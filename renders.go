@@ -11,11 +11,11 @@ import (
 )
 
 type RenderInstance interface {
-	render(wr http.ResponseWriter, data interface{}) bool
+	render(wr http.ResponseWriter, data interface{}) error
 }
 
 type _Render interface {
-	render(*BlockOption) RenderInstance
+	render(*Context) RenderInstance
 	Init(*Server)
 }
 
@@ -27,12 +27,29 @@ type HtmlRender struct {
 	saveTemp bool
 }
 
-func (h *HtmlRender) render(opt *BlockOption) RenderInstance {
-	if opt.isHtml {
-		layout := h.getTemplate("layout/"+opt.layout+h.suffix, filepath.Join("layout", opt.layout+h.suffix))
-		yield := h.getTemplate(opt.htmlRenderFileOrDir + h.suffix)
-		return &HttpRenderInstance{layout, yield}
+func (h *HtmlRender) render(ctx *Context) RenderInstance {
+	var err error
+	var layout, yield *template.Template
+	switch typ := ctx.option.(type) {
+	case *HtmlBlockOption:
+		layout, err = h.getTemplate("layout/"+typ.layout+h.suffix, filepath.Join("layout", typ.layout+h.suffix))
+		if err == nil {
+			yield, err = h.getTemplate(typ.htmlRenderFileOrDir + h.suffix)
+		}
+	case *RestBlockOption:
+		if layout, err = h.getTemplate("layout/"+typ.layout+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", typ.layout+h.suffix)); err != nil {
+			layout, err = h.getTemplate("layout/"+typ.layout+h.suffix, filepath.Join("layout", typ.layout+h.suffix))
+		}
+		if err == nil {
+			yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
+		}
 	}
+	if err == nil {
+		return &HttpRenderInstance{layout, yield}
+	} else {
+		fmt.Println(err)
+	}
+
 	return nil
 }
 
@@ -79,7 +96,7 @@ func (f *HtmlRender) initLayout(dir string) {
 	})
 }
 
-func (h *HtmlRender) getTemplate(args ...string) *template.Template {
+func (h *HtmlRender) getTemplate(args ...string) (*template.Template, error) {
 	var name, file string
 	if len(args) == 1 {
 		name = args[0]
@@ -88,6 +105,7 @@ func (h *HtmlRender) getTemplate(args ...string) *template.Template {
 		name = args[1]
 		file = args[1]
 	}
+	file = filepath.FromSlash(file)
 	t := h.models[name]
 
 	if t == nil {
@@ -102,11 +120,11 @@ func (h *HtmlRender) getTemplate(args ...string) *template.Template {
 					h.models[name] = t
 				}
 			} else {
-				fmt.Println("ERROR template.ParseFile: %v", err)
+				return nil, err
 			}
 		}
 	}
-	return t
+	return t, nil
 }
 
 type HttpRenderInstance struct {
@@ -114,7 +132,7 @@ type HttpRenderInstance struct {
 	yield  *template.Template
 }
 
-func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}) bool {
+func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}) error {
 	h.layout.Funcs(template.FuncMap{
 		"yield": func() (template.HTML, error) {
 			err := h.yield.Execute(wr, data)
@@ -123,13 +141,13 @@ func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}) bo
 		},
 	})
 	h.layout.Execute(wr, data)
-	return true
+	return nil
 }
 
 type JsonRender struct {
 }
 
-func (j *JsonRender) render(*BlockOption) RenderInstance {
+func (j *JsonRender) render(c *Context) RenderInstance {
 	return nil
 }
 

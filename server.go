@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"crypto/sha1"
 	"flag"
 	"fmt"
 	toml "github.com/stvp/go-toml-config"
@@ -17,6 +18,7 @@ type Server struct {
 	router        Router
 	env           *string
 	Renders       map[string]_Render
+	HashSecret    *string
 }
 
 type Handler interface {
@@ -47,23 +49,7 @@ func (s *Server) Use(block interface{}) {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if ctx := s.router.route(w, r); ctx != nil {
-		render := make(chan RenderInstance)
-		response := make(chan *Response)
-		go s.prepareRender(ctx, render)
-		go ctx.handleData()
-		for {
-			select {
-			case render_ready := <-render:
-				ctx.renderInstance = render_ready
-			case response_ready := <-response:
-				ctx.response = response_ready
-			}
-			if ok := ctx.render(); ok {
-				return
-			}
-		}
-	} else {
+	if err := s.router.route(s, w, r); err != nil {
 		var path string
 		if strings.HasSuffix(r.URL.Path, "/") {
 			path = r.URL.Path + "index.html"
@@ -74,20 +60,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) prepareRender(c *Context, cha chan RenderInstance) {
-	re := s.Renders[c.format]
-	if re != nil {
-		cha <- re.render(c.cfg)
-	}
-	cha <- nil
-}
-
 func (s *Server) parseConfig(name string) (err error) {
 	path := flag.String("config", "./"+name+".conf", "设置配置文件的路径")
 	s.WwwRoot = toml.String("basic.www_root", "./www")
 	s.ListenPort = toml.Int("basic.port", 8080)
 	s.PublicDir = toml.String("basic.public_dir", "public")
 	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
+	s.HashSecret = toml.String("secret", "cX8Os0wfB6uCGZZSZHIi6rKsy7b0scE9")
 	s.env = toml.String("basic.env", "development")
 	flag.Parse()
 	*path = filepath.FromSlash(*path)
@@ -95,20 +74,13 @@ func (s *Server) parseConfig(name string) (err error) {
 	return
 }
 
-func (s *Server) RegisterRest(r interface{}, cfg RestOption) {
-	// s.m.Group(cfg.Path, func(rou martini.Router) {
-	// 	if new_handler, ok := r.(RestNewHander); ok {
-	// 		rou.Get("/new", _RestRender{cfg, new_handler.New, "new"}.Wrap)
-	// 	}
-	// })
-	return
-}
+func (s *Server) Hash(str string) string {
 
-func (s *Server) RegisterPage(r interface{}, cfg PageOption) {
-	// if page_handler, ok := r.(PageHandler); ok {
-	// 	s.m.Get(cfg.Path, _PageRender{cfg, page_handler.Page}.Wrap)
-	// }
-	return
+	hash := sha1.New()
+	hash.Write([]byte(str))
+	hash.Write([]byte(*s.HashSecret))
+	return fmt.Sprintf("%x", hash.Sum(nil))
+
 }
 
 func (s *Server) Run() {

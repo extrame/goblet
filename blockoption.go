@@ -9,18 +9,129 @@ type Route byte
 type Render byte
 type Layout byte
 
-type BlockOption struct {
+const (
+	REST_READ     = "read"
+	REST_READMANY = "readmany"
+	REST_DELETE   = "delete"
+	REST_NEW      = "new"
+	REST_CREATE   = "create"
+	REST_UPDATE   = "update"
+)
+
+type BlockOption interface {
+	UpdateRender(string, *Context)
+	GetRouting() []string
+	MatchSuffix(string) bool
+	Parse(*Context) error
+}
+
+type BasicBlockOption struct {
 	routing             []string
 	render              []string
 	layout              string
-	isHtml              bool
 	htmlRenderFileOrDir string
-	isRest              bool
+	block               interface{}
 }
 
-func PrepareOption(block interface{}) *BlockOption {
-	option := new(BlockOption)
+type HtmlBlockOption struct {
+	BasicBlockOption
+}
 
+func (h *HtmlBlockOption) MatchSuffix(suffix string) bool {
+	return len(suffix) == 0
+}
+
+func (h *HtmlBlockOption) Parse(c *Context) error {
+	if c.req.Method == "GET" {
+		if get, ok := h.BasicBlockOption.block.(HtmlGetBlock); ok {
+			get.Get(c)
+		}
+	} else if c.req.Method == "POST" {
+		if post, ok := h.BasicBlockOption.block.(HtmlPostBlock); ok {
+			post.Post(c)
+		}
+	}
+	return nil
+}
+
+func (h *BasicBlockOption) UpdateRender(o string, ctx *Context) {
+	h.htmlRenderFileOrDir = o
+}
+
+func (b *BasicBlockOption) GetRouting() []string {
+	return b.routing
+}
+
+type RestBlockOption struct {
+	BasicBlockOption
+}
+
+func (r *RestBlockOption) UpdateRender(obj string, ctx *Context) {
+	ctx.method = obj
+}
+
+func (r *RestBlockOption) Parse(c *Context) error {
+	if len(c.suffix) > 0 {
+		id := c.suffix[1:]
+		if c.req.Method == "GET" {
+			r.renderAsRead(id, c)
+		}
+	} else {
+		if c.req.Method == "GET" {
+			r.renderAsReadMany(c)
+		}
+	}
+
+	return nil
+}
+
+func (r *RestBlockOption) renderAsRead(id string, cx *Context) {
+	if reader, ok := r.BasicBlockOption.block.(RestReadBlock); ok {
+		cx.method = REST_READ
+		reader.Read(id, cx)
+	}
+}
+
+func (r *RestBlockOption) renderAsReadMany(cx *Context) {
+	if reader, ok := r.BasicBlockOption.block.(RestReadManyBlock); ok {
+		cx.method = REST_READMANY
+		reader.ReadMany(cx)
+	}
+}
+
+func (r *RestBlockOption) handleData(c *Context) {
+
+}
+
+func (r *RestBlockOption) MatchSuffix(suffix string) bool {
+	return len(suffix) == 0 || suffix[0:1] == "/"
+}
+
+type CommonBlokOption struct {
+	BasicBlockOption
+}
+
+func (c *CommonBlokOption) MatchSuffix(suffix string) bool {
+	return true
+}
+
+func (c *CommonBlokOption) Parse(*Context) error {
+	return nil
+}
+
+func PrepareOption(block interface{}) BlockOption {
+	opt := newBlock(block)
+	var basic *BasicBlockOption
+	switch typ := opt.(type) {
+	case *HtmlBlockOption:
+		basic = &typ.BasicBlockOption
+	case *RestBlockOption:
+		basic = &typ.BasicBlockOption
+	case *CommonBlokOption:
+		basic = &typ.BasicBlockOption
+	}
+
+	basic.block = block
 	val := reflect.ValueOf(block)
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
@@ -34,54 +145,59 @@ func PrepareOption(block interface{}) *BlockOption {
 			// v := val.Field(i)
 			tags := strings.Split(string(t.Tag), ",")
 			if t.Type.Name() == "Route" && t.Type.PkgPath() == "github.com/extrame/goblet" {
-				option.routing = tags
+				basic.routing = tags
 				continue
 			}
 			if t.Type.Name() == "Render" && t.Type.PkgPath() == "github.com/extrame/goblet" {
-				option.render = make([]string, len(tags))
+				basic.render = make([]string, len(tags))
 				for k, v := range tags {
 					vs := strings.Split(v, "=")
-					option.render[k] = vs[0]
+					basic.render[k] = vs[0]
 					if vs[0] == "html" && len(vs) >= 2 {
-						option.htmlRenderFileOrDir = vs[1]
+						basic.htmlRenderFileOrDir = vs[1]
 					}
 				}
 				continue
 			}
 			if t.Type.Name() == "Layout" && t.Type.PkgPath() == "github.com/extrame/goblet" {
-				option.layout = string(t.Tag)
+				basic.layout = string(t.Tag)
 				continue
 			}
 		}
 	}
 
-	if len(option.routing) == 0 {
-		option.routing = []string{"/" + valtype.Name()}
+	if len(basic.routing) == 0 {
+		basic.routing = []string{"/" + valtype.Name()}
 	}
 
-	if len(option.render) == 0 {
-		option.routing = []string{"json"}
+	if len(basic.render) == 0 {
+		basic.routing = []string{"json"}
 	}
 
-	if option.htmlRenderFileOrDir == "" {
-		option.htmlRenderFileOrDir = valtype.Name()
+	if basic.htmlRenderFileOrDir == "" {
+		basic.htmlRenderFileOrDir = valtype.Name()
 	}
 
-	if option.layout == "" {
-		option.layout = "default"
+	if basic.layout == "" {
+		basic.layout = "default"
 	}
 
+	return opt
+}
+
+func newBlock(block interface{}) BlockOption {
 	if _, ok := block.(HtmlGetBlock); ok {
-		option.isHtml = true
-	}
-
-	if _, ok := block.(HtmlPostBlock); ok {
-		option.isHtml = true
+		return &HtmlBlockOption{}
+	} else if _, ok := block.(HtmlPostBlock); ok {
+		return &HtmlBlockOption{}
 	}
 
 	if _, ok := block.(RestNewBlock); ok {
-		option.isRest = true
+		return &RestBlockOption{}
+	} else if _, ok := block.(RestReadManyBlock); ok {
+		return &RestBlockOption{}
+	} else if _, ok := block.(RestReadBlock); ok {
+		return &RestBlockOption{}
 	}
-
-	return option
+	return &CommonBlokOption{}
 }
