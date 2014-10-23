@@ -22,3 +22,7 @@ type RestReadManyBlock interface {
 type RestReadBlock interface {
 	Read(string, *Context)
 }
+
+type RestUpdateManyBlock interface {
+	UpdateMany(*Context)
+}

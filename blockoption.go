@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -10,12 +11,13 @@ type Render byte
 type Layout byte
 
 const (
-	REST_READ     = "read"
-	REST_READMANY = "readmany"
-	REST_DELETE   = "delete"
-	REST_NEW      = "new"
-	REST_CREATE   = "create"
-	REST_UPDATE   = "update"
+	REST_READ       = "read"
+	REST_READMANY   = "readmany"
+	REST_DELETE     = "delete"
+	REST_NEW        = "new"
+	REST_CREATE     = "create"
+	REST_UPDATE     = "update"
+	REST_UPDATEMANY = "updatemany"
 )
 
 type BlockOption interface {
@@ -23,6 +25,7 @@ type BlockOption interface {
 	GetRouting() []string
 	MatchSuffix(string) bool
 	Parse(*Context) error
+	Layout() string
 }
 
 type BasicBlockOption struct {
@@ -54,6 +57,10 @@ func (h *HtmlBlockOption) Parse(c *Context) error {
 	return nil
 }
 
+func (b *BasicBlockOption) Layout() string {
+	return b.layout
+}
+
 func (h *BasicBlockOption) UpdateRender(o string, ctx *Context) {
 	h.htmlRenderFileOrDir = o
 }
@@ -79,6 +86,8 @@ func (r *RestBlockOption) Parse(c *Context) error {
 	} else {
 		if c.req.Method == "GET" {
 			r.renderAsReadMany(c)
+		} else if c.req.Method == "POST" {
+			r.renderAsUpdateMany(c)
 		}
 	}
 
@@ -99,6 +108,13 @@ func (r *RestBlockOption) renderAsReadMany(cx *Context) {
 	}
 }
 
+func (r *RestBlockOption) renderAsUpdateMany(cx *Context) {
+	if um, ok := r.BasicBlockOption.block.(RestUpdateManyBlock); ok {
+		cx.method = REST_UPDATEMANY
+		um.UpdateMany(cx)
+	}
+}
+
 func (r *RestBlockOption) handleData(c *Context) {
 
 }
@@ -116,6 +132,7 @@ func (c *CommonBlokOption) MatchSuffix(suffix string) bool {
 }
 
 func (c *CommonBlokOption) Parse(*Context) error {
+	fmt.Println("eheresljdflsfj")
 	return nil
 }
 

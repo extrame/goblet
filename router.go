@@ -7,17 +7,17 @@ import (
 	"strings"
 )
 
-type Router struct {
+type _Router struct {
 	anchor *Anchor
 }
 
 var NOSUCHROUTER = fmt.Errorf("no such router")
 
-func (r *Router) init() {
+func (r *_Router) init() {
 	r.anchor = &Anchor{0, "/", "", []*Anchor{}, &CommonBlokOption{}}
 }
 
-func (rou *Router) route(s *Server, w http.ResponseWriter, r *http.Request) error {
+func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) error {
 	defer func() {
 		ErrorWrap(w)
 	}()
@@ -36,22 +36,26 @@ func (rou *Router) route(s *Server, w http.ResponseWriter, r *http.Request) erro
 	anch, suffix_url := rou.anchor.match(main, len(main))
 
 	if anch != nil {
-		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "default", nil, nil}
-		if err := anch.opt.Parse(context); err == nil {
+		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "default", nil, nil, ""}
+		var err error
+		if err = anch.opt.Parse(context); err == nil {
 			context.prepareRender()
-			return context.render()
+			err = context.render()
+		}
+		if err != nil {
+			fmt.Println(err)
 		}
 	}
 	return NOSUCHROUTER
 }
 
-func (r *Router) add(opt BlockOption) {
+func (r *_Router) add(opt BlockOption) {
 	for _, v := range opt.GetRouting() {
 		r.addRoute(v, opt)
 	}
 }
 
-func (r *Router) addRoute(path string, opt BlockOption) {
+func (r *_Router) addRoute(path string, opt BlockOption) {
 	r.anchor.add(path, opt)
 }
 
@@ -65,7 +69,6 @@ type Anchor struct {
 }
 
 func (a *Anchor) add(path string, opt BlockOption) bool {
-	log.Println("add router at ", path, " with ", opt)
 	if len(path) > a.loc {
 		if path[a.loc-len(a.prefix):a.loc+1] == a.prefix+a.char {
 			for _, v := range a.branches {

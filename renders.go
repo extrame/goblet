@@ -31,15 +31,17 @@ func (h *HtmlRender) render(ctx *Context) RenderInstance {
 	var err error
 	var layout, yield *template.Template
 	switch typ := ctx.option.(type) {
+
 	case *HtmlBlockOption:
-		layout, err = h.getTemplate("layout/"+typ.layout+h.suffix, filepath.Join("layout", typ.layout+h.suffix))
+		layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 		if err == nil {
 			yield, err = h.getTemplate(typ.htmlRenderFileOrDir + h.suffix)
 		}
 	case *RestBlockOption:
-		if layout, err = h.getTemplate("layout/"+typ.layout+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", typ.layout+h.suffix)); err != nil {
-			layout, err = h.getTemplate("layout/"+typ.layout+h.suffix, filepath.Join("layout", typ.layout+h.suffix))
+		if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
+			layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 		}
+		h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
 		if err == nil {
 			yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
 		}
@@ -58,7 +60,6 @@ func (h *HtmlRender) Init(s *Server) {
 	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml})
 	h.dir = *s.WwwRoot
 	h.initGlobalTemplate(h.dir)
-	h.initLayout(h.dir)
 	h.models = make(map[string]*template.Template)
 	h.suffix = ".html"
 	h.saveTemp = (*s.env == "production")
@@ -67,11 +68,11 @@ func (h *HtmlRender) Init(s *Server) {
 func (f *HtmlRender) initGlobalTemplate(dir string) {
 	f.root.New("")
 	//scan for the helpers
-	filepath.Walk(filepath.Join(dir, "helper"), func(path string, info os.FileInfo, err error) error {
-		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), "html") {
+	filepath.Walk(filepath.Join(f.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
+		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), f.suffix) {
 			fmt.Println("Parse helper:", path)
-			name := strings.TrimSuffix(info.Name(), "html")
-			e := parseFileWithName(f.root, "global/"+name, path)
+			name := strings.TrimSuffix(info.Name(), f.suffix)
+			e := parseFileWithName(f.root, "helper/"+name, path)
 			if e != nil {
 				fmt.Printf("ERROR template.ParseFile: %v", e)
 			}
@@ -80,14 +81,14 @@ func (f *HtmlRender) initGlobalTemplate(dir string) {
 	})
 }
 
-func (f *HtmlRender) initLayout(dir string) {
-	f.root.New("")
-	//scan for the layout
-	filepath.Walk(filepath.Join(dir, "helper"), func(path string, info os.FileInfo, err error) error {
-		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), "html") {
+func (h *HtmlRender) initModelTemplate(layout *template.Template, dir string) {
+	layout.New("")
+	//scan for the helpers
+	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
+		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
 			fmt.Println("Parse helper:", path)
-			name := strings.TrimSuffix(info.Name(), "html")
-			e := parseFileWithName(f.root, "layout/"+name, path)
+			name := strings.TrimSuffix(info.Name(), h.suffix)
+			e := parseFileWithName(layout, "helper/"+name, path)
 			if e != nil {
 				fmt.Printf("ERROR template.ParseFile: %v", e)
 			}
@@ -140,8 +141,7 @@ func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}) er
 			return template.HTML(""), err
 		},
 	})
-	h.layout.Execute(wr, data)
-	return nil
+	return h.layout.Execute(wr, data)
 }
 
 type JsonRender struct {
