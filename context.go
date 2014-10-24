@@ -66,6 +66,12 @@ func (c *Context) RestRedirectToRead(id interface{}) {
 	}
 }
 
+func (c *Context) RedirectTo(url string) {
+	c.writer.Header().Set("Location", url)
+	c.writer.WriteHeader(302)
+	c.format = "raw"
+}
+
 func (c *Context) GetLoginId() (string, bool) {
 	return c.GetLoginIdAs(USERCOOKIENAME)
 }

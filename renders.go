@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -59,9 +60,9 @@ func (h *HtmlRender) Init(s *Server) {
 	h.root = template.New("REST_HTTP_ROOT")
 	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml})
 	h.dir = *s.WwwRoot
+	h.suffix = ".html"
 	h.initGlobalTemplate(h.dir)
 	h.models = make(map[string]*template.Template)
-	h.suffix = ".html"
 	h.saveTemp = (*s.env == "production")
 }
 
@@ -148,11 +149,37 @@ type JsonRender struct {
 }
 
 func (j *JsonRender) render(c *Context) RenderInstance {
-	return nil
+	return new(JsonRenderInstance)
 }
 
 func (j *JsonRender) Init(s *Server) {
 
+}
+
+type JsonRenderInstance int8
+
+func (r *JsonRenderInstance) render(wr http.ResponseWriter, data interface{}) (err error) {
+	var v []byte
+	v, err = json.Marshal(data)
+	if err == nil {
+		wr.Write(v)
+	}
+	return
+}
+
+type RawRender int8
+
+func (r *RawRender) render(c *Context) RenderInstance {
+	return new(RawRenderInstance)
+}
+
+func (r *RawRender) Init(s *Server) {
+}
+
+type RawRenderInstance int8
+
+func (r *RawRenderInstance) render(wr http.ResponseWriter, data interface{}) error {
+	return nil
 }
 
 func parseFileWithName(parent *template.Template, name string, filepath string) error {

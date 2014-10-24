@@ -51,6 +51,7 @@ func (s *Server) Organize(name string, opts ...Option) {
 		s.Renders["html"] = new(HtmlRender)
 		s.Renders["html"].Init(s)
 		s.Renders["json"] = new(JsonRender)
+		s.Renders["raw"] = new(RawRender)
 		if err = newDB(*s.dbEngine, *s.dbUser, *s.dbPwd, *s.dbHost, *s.dbName, *s.dbPort); err != nil {
 			log.Fatalln(err)
 		}

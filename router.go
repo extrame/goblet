@@ -17,7 +17,7 @@ func (r *_Router) init() {
 	r.anchor = &Anchor{0, "/", "", []*Anchor{}, &CommonBlokOption{}}
 }
 
-func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) error {
+func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (err error) {
 	defer func() {
 		ErrorWrap(w)
 	}()
@@ -37,14 +37,14 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) err
 
 	if anch != nil {
 		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "default", nil, nil, ""}
-		var err error
 		if err = anch.opt.Parse(context); err == nil {
 			context.prepareRender()
 			err = context.render()
 		}
 		if err != nil {
-			fmt.Println(err)
+			log.Println("RENDER ERROR:", err)
 		}
+		return
 	}
 	return NOSUCHROUTER
 }
