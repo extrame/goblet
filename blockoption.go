@@ -1,7 +1,6 @@
 package goblet
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 )
@@ -80,7 +79,9 @@ func (r *RestBlockOption) UpdateRender(obj string, ctx *Context) {
 func (r *RestBlockOption) Parse(c *Context) error {
 	if len(c.suffix) > 0 {
 		id := c.suffix[1:]
-		if c.req.Method == "GET" {
+		if id == "new" {
+			r.renderAsNew(c)
+		} else if c.req.Method == "GET" {
 			r.renderAsRead(id, c)
 		}
 	} else {
@@ -108,6 +109,13 @@ func (r *RestBlockOption) renderAsReadMany(cx *Context) {
 	}
 }
 
+func (r *RestBlockOption) renderAsNew(cx *Context) {
+	if reader, ok := r.BasicBlockOption.block.(RestNewBlock); ok {
+		cx.method = REST_NEW
+		reader.New(cx)
+	}
+}
+
 func (r *RestBlockOption) renderAsUpdateMany(cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestUpdateManyBlock); ok {
 		cx.method = REST_UPDATEMANY
@@ -132,7 +140,6 @@ func (c *CommonBlokOption) MatchSuffix(suffix string) bool {
 }
 
 func (c *CommonBlokOption) Parse(*Context) error {
-	fmt.Println("eheresljdflsfj")
 	return nil
 }
 
