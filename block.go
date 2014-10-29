@@ -11,6 +11,10 @@ type HtmlPostBlock interface {
 	Post(cx *Context)
 }
 
+type RestCreateBlock interface {
+	Create(cx *Context)
+}
+
 type RestNewBlock interface {
 	New(cx *Context)
 }

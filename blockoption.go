@@ -77,17 +77,24 @@ func (r *RestBlockOption) UpdateRender(obj string, ctx *Context) {
 }
 
 func (r *RestBlockOption) Parse(c *Context) error {
+	var method string
+	if method = c.req.URL.Query().Get("method"); method == "" {
+		method = c.req.Method
+	}
+	method = strings.ToUpper(method)
 	if len(c.suffix) > 0 {
 		id := c.suffix[1:]
 		if id == "new" {
 			r.renderAsNew(c)
-		} else if c.req.Method == "GET" {
+		} else if method == "GET" {
 			r.renderAsRead(id, c)
 		}
 	} else {
-		if c.req.Method == "GET" {
+		if method == "GET" {
 			r.renderAsReadMany(c)
-		} else if c.req.Method == "POST" {
+		} else if method == "POST" {
+			r.renderAsCreate(c)
+		} else if method == "PUT" {
 			r.renderAsUpdateMany(c)
 		}
 	}
@@ -120,6 +127,13 @@ func (r *RestBlockOption) renderAsUpdateMany(cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestUpdateManyBlock); ok {
 		cx.method = REST_UPDATEMANY
 		um.UpdateMany(cx)
+	}
+}
+
+func (r *RestBlockOption) renderAsCreate(cx *Context) {
+	if um, ok := r.BasicBlockOption.block.(RestCreateBlock); ok {
+		cx.method = REST_CREATE
+		um.Create(cx)
 	}
 }
 
