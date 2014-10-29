@@ -73,7 +73,7 @@ func (f *HtmlRender) initGlobalTemplate(dir string) {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), f.suffix) {
 			fmt.Println("Parse helper:", path)
 			name := strings.TrimSuffix(info.Name(), f.suffix)
-			e := parseFileWithName(f.root, "helper/"+name, path)
+			e := parseFileWithName(f.root, "global/"+name, path)
 			if e != nil {
 				fmt.Printf("ERROR template.ParseFile: %v", e)
 			}
@@ -89,7 +89,7 @@ func (h *HtmlRender) initModelTemplate(layout *template.Template, dir string) {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
 			fmt.Println("Parse helper:", path)
 			name := strings.TrimSuffix(info.Name(), h.suffix)
-			e := parseFileWithName(layout, "helper/"+name, path)
+			e := parseFileWithName(layout, "model/"+name, path)
 			if e != nil {
 				fmt.Printf("ERROR template.ParseFile: %v", e)
 			}

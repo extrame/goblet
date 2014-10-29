@@ -20,18 +20,32 @@ type Context struct {
 	renderInstance RenderInstance
 	response       interface{}
 	layout         string
+	status_code    int
 }
 
 func (c *Context) handleData() {
 
 }
 
-func (c *Context) render() error {
-	return c.renderInstance.render(c.writer, c.response)
+func (c *Context) render() (err error) {
+	if err = c.renderInstance.render(c.writer, c.response); err == nil {
+		c.writer.WriteHeader(c.status_code)
+	}
+	return
 }
 
 func (c *Context) Respond(data interface{}) {
+	switch data.(type) {
+	case error:
+		c.RespondWithStatus(data, http.StatusInternalServerError)
+	default:
+		c.RespondWithStatus(data, http.StatusOK)
+	}
+}
+
+func (c *Context) RespondWithStatus(data interface{}, status int) {
 	c.response = autoHide(data)
+	c.status_code = status
 }
 
 func (c *Context) prepareRender() {
