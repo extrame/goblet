@@ -7,6 +7,10 @@ import (
 
 func autoHide(data interface{}) interface{} {
 
+	if data == nil {
+		return nil
+	}
+
 	val := reflect.ValueOf(data)
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()

@@ -28,10 +28,7 @@ func (c *Context) handleData() {
 }
 
 func (c *Context) render() (err error) {
-	if err = c.renderInstance.render(c.writer, c.response); err == nil {
-		c.writer.WriteHeader(c.status_code)
-	}
-	return
+	return c.renderInstance.render(c.writer, c.response, c.status_code)
 }
 
 func (c *Context) Respond(data interface{}) {
@@ -41,6 +38,10 @@ func (c *Context) Respond(data interface{}) {
 	default:
 		c.RespondWithStatus(data, http.StatusOK)
 	}
+}
+
+func (c *Context) RespondStatus(status int) {
+	c.RespondWithStatus(nil, status)
 }
 
 func (c *Context) RespondWithStatus(data interface{}, status int) {

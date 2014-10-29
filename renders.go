@@ -2,17 +2,19 @@ package goblet
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
 type RenderInstance interface {
-	render(wr http.ResponseWriter, data interface{}) error
+	render(wr http.ResponseWriter, data interface{}, status int) error
 }
 
 type _Render interface {
@@ -29,24 +31,34 @@ type HtmlRender struct {
 }
 
 func (h *HtmlRender) render(ctx *Context) RenderInstance {
-	var err error
+	var err = errors.New("")
 	var layout, yield *template.Template
-	switch typ := ctx.option.(type) {
 
-	case *HtmlBlockOption:
-		layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+	if ctx.status_code != 200 {
+		layout, err = h.getTemplate("layout/"+"default"+h.suffix, filepath.Join("layout", "default"+h.suffix))
 		if err == nil {
-			yield, err = h.getTemplate(typ.htmlRenderFileOrDir + h.suffix)
-		}
-	case *RestBlockOption:
-		if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
-			layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
-		}
-		h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
-		if err == nil {
-			yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
+			yield, err = h.getTemplate("code/"+strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join("code", strconv.Itoa(ctx.status_code)+h.suffix))
 		}
 	}
+	if err != nil {
+		switch typ := ctx.option.(type) {
+
+		case *HtmlBlockOption:
+			layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			if err == nil {
+				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + h.suffix)
+			}
+		case *RestBlockOption:
+			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			}
+			h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
+			if err == nil {
+				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
+			}
+		}
+	}
+
 	if err == nil {
 		return &HttpRenderInstance{layout, yield}
 	} else {
@@ -134,15 +146,20 @@ type HttpRenderInstance struct {
 	yield  *template.Template
 }
 
-func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}) error {
-	h.layout.Funcs(template.FuncMap{
-		"yield": func() (template.HTML, error) {
-			err := h.yield.Execute(wr, data)
-			// return safe html here since we are rendering our own template
-			return template.HTML(""), err
-		},
-	})
-	return h.layout.Execute(wr, data)
+func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) error {
+	if h.layout != nil {
+		h.layout.Funcs(template.FuncMap{
+			"yield": func() (template.HTML, error) {
+				err := h.yield.Execute(wr, data)
+				// return safe html here since we are rendering our own template
+				return template.HTML(""), err
+			},
+		})
+		return h.layout.Execute(wr, data)
+	} else if h.yield != nil {
+		return h.yield.Execute(wr, data)
+	}
+	return nil
 }
 
 type JsonRender struct {
@@ -158,12 +175,13 @@ func (j *JsonRender) Init(s *Server) {
 
 type JsonRenderInstance int8
 
-func (r *JsonRenderInstance) render(wr http.ResponseWriter, data interface{}) (err error) {
+func (r *JsonRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) (err error) {
 	var v []byte
 	v, err = json.Marshal(data)
 	if err == nil {
 		wr.Write(v)
 	}
+	wr.WriteHeader(status)
 	return
 }
 
@@ -178,7 +196,7 @@ func (r *RawRender) Init(s *Server) {
 
 type RawRenderInstance int8
 
-func (r *RawRenderInstance) render(wr http.ResponseWriter, data interface{}) error {
+func (r *RawRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) error {
 	return nil
 }
 
