@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -38,6 +39,9 @@ func (h *HtmlRender) render(ctx *Context) RenderInstance {
 		layout, err = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
 		if err == nil {
 			yield, err = h.getTemplate(strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join(strconv.Itoa(ctx.status_code)+h.suffix))
+		}
+		if err != nil {
+			log.Println("Find Err Code Fail, ", err)
 		}
 	}
 	if err != nil {
