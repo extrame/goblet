@@ -36,10 +36,8 @@ func (h *HtmlRender) render(ctx *Context) RenderInstance {
 	var layout, yield *template.Template
 
 	if ctx.status_code != 200 {
-		layout, err = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
-		if err == nil {
-			yield, err = h.getTemplate(strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join(strconv.Itoa(ctx.status_code)+h.suffix))
-		}
+		layout, _ = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
+		yield, err = h.getTemplate(strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join(strconv.Itoa(ctx.status_code)+h.suffix))
 		if err != nil {
 			log.Println("Find Err Code Fail, ", err)
 		}
