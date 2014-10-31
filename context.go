@@ -49,6 +49,11 @@ func (c *Context) RespondWithStatus(data interface{}, status int) {
 	c.status_code = status
 }
 
+func (c *Context) RespondWithRender(data interface{}, render string) {
+	c.response = autoHide(data)
+	c.method = render
+}
+
 func (c *Context) prepareRender() {
 	re := c.server.Renders[c.format]
 	if re != nil {
@@ -69,7 +74,7 @@ func (c *Context) getLayout() string {
 }
 
 func (c *Context) RenderAs(name string) {
-	c.option.UpdateRender(name, c)
+	c.method = name
 }
 
 func (c *Context) RestRedirectToRead(id interface{}) {

@@ -48,7 +48,7 @@ func (h *HtmlRender) render(ctx *Context) RenderInstance {
 		case *HtmlBlockOption:
 			layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 			if err == nil {
-				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + h.suffix)
+				yield, err = h.getTemplate(ctx.method + h.suffix)
 			}
 		case *RestBlockOption:
 			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {

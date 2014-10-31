@@ -23,6 +23,9 @@ type BlockOption interface {
 	UpdateRender(string, *Context)
 	GetRouting() []string
 	MatchSuffix(string) bool
+
+	//Call the function in object and Parse data, this function used before
+	//the render prepared. So you can change function and render in here
 	Parse(*Context) error
 	Layout() string
 }
@@ -44,6 +47,7 @@ func (h *HtmlBlockOption) MatchSuffix(suffix string) bool {
 }
 
 func (h *HtmlBlockOption) Parse(c *Context) error {
+	c.method = h.htmlRenderFileOrDir
 	if c.Request.Method == "GET" {
 		if get, ok := h.BasicBlockOption.block.(HtmlGetBlock); ok {
 			get.Get(c)
