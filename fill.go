@@ -26,7 +26,7 @@ type JsonRequestDecoder struct{}
 func (d *JsonRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) (err error) {
 	var request []byte
 	// read body
-	request, err = ioutil.ReadAll(cx.req.Body)
+	request, err = ioutil.ReadAll(cx.Request.Body)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ type XmlRequestDecoder struct{}
 
 func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
 	// read body
-	data, err := ioutil.ReadAll(cx.req.Body)
+	data, err := ioutil.ReadAll(cx.Request.Body)
 	if err != nil {
 		return err
 	}
@@ -49,11 +49,11 @@ func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool)
 type FormRequestDecoder struct{}
 
 func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	if cx.req.Form == nil {
-		cx.req.ParseForm()
+	if cx.Request.Form == nil {
+		cx.Request.ParseForm()
 	}
 	var values *map[string][]string
-	values = (*map[string][]string)(&cx.req.Form)
+	values = (*map[string][]string)(&cx.Request.Form)
 	return UnmarshalForm(values, v, autofill)
 }
 
@@ -61,9 +61,9 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 type MultiFormRequestDecoder struct{}
 
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	cx.req.ParseMultipartForm(32 << 20)
-	values := (map[string][]string)(cx.req.Form)
-	for k, v := range cx.req.MultipartForm.Value {
+	cx.Request.ParseMultipartForm(32 << 20)
+	values := (map[string][]string)(cx.Request.Form)
+	for k, v := range cx.Request.MultipartForm.Value {
 		values[k] = v
 	}
 	return UnmarshalForm(&values, v, autofill)
@@ -85,7 +85,7 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 // automatically selected
 func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	// get content type
-	ct := cx.req.Header.Get("Content-Type")
+	ct := cx.Request.Header.Get("Content-Type")
 	// default to urlencoded
 	if ct == "" {
 		ct = "application/x-www-form-urlencoded"

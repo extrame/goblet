@@ -67,7 +67,7 @@ func (c *Context) SignedCookie(name string) (*http.Cookie, error) {
 
 	valid, validErr := c.cookieIsValid(name)
 	if valid {
-		return c.req.Cookie(name)
+		return c.Request.Cookie(name)
 	} else if validErr != nil {
 		return nil, validErr
 	}
@@ -80,8 +80,8 @@ func (c *Context) SignedCookie(name string) (*http.Cookie, error) {
 func (c *Context) cookieIsValid(name string) (bool, error) {
 
 	// get the cookies
-	cookie, cookieErr := c.req.Cookie(name)
-	signedCookie, signedCookieErr := c.req.Cookie(toSignedCookieName(name))
+	cookie, cookieErr := c.Request.Cookie(name)
+	signedCookie, signedCookieErr := c.Request.Cookie(toSignedCookieName(name))
 
 	// handle errors reading cookies
 	if cookieErr == http.ErrNoCookie {

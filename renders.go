@@ -35,9 +35,9 @@ func (h *HtmlRender) render(ctx *Context) RenderInstance {
 	var layout, yield *template.Template
 
 	if ctx.status_code != 200 {
-		layout, err = h.getTemplate("layout/"+"default"+h.suffix, filepath.Join("layout", "default"+h.suffix))
+		layout, err = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
 		if err == nil {
-			yield, err = h.getTemplate("code/"+strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join("code", strconv.Itoa(ctx.status_code)+h.suffix))
+			yield, err = h.getTemplate(strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join(strconv.Itoa(ctx.status_code)+h.suffix))
 		}
 	}
 	if err != nil {

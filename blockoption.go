@@ -44,11 +44,11 @@ func (h *HtmlBlockOption) MatchSuffix(suffix string) bool {
 }
 
 func (h *HtmlBlockOption) Parse(c *Context) error {
-	if c.req.Method == "GET" {
+	if c.Request.Method == "GET" {
 		if get, ok := h.BasicBlockOption.block.(HtmlGetBlock); ok {
 			get.Get(c)
 		}
-	} else if c.req.Method == "POST" {
+	} else if c.Request.Method == "POST" {
 		if post, ok := h.BasicBlockOption.block.(HtmlPostBlock); ok {
 			post.Post(c)
 		}
@@ -78,8 +78,8 @@ func (r *RestBlockOption) UpdateRender(obj string, ctx *Context) {
 
 func (r *RestBlockOption) Parse(c *Context) error {
 	var method string
-	if method = c.req.URL.Query().Get("method"); method == "" {
-		method = c.req.Method
+	if method = c.Request.URL.Query().Get("method"); method == "" {
+		method = c.Request.Method
 	}
 	method = strings.ToUpper(method)
 	if len(c.suffix) > 0 {

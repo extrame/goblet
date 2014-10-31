@@ -11,7 +11,7 @@ var USERCOOKIENAME = "user"
 
 type Context struct {
 	server         *Server
-	req            *http.Request
+	Request        *http.Request
 	writer         http.ResponseWriter
 	option         BlockOption
 	suffix         string
