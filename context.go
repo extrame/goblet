@@ -10,7 +10,7 @@ import (
 var USERCOOKIENAME = "user"
 
 type Context struct {
-	server         *Server
+	Server         *Server
 	Request        *http.Request
 	writer         http.ResponseWriter
 	option         BlockOption
@@ -55,7 +55,7 @@ func (c *Context) RespondWithRender(data interface{}, render string) {
 }
 
 func (c *Context) prepareRender() {
-	re := c.server.Renders[c.format]
+	re := c.Server.Renders[c.format]
 	if re != nil {
 		c.renderInstance = re.render(c)
 	}

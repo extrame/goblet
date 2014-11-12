@@ -49,7 +49,7 @@ func (c *Context) AddSignedCookie(cookie *http.Cookie) (*http.Cookie, error) {
 
 	// set the signed cookie specifics
 	signedCookie.Name = toSignedCookieName(cookie.Name)
-	signedCookie.Value = c.server.Hash(cookie.Value)
+	signedCookie.Value = c.Server.Hash(cookie.Value)
 
 	// add the cookies
 	http.SetCookie(c.writer, cookie)
@@ -98,7 +98,7 @@ func (c *Context) cookieIsValid(name string) (bool, error) {
 	}
 
 	// check the cookies
-	if c.server.Hash(cookie.Value) != signedCookie.Value {
+	if c.Server.Hash(cookie.Value) != signedCookie.Value {
 		return false, nil
 	}
 
