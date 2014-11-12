@@ -8,6 +8,9 @@ import (
 type Route byte
 type Render byte
 type Layout byte
+type SingleController byte
+type RestController byte
+type GroupController byte
 
 const (
 	REST_READ       = "read"
@@ -35,6 +38,7 @@ type BasicBlockOption struct {
 	render              []string
 	layout              string
 	htmlRenderFileOrDir string
+	typ                 string
 	block               interface{}
 }
 
@@ -149,30 +153,43 @@ func (r *RestBlockOption) MatchSuffix(suffix string) bool {
 	return len(suffix) == 0 || suffix[0:1] == "/"
 }
 
-type CommonBlokOption struct {
+type GroupBlockOption struct {
 	BasicBlockOption
+	ignoreCase bool
 }
 
-func (c *CommonBlokOption) MatchSuffix(suffix string) bool {
+func (c *GroupBlockOption) MatchSuffix(suffix string) bool {
 	return true
 }
 
-func (c *CommonBlokOption) Parse(*Context) error {
+func (g *GroupBlockOption) Parse(ctx *Context) error {
+	method := ctx.suffix[1:]
+
+	val := reflect.ValueOf(g.block)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	typ := val.Type()
+
+	if g.ignoreCase {
+		for i := 0; i < val.NumMethod(); i++ {
+			m := typ.Method(i)
+			if strings.ToLower(m.Name) == strings.ToLower(method) {
+				arg := reflect.ValueOf(ctx)
+				val.Method(i).Call([]reflect.Value{arg})
+			}
+		}
+	} else {
+		val.MethodByName(method)
+	}
+
 	return nil
 }
 
 func PrepareOption(block interface{}) BlockOption {
-	opt := newBlock(block)
-	var basic *BasicBlockOption
-	switch typ := opt.(type) {
-	case *HtmlBlockOption:
-		basic = &typ.BasicBlockOption
-	case *RestBlockOption:
-		basic = &typ.BasicBlockOption
-	case *CommonBlokOption:
-		basic = &typ.BasicBlockOption
-	}
 
+	var basic BasicBlockOption
 	basic.block = block
 	val := reflect.ValueOf(block)
 	if val.Kind() == reflect.Ptr {
@@ -180,12 +197,41 @@ func PrepareOption(block interface{}) BlockOption {
 	}
 
 	valtype := val.Type()
+	ignoreCase := true
 
 	if val.Kind() == reflect.Struct {
 		for i := 0; i < valtype.NumField(); i++ {
 			t := valtype.Field(i)
-			// v := val.Field(i)
+
+			if t.Type.Name() == "Layout" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+				basic.layout = string(t.Tag)
+				continue
+			}
+			if t.Type.Name() == "SingleController" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+				basic.typ = "single"
+				continue
+			}
+
+			if t.Type.Name() == "RestController" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+				basic.typ = "rest"
+				continue
+			}
+
 			tags := strings.Split(string(t.Tag), ",")
+
+			if t.Type.Name() == "GroupController" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+				basic.typ = "group"
+				for _, v := range tags {
+					vs := strings.Split(v, "=")
+					if vs[0] == "ignoreCase" && len(vs) >= 2 {
+						if vs[1] == "false" {
+							ignoreCase = false
+						}
+					}
+				}
+				continue
+			}
+
 			if t.Type.Name() == "Route" && t.Type.PkgPath() == "github.com/extrame/goblet" {
 				basic.routing = tags
 				continue
@@ -199,10 +245,6 @@ func PrepareOption(block interface{}) BlockOption {
 						basic.htmlRenderFileOrDir = vs[1]
 					}
 				}
-				continue
-			}
-			if t.Type.Name() == "Layout" && t.Type.PkgPath() == "github.com/extrame/goblet" {
-				basic.layout = string(t.Tag)
 				continue
 			}
 		}
@@ -224,22 +266,31 @@ func PrepareOption(block interface{}) BlockOption {
 		basic.layout = "default"
 	}
 
-	return opt
+	return newBlock(basic, block, ignoreCase)
 }
 
-func newBlock(block interface{}) BlockOption {
+func newBlock(basic BasicBlockOption, block interface{}, ignoreCase bool) BlockOption {
+	switch basic.typ {
+	case "single":
+		return &HtmlBlockOption{basic}
+	case "rest":
+		return &RestBlockOption{basic}
+	case "group":
+		return &GroupBlockOption{basic, ignoreCase}
+	}
+
 	if _, ok := block.(HtmlGetBlock); ok {
-		return &HtmlBlockOption{}
+		return &HtmlBlockOption{basic}
 	} else if _, ok := block.(HtmlPostBlock); ok {
-		return &HtmlBlockOption{}
+		return &HtmlBlockOption{basic}
 	}
 
 	if _, ok := block.(RestNewBlock); ok {
-		return &RestBlockOption{}
+		return &RestBlockOption{basic}
 	} else if _, ok := block.(RestReadManyBlock); ok {
-		return &RestBlockOption{}
+		return &RestBlockOption{basic}
 	} else if _, ok := block.(RestReadBlock); ok {
-		return &RestBlockOption{}
+		return &RestBlockOption{basic}
 	}
-	return &CommonBlokOption{}
+	return &GroupBlockOption{basic, ignoreCase}
 }

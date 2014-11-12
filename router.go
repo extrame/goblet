@@ -14,7 +14,7 @@ type _Router struct {
 var NOSUCHROUTER = fmt.Errorf("no such router")
 
 func (r *_Router) init() {
-	r.anchor = &Anchor{0, "/", "", []*Anchor{}, &CommonBlokOption{}}
+	r.anchor = &Anchor{0, "/", "", []*Anchor{}, &GroupBlockOption{BasicBlockOption{}, true}}
 }
 
 func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (err error) {
