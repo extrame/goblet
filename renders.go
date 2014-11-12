@@ -58,6 +58,14 @@ func (h *HtmlRender) render(ctx *Context) RenderInstance {
 			if err == nil {
 				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
 			}
+		case *GroupBlockOption:
+			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			}
+			h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
+			if err == nil {
+				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
+			}
 		}
 	}
 

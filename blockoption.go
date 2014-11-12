@@ -178,10 +178,12 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 			if strings.ToLower(m.Name) == strings.ToLower(method) {
 				arg := reflect.ValueOf(ctx)
 				val.Method(i).Call([]reflect.Value{arg})
+				ctx.method = strings.ToLower(method)
 			}
 		}
 	} else {
 		val.MethodByName(method)
+		ctx.method = method
 	}
 
 	return nil
