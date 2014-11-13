@@ -20,6 +20,7 @@ const (
 	REST_CREATE     = "create"
 	REST_UPDATE     = "update"
 	REST_UPDATEMANY = "updatemany"
+	REST_DELETEMANY = "deletemany"
 )
 
 type BlockOption interface {
@@ -104,6 +105,8 @@ func (r *RestBlockOption) Parse(c *Context) error {
 			r.renderAsCreate(c)
 		} else if method == "PUT" {
 			r.renderAsUpdateMany(c)
+		} else if method == "DELETE" {
+			r.renderAsDeleteMany(c)
 		}
 	}
 
@@ -135,6 +138,13 @@ func (r *RestBlockOption) renderAsUpdateMany(cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestUpdateManyBlock); ok {
 		cx.method = REST_UPDATEMANY
 		um.UpdateMany(cx)
+	}
+}
+
+func (r *RestBlockOption) renderAsDeleteMany(cx *Context) {
+	if um, ok := r.BasicBlockOption.block.(RestDeleteManyBlock); ok {
+		cx.method = REST_DELETEMANY
+		um.DeleteMany(cx)
 	}
 }
 

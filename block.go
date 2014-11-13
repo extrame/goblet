@@ -30,3 +30,7 @@ type RestReadBlock interface {
 type RestUpdateManyBlock interface {
 	UpdateMany(*Context)
 }
+
+type RestDeleteManyBlock interface {
+	DeleteMany(*Context)
+}
