@@ -19,6 +19,7 @@ type Context struct {
 	method         string
 	renderInstance RenderInstance
 	response       interface{}
+	responseMap    map[string]interface{}
 	layout         string
 	status_code    int
 }
@@ -31,6 +32,23 @@ func (c *Context) render() (err error) {
 	return c.renderInstance.render(c.writer, c.response, c.status_code)
 }
 
+//Respond with multi data, data will tread as a key-value map
+//for example:
+//AddRespond("key1","value1",key2","value2")
+//You can use AddRespond multi time in controller
+func (c *Context) AddRespond(datas ...interface{}) {
+	if len(datas) > 1 {
+		if c.responseMap == nil {
+			c.responseMap = make(map[string]interface{})
+		}
+		for i := 0; i < len(datas)/2; i++ {
+			k := fmt.Sprintf("%s", datas[i])
+			v := datas[i+1]
+			c.responseMap[k] = v
+		}
+	}
+}
+
 func (c *Context) Respond(data interface{}) {
 	switch data.(type) {
 	case error:
@@ -41,7 +59,7 @@ func (c *Context) Respond(data interface{}) {
 }
 
 func (c *Context) RespondStatus(status int) {
-	c.RespondWithStatus(nil, status)
+	c.status_code = status
 }
 
 func (c *Context) RespondWithStatus(data interface{}, status int) {
@@ -58,6 +76,12 @@ func (c *Context) prepareRender() {
 	re := c.Server.Renders[c.format]
 	if re != nil {
 		c.renderInstance = re.render(c)
+	}
+}
+
+func (c *Context) checkResponse() {
+	if c.responseMap != nil {
+		c.response = c.responseMap
 	}
 }
 

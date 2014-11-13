@@ -36,8 +36,9 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 	anch, suffix_url := rou.anchor.match(main, len(main))
 
 	if anch != nil {
-		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "default", nil, nil, "", 200}
+		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "default", nil, nil, nil, "", 200}
 		if err = anch.opt.Parse(context); err == nil {
+			context.checkResponse()
 			context.prepareRender()
 			err = context.render()
 		}
