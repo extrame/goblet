@@ -84,7 +84,7 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 					branch = &Anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, opt}
 					a.branches = []*Anchor{branch}
 				} else {
-					if path[a.loc-len(a.prefix):a.loc+1] == full_stored_path {
+					if path[a.loc-len(a.prefix):] == full_stored_path {
 						a.opt = opt
 						return true
 					}

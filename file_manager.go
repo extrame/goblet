@@ -29,12 +29,14 @@ type filerSaver struct {
 	header     *multipart.FileHeader
 }
 
-func (f *filerSaver) From(key string) {
+func (f *filerSaver) From(key string) *filerSaver {
 	f.key = key
+	return f
 }
 
-func (f *filerSaver) NameBy(fn func(string) string) {
+func (f *filerSaver) NameBy(fn func(string) string) *filerSaver {
 	f.nameSetter = fn
+	return f
 }
 
 func (f *filerSaver) Exec() (status int, err error) {
