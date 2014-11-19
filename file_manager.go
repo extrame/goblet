@@ -17,7 +17,7 @@ const (
 )
 
 func (cx *Context) SaveFileAt(path ...string) *filerSaver {
-	path = append([]string{*cx.Server.WwwRoot, *cx.Server.PublicDir}, path...)
+	path = append([]string{*cx.Server.UploadsDir}, path...)
 	return &filerSaver{filepath.Join(path...), setName, cx.Request, "", nil}
 }
 
@@ -39,7 +39,8 @@ func (f *filerSaver) NameBy(fn func(string) string) *filerSaver {
 	return f
 }
 
-func (f *filerSaver) Exec() (status int, err error) {
+//Execute the file save process and return the result
+func (f *filerSaver) Exec() (path string, status int, err error) {
 	if _, err := os.Stat(f.path); err == nil {
 		if err := os.MkdirAll(f.path, 0755); err == nil {
 			var file multipart.File
@@ -50,7 +51,8 @@ func (f *filerSaver) Exec() (status int, err error) {
 			if err == nil {
 				fname := f.nameSetter(f.header.Filename)
 				var fwriter *os.File
-				fwriter, err = os.Create(fname)
+				path = filepath.Join(f.path, fname)
+				fwriter, err = os.Create(path)
 				if err == nil {
 					defer fwriter.Close()
 					_, err = io.Copy(fwriter, file)

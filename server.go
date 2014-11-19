@@ -14,6 +14,7 @@ import (
 type Server struct {
 	WwwRoot       *string
 	PublicDir     *string
+	UploadsDir    *string
 	ListenPort    *int
 	IgnoreUrlCase *bool
 	router        _Router
@@ -100,6 +101,7 @@ func (s *Server) parseConfig(name string) (err error) {
 	s.WwwRoot = toml.String("basic.www_root", "./www")
 	s.ListenPort = toml.Int("basic.port", 8080)
 	s.PublicDir = toml.String("basic.public_dir", "public")
+	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")
 	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
 	s.HashSecret = toml.String("secret", "cX8Os0wfB6uCGZZSZHIi6rKsy7b0scE9")
 	s.env = toml.String("basic.env", "development")
