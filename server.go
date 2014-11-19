@@ -77,7 +77,12 @@ func (s *Server) AddModel(models ...interface{}) {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := s.router.route(s, w, r); err != nil {
+	defer func() {
+		if err := recover(); err != nil {
+			WrapError(w, err, true)
+		}
+	}()
+	if err := s.router.route(s, w, r); err == NOSUCHROUTER {
 		var path string
 		if strings.HasSuffix(r.URL.Path, "/") {
 			path = r.URL.Path + "index.html"
@@ -85,6 +90,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			path = r.URL.Path
 		}
 		http.ServeFile(w, r, filepath.Join(*s.WwwRoot, *s.PublicDir, path))
+	} else if err != nil {
+		WrapError(w, err, false)
 	}
 }
 

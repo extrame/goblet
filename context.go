@@ -29,7 +29,13 @@ func (c *Context) handleData() {
 }
 
 func (c *Context) render() (err error) {
-	return c.renderInstance.render(c.writer, c.response, c.status_code)
+	if c.renderInstance != nil {
+		return c.renderInstance.render(c.writer, c.response, c.status_code)
+	} else {
+		c.writer.WriteHeader(500)
+		c.writer.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))
+		return nil
+	}
 }
 
 //Respond with multi data, data will tread as a key-value map
@@ -72,11 +78,16 @@ func (c *Context) RespondWithRender(data interface{}, render string) {
 	c.method = render
 }
 
-func (c *Context) prepareRender() {
-	re := c.Server.Renders[c.format]
-	if re != nil {
-		c.renderInstance = re.render(c)
+func (c *Context) prepareRender() (err error) {
+	//test required format in allow list or not
+	var format string
+	if format, err = c.option.GetRender(c); err == nil {
+		re := c.Server.Renders[format]
+		if re != nil {
+			c.renderInstance, err = re.render(c)
+		}
 	}
+	return
 }
 
 func (c *Context) checkResponse() {

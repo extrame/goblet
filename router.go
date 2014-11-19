@@ -28,7 +28,6 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 		main = r.URL.Path[:suff]
 	} else {
 		main = r.URL.Path
-		suffix = "html"
 	}
 
 	log.Println("routing " + r.URL.Path)
@@ -39,8 +38,9 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "default", nil, nil, nil, "", 200}
 		if err = anch.opt.Parse(context); err == nil {
 			context.checkResponse()
-			context.prepareRender()
-			err = context.render()
+			if err = context.prepareRender(); err == nil {
+				err = context.render()
+			}
 		}
 		return
 	}
@@ -68,14 +68,14 @@ type Anchor struct {
 
 func (a *Anchor) add(path string, opt BlockOption) bool {
 	if len(path) > a.loc {
-		if path[a.loc-len(a.prefix):a.loc+1] == a.prefix+a.char {
+		var full_stored_path = a.prefix + a.char
+		if path[a.loc-len(a.prefix):a.loc+1] == full_stored_path {
 			for _, v := range a.branches {
 				if v.add(path, opt) {
 					return true
 				}
 			}
 		}
-		var full_stored_path = a.prefix + a.char
 		for i := 0; i < len(full_stored_path); i++ {
 			if path[a.loc+1-len(full_stored_path):a.loc+1-i] == full_stored_path[:len(full_stored_path)-i] {
 
@@ -84,7 +84,7 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 					branch = &Anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, opt}
 					a.branches = []*Anchor{branch}
 				} else {
-					if path == full_stored_path {
+					if path[a.loc-len(a.prefix):a.loc+1] == full_stored_path {
 						a.opt = opt
 						return true
 					}

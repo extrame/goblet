@@ -19,7 +19,7 @@ type RenderInstance interface {
 }
 
 type _Render interface {
-	render(*Context) RenderInstance
+	render(*Context) (RenderInstance, error)
 	Init(*Server)
 }
 
@@ -31,9 +31,10 @@ type HtmlRender struct {
 	saveTemp bool
 }
 
-func (h *HtmlRender) render(ctx *Context) RenderInstance {
-	var err = errors.New("")
+func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 	var layout, yield *template.Template
+
+	err = errors.New("")
 
 	if ctx.status_code != 200 {
 		layout, _ = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
@@ -54,28 +55,25 @@ func (h *HtmlRender) render(ctx *Context) RenderInstance {
 			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 			}
-			h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
 			if err == nil {
+				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
 				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
 			}
 		case *GroupBlockOption:
 			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 			}
-			h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
 			if err == nil {
+				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
 				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
 			}
 		}
 	}
-
 	if err == nil {
-		return &HttpRenderInstance{layout, yield}
-	} else {
-		fmt.Println(err)
+		return &HttpRenderInstance{layout, yield}, nil
 	}
 
-	return nil
+	return
 }
 
 func (h *HtmlRender) Init(s *Server) {
@@ -175,8 +173,8 @@ func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}, st
 type JsonRender struct {
 }
 
-func (j *JsonRender) render(c *Context) RenderInstance {
-	return new(JsonRenderInstance)
+func (j *JsonRender) render(c *Context) (RenderInstance, error) {
+	return new(JsonRenderInstance), nil
 }
 
 func (j *JsonRender) Init(s *Server) {
@@ -187,18 +185,18 @@ type JsonRenderInstance int8
 
 func (r *JsonRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) (err error) {
 	var v []byte
+	wr.WriteHeader(status)
 	v, err = json.Marshal(data)
 	if err == nil {
 		wr.Write(v)
 	}
-	wr.WriteHeader(status)
 	return
 }
 
 type RawRender int8
 
-func (r *RawRender) render(c *Context) RenderInstance {
-	return new(RawRenderInstance)
+func (r *RawRender) render(c *Context) (RenderInstance, error) {
+	return new(RawRenderInstance), nil
 }
 
 func (r *RawRender) Init(s *Server) {

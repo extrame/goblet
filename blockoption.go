@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -23,11 +24,14 @@ const (
 	REST_DELETEMANY = "deletemany"
 )
 
+var RenderNotAllowd = fmt.Errorf("render is not allowed")
+
 type BlockOption interface {
 	UpdateRender(string, *Context)
 	GetRouting() []string
 	MatchSuffix(string) bool
-
+	//Get the render by user require, if required render is not allow, pass RenderNotAllowed
+	GetRender(*Context) (render string, err error)
 	//Call the function in object and Parse data, this function used before
 	//the render prepared. So you can change function and render in here
 	Parse(*Context) error
@@ -75,6 +79,19 @@ func (h *BasicBlockOption) UpdateRender(o string, ctx *Context) {
 
 func (b *BasicBlockOption) GetRouting() []string {
 	return b.routing
+}
+
+func (b *BasicBlockOption) GetRender(cx *Context) (render string, err error) {
+	if cx.format == "" {
+		return b.render[0], nil
+	} else {
+		for _, v := range b.render {
+			if v == cx.format {
+				return v, nil
+			}
+		}
+	}
+	return "", RenderNotAllowd
 }
 
 type RestBlockOption struct {

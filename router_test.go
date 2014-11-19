@@ -7,10 +7,10 @@ import (
 
 func TestAnchor(t *testing.T) {
 	anchor := &Anchor{0, "/", "", []*Anchor{}, &HtmlBlockOption{}}
-	anchor.add("/", &CommonBlokOption{})
-	anchor.add("/sec", &CommonBlokOption{})
+	anchor.add("/", &GroupBlockOption{})
+	anchor.add("/sec", &GroupBlockOption{})
 	anchor.add("/dec", &HtmlBlockOption{})
-	anchor.add("/sic", &CommonBlokOption{})
+	anchor.add("/sec", &GroupBlockOption{})
 	anchor.match("/sed/", 5)
 	fmt.Println(anchor.match("/deceeee", 4))
 }
