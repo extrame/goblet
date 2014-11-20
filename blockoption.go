@@ -289,7 +289,7 @@ func PrepareOption(block interface{}) BlockOption {
 	}
 
 	if len(basic.routing) == 0 {
-		basic.routing = []string{"/" + valtype.Name()}
+		basic.routing = []string{"/" + strings.ToLower(valtype.Name())}
 	}
 
 	if len(basic.render) == 0 {
@@ -297,7 +297,7 @@ func PrepareOption(block interface{}) BlockOption {
 	}
 
 	if basic.htmlRenderFileOrDir == "" {
-		basic.htmlRenderFileOrDir = valtype.Name()
+		basic.htmlRenderFileOrDir = strings.ToLower(valtype.Name())
 	}
 
 	if basic.layout == "" {
