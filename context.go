@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 var USERCOOKIENAME = "user"
@@ -125,35 +124,4 @@ func (c *Context) RedirectTo(url string) {
 	c.writer.Header().Set("Location", url)
 	c.writer.WriteHeader(302)
 	c.format = "raw"
-}
-
-func (c *Context) GetLoginId() (string, bool) {
-	return c.GetLoginIdAs(USERCOOKIENAME)
-}
-
-func (c *Context) GetLoginIdAs(name string) (string, bool) {
-	cookie, err := c.SignedCookie(name + "Id")
-	if cookie != nil && err == nil {
-		return cookie.Value, true
-	}
-	return "", false
-}
-
-func (c *Context) AddLoginId(id interface{}) {
-	switch rid := id.(type) {
-	case string:
-		c.addLoginAs("user", rid)
-	case int64:
-		c.addLoginAs("user", strconv.FormatInt(rid, 10))
-	}
-}
-
-func (c *Context) addLoginAs(name string, id string) {
-	expire := time.Now().AddDate(0, 0, 1)
-	cookie := new(http.Cookie)
-	cookie.Name = name + "Id"
-	cookie.Value = id
-	cookie.Expires = expire
-	cookie.RawExpires = expire.Format(time.UnixDate)
-	fmt.Println(c.AddSignedCookie(cookie))
 }
