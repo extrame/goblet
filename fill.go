@@ -210,7 +210,6 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 			}
 		}
 	}
-	fmt.Println(rvalue.Interface(), success)
 	if !success {
 		return errors.New("no more element")
 	}

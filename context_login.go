@@ -35,7 +35,7 @@ func (c *Context) addLoginAs(name string, id string) {
 	cookie.Value = id
 	cookie.Expires = expire
 	cookie.RawExpires = expire.Format(time.UnixDate)
-	fmt.Println(c.AddSignedCookie(cookie))
+	c.AddSignedCookie(cookie)
 }
 
 func (c *Context) DelLogin() {
