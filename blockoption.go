@@ -32,6 +32,8 @@ type BlockOption interface {
 	MatchSuffix(string) bool
 	//Get the render by user require, if required render is not allow, pass RenderNotAllowed
 	GetRender(*Context) (render string, err error)
+	//Reset the allowed renders
+	SetRender([]string)
 	//Call the function in object and Parse data, this function used before
 	//the render prepared. So you can change function and render in here
 	Parse(*Context) error
@@ -77,17 +79,31 @@ func (h *BasicBlockOption) UpdateRender(o string, ctx *Context) {
 	h.htmlRenderFileOrDir = o
 }
 
+func (h *BasicBlockOption) SetRender(renders []string) {
+	h.render = renders
+}
+
 func (b *BasicBlockOption) GetRouting() []string {
 	return b.routing
 }
 
 func (b *BasicBlockOption) GetRender(cx *Context) (render string, err error) {
+	if cx.forceFormat != "" {
+		return cx.forceFormat, nil
+	}
 	if cx.format == "" {
 		return b.render[0], nil
 	} else {
 		for _, v := range b.render {
 			if v == cx.format {
 				return v, nil
+			}
+		}
+		if cx.tempRenders != nil {
+			for _, v := range cx.tempRenders {
+				if v == cx.format {
+					return v, nil
+				}
 			}
 		}
 	}
@@ -113,7 +129,11 @@ func (r *RestBlockOption) Parse(c *Context) error {
 		if id == "new" {
 			r.renderAsNew(c)
 		} else if method == "GET" {
-			r.renderAsRead(id, c)
+			if nid = strings.TrimSuffix(id, ";edit"); nid != id {
+				r.renderAsEdit(c)
+			} else {
+				r.renderAsRead(id, c)
+			}
 		}
 	} else {
 		if method == "GET" {
@@ -190,24 +210,43 @@ func (c *GroupBlockOption) MatchSuffix(suffix string) bool {
 }
 
 func (g *GroupBlockOption) Parse(ctx *Context) error {
-	method := ctx.suffix[1:]
+	name := ctx.suffix[1:]
 
 	val := reflect.ValueOf(g.block)
 
 	typ := val.Type()
 
+	var method reflect.Value
+
 	if g.ignoreCase {
 		for i := 0; i < val.NumMethod(); i++ {
 			m := typ.Method(i)
-			if strings.ToLower(m.Name) == strings.ToLower(method) {
-				arg := reflect.ValueOf(ctx)
-				ctx.method = strings.ToLower(method)
-				val.Method(i).Call([]reflect.Value{arg})
+			if strings.ToLower(m.Name) == strings.ToLower(name) {
+				name = strings.ToLower(name)
+				method = val.Method(i)
 			}
 		}
 	} else {
-		ctx.method = method
-		val.MethodByName(method)
+		method = val.MethodByName(name)
+	}
+	if !method.IsValid() {
+		if name = ctx.Request.URL.Query().Get("method"); name == "" {
+			name = ctx.Request.Method
+		}
+		name = strings.ToLower(name)
+		switch name {
+		case "post":
+			method = val.MethodByName("Post")
+		case "get":
+			method = val.MethodByName("Get")
+		}
+	}
+	if !method.IsValid() {
+		return NOSUCHROUTER
+	} else {
+		ctx.method = name
+		arg := reflect.ValueOf(ctx)
+		method.Call([]reflect.Value{arg})
 	}
 
 	return nil
@@ -293,7 +332,7 @@ func PrepareOption(block interface{}) BlockOption {
 	}
 
 	if len(basic.render) == 0 {
-		basic.routing = []string{"json"}
+		basic.render = []string{"html"}
 	}
 
 	if basic.htmlRenderFileOrDir == "" {

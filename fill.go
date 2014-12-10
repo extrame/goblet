@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
@@ -157,56 +158,63 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 		if increaseOffset {
 			used_offset = offset
 		}
-		switch rtype.Field(i).Type.Kind() {
-		case reflect.Ptr: //TODO if the ptr point to a basic data, it will crash
-			val := rvalue.Field(i)
-			typ := rtype.Field(i).Type.Elem()
-			if val.IsNil() {
-				val.Set(reflect.New(typ))
-			}
-			if err := fill_struct(typ, form, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
-				fmt.Println(err)
-				return err
-			} else {
-				break
-			}
-		case reflect.Struct:
-			if err := fill_struct(rtype.Field(i).Type, form, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
-				fmt.Println(err)
-				return err
-			} else {
-				break
-			}
-		case reflect.Slice:
-			subRType := rtype.Field(i).Type.Elem()
-			switch subRType.Kind() {
+		if rvalue.Field(i).CanSet() {
+			switch rtype.Field(i).Type.Kind() {
+			case reflect.Ptr: //TODO if the ptr point to a basic data, it will crash
+				val := rvalue.Field(i)
+				typ := rtype.Field(i).Type.Elem()
+				if val.IsNil() {
+					val.Set(reflect.New(typ))
+				}
+				if err := fill_struct(typ, form, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
+					fmt.Println(err)
+					return err
+				} else {
+					break
+				}
 			case reflect.Struct:
-				rvalueTemp := reflect.MakeSlice(rtype.Field(i).Type, 0, 0)
-				subRValue := reflect.New(subRType)
-				offset := 0
-				for {
-					err = unmarshalStructInForm(id, form, subRValue, offset, autofill, true)
-					if err != nil {
-						fmt.Println(err)
-						break
-					}
+				if err := fill_struct(rtype.Field(i).Type, form, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
+					fmt.Println(err)
+					return err
+				} else {
+					break
+				}
+			case reflect.Slice:
+				fType := rtype.Field(i).Type
+				subRType := rtype.Field(i).Type.Elem()
+				if fType.PkgPath() == "net" && fType.Name() == "IP" {
+					rvalue.Field(i).Set(reflect.ValueOf(net.ParseIP(form_values[used_offset])))
+					continue
+				}
+				switch subRType.Kind() {
+				case reflect.Struct:
+					rvalueTemp := reflect.MakeSlice(rtype.Field(i).Type, 0, 0)
+					subRValue := reflect.New(subRType)
+					offset := 0
+					for {
+						err = unmarshalStructInForm(id, form, subRValue, offset, autofill, true)
+						if err != nil {
+							fmt.Println(err)
+							break
+						}
 
-					offset++
-					rvalueTemp = reflect.Append(rvalueTemp, subRValue.Elem())
+						offset++
+						rvalueTemp = reflect.Append(rvalueTemp, subRValue.Elem())
+					}
+					rvalue.Field(i).Set(rvalueTemp)
+				default:
+					len_fv := len(form_values)
+					rvnew := reflect.MakeSlice(rtype.Field(i).Type, len_fv, len_fv)
+					for j := 0; j < len_fv; j++ {
+						unmarshalField(context, form, rvnew.Index(j), form_values[i], autofill, tag)
+					}
+					rvalue.Field(i).Set(rvnew)
 				}
-				rvalue.Field(i).Set(rvalueTemp)
 			default:
-				len_fv := len(form_values)
-				rvnew := reflect.MakeSlice(rtype.Field(i).Type, len_fv, len_fv)
-				for j := 0; j < len_fv; j++ {
-					unmarshalField(context, form, rvnew.Index(j), form_values[i], autofill, tag)
+				if len(form_values) > 0 && used_offset < len(form_values) {
+					unmarshalField(context, form, rvalue.Field(i), form_values[used_offset], autofill, tag)
+					success = true
 				}
-				rvalue.Field(i).Set(rvnew)
-			}
-		default:
-			if len(form_values) > 0 && used_offset < len(form_values) {
-				unmarshalField(context, form, rvalue.Field(i), form_values[used_offset], autofill, tag)
-				success = true
 			}
 		}
 	}

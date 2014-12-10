@@ -205,6 +205,10 @@ func (r *RawRender) Init(s *Server) {
 type RawRenderInstance int8
 
 func (r *RawRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) error {
+	switch tdata := data.(type) {
+	case []byte:
+		wr.Write(tdata)
+	}
 	return nil
 }
 

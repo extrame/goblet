@@ -1,7 +1,6 @@
 package goblet
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -38,6 +37,7 @@ func (c *Context) addLoginAs(name string, id string) {
 	c.AddSignedCookie(cookie)
 }
 
+//Delete the login cookie saved
 func (c *Context) DelLogin() {
 	c.delLoginAs("user")
 }

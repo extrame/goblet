@@ -15,6 +15,8 @@ type Context struct {
 	option         BlockOption
 	suffix         string
 	format         string
+	forceFormat    string
+	tempRenders    []string
 	method         string
 	renderInstance RenderInstance
 	response       interface{}
@@ -61,6 +63,16 @@ func (c *Context) Respond(data interface{}) {
 	default:
 		c.RespondWithStatus(data, http.StatusOK)
 	}
+}
+
+//Reset the context renders
+func (c *Context) UseRender(render string) {
+	c.forceFormat = render
+}
+
+//Allow some temporary render
+func (c *Context) AllowRender(renders ...string) {
+	c.tempRenders = renders
 }
 
 func (c *Context) RespondStatus(status int) {
