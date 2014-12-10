@@ -131,10 +131,14 @@ func (r *RestBlockOption) Parse(c *Context) error {
 			r.renderAsNew(c)
 		} else if method == "GET" {
 			if nid := strings.TrimSuffix(id, ";edit"); nid != id {
-				r.renderAsEdit(id, c)
+				r.renderAsEdit(nid, c)
 			} else {
 				r.renderAsRead(id, c)
 			}
+		} else if method == "DELETE" {
+			r.renderAsDelete(id, c)
+		} else {
+			r.renderAsUpdate(id, c)
 		}
 	} else {
 		if method == "GET" {
@@ -197,6 +201,20 @@ func (r *RestBlockOption) renderAsEdit(id string, cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestEditBlock); ok {
 		cx.method = REST_EDIT
 		um.Edit(id, cx)
+	}
+}
+
+func (r *RestBlockOption) renderAsUpdate(id string, cx *Context) {
+	if um, ok := r.BasicBlockOption.block.(RestUpdateBlock); ok {
+		cx.method = REST_UPDATE
+		um.Update(id, cx)
+	}
+}
+
+func (r *RestBlockOption) renderAsDelete(id string, cx *Context) {
+	if um, ok := r.BasicBlockOption.block.(RestDeleteBlock); ok {
+		cx.method = REST_DELETE
+		um.Delete(id, cx)
 	}
 }
 
