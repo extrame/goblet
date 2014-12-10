@@ -36,3 +36,7 @@ type RestUpdateManyBlock interface {
 type RestDeleteManyBlock interface {
 	DeleteMany(*Context)
 }
+
+type RestEditBlock interface {
+	Edit(string, *Context)
+}

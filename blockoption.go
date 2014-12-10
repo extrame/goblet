@@ -17,6 +17,7 @@ const (
 	REST_READ       = "read"
 	REST_READMANY   = "readmany"
 	REST_DELETE     = "delete"
+	REST_EDIT       = "edit"
 	REST_NEW        = "new"
 	REST_CREATE     = "create"
 	REST_UPDATE     = "update"
@@ -129,8 +130,8 @@ func (r *RestBlockOption) Parse(c *Context) error {
 		if id == "new" {
 			r.renderAsNew(c)
 		} else if method == "GET" {
-			if nid = strings.TrimSuffix(id, ";edit"); nid != id {
-				r.renderAsEdit(c)
+			if nid := strings.TrimSuffix(id, ";edit"); nid != id {
+				r.renderAsEdit(id, c)
 			} else {
 				r.renderAsRead(id, c)
 			}
@@ -189,6 +190,13 @@ func (r *RestBlockOption) renderAsCreate(cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestCreateBlock); ok {
 		cx.method = REST_CREATE
 		um.Create(cx)
+	}
+}
+
+func (r *RestBlockOption) renderAsEdit(id string, cx *Context) {
+	if um, ok := r.BasicBlockOption.block.(RestEditBlock); ok {
+		cx.method = REST_EDIT
+		um.Edit(id, cx)
 	}
 }
 
