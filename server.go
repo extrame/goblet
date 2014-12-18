@@ -151,5 +151,6 @@ func (s *Server) enableDbCache() {
 }
 
 func (s *Server) Run() {
+	log.Println("Listen at ", fmt.Sprintf(":%d", *s.ListenPort))
 	http.ListenAndServe(fmt.Sprintf(":%d", *s.ListenPort), s)
 }
