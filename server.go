@@ -118,7 +118,7 @@ func (s *Server) parseConfig(name string) (err error) {
 	s.dbEngine = toml.String("basic.db_engine", "mysql")
 	s.enDbCache = toml.Bool("cache.enable", false)
 	s.cacheAmout = toml.Int("cache.amount", 1000)
-	s.logFile = toml.Int("log.file", "")
+	s.logFile = toml.String("log.file", "")
 	flag.Parse()
 	s.initLog()
 	*path = filepath.FromSlash(*path)
