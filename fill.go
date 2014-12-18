@@ -277,8 +277,14 @@ func unmarshalField(context string, form *map[string][]string, v reflect.Value, 
 	case reflect.Int16:
 		// convert to Int
 		// convert to Int64
-		if i, err := strconv.ParseInt(form_value, 10, 64); err == nil {
+		if i, err := strconv.ParseInt(form_value, 10, 16); err == nil {
 			v.SetInt(i)
+		}
+	case reflect.Uint16:
+		// convert to Int
+		// convert to Int64
+		if i, err := strconv.ParseUint(form_value, 10, 16); err == nil {
+			v.SetUint(i)
 		}
 	case reflect.String:
 		// copy string

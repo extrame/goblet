@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	toml "github.com/extrame/go-toml-config"
+	"github.com/extrame/xorm"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -27,6 +28,11 @@ type Server struct {
 	dbHost        *string
 	dbName        *string
 	dbPort        *int
+	dbConTO       *int
+	dbKaInterval  *int
+	enDbCache     *bool
+	cacheAmout    *int
+	logFile       *string
 }
 
 type Handler interface {
@@ -53,13 +59,17 @@ func (s *Server) Organize(name string, opts ...Option) {
 		s.Renders["html"].Init(s)
 		s.Renders["json"] = new(JsonRender)
 		s.Renders["raw"] = new(RawRender)
-		if err = newDB(*s.dbEngine, *s.dbUser, *s.dbPwd, *s.dbHost, *s.dbName, *s.dbPort); err != nil {
-			log.Fatalln(err)
+		if err = s.connectDB(); err == nil {
+
 		}
 	} else {
 		log.Fatalln(err)
 	}
+	s.enableDbCache()
+}
 
+func (s *Server) connectDB() error {
+	return newDB(*s.dbEngine, *s.dbUser, *s.dbPwd, *s.dbHost, *s.dbName, *s.dbPort, *s.dbConTO, *s.dbKaInterval)
 }
 
 func (s *Server) ControlBy(block interface{}) {
@@ -106,7 +116,11 @@ func (s *Server) parseConfig(name string) (err error) {
 	s.HashSecret = toml.String("secret", "cX8Os0wfB6uCGZZSZHIi6rKsy7b0scE9")
 	s.env = toml.String("basic.env", "development")
 	s.dbEngine = toml.String("basic.db_engine", "mysql")
+	s.enDbCache = toml.Bool("cache.enable", false)
+	s.cacheAmout = toml.Int("cache.amount", 1000)
+	s.logFile = toml.Int("log.file", "")
 	flag.Parse()
+	s.initLog()
 	*path = filepath.FromSlash(*path)
 	err = toml.Parse(*path)
 	if err == nil {
@@ -115,18 +129,25 @@ func (s *Server) parseConfig(name string) (err error) {
 		s.dbPwd = toml.String(*s.dbEngine+".password", "")
 		s.dbName = toml.String(*s.dbEngine+".name", "")
 		s.dbPort = toml.Int(*s.dbEngine+".port", 3306)
+		s.dbConTO = toml.Int(*s.dbEngine+".connect_timeout", 30)
+		s.dbKaInterval = toml.Int(*s.dbEngine+".ka_interval", 0)
 		err = toml.Load()
 	}
 	return
 }
 
 func (s *Server) Hash(str string) string {
-
 	hash := sha1.New()
 	hash.Write([]byte(str))
 	hash.Write([]byte(*s.HashSecret))
 	return fmt.Sprintf("%x", hash.Sum(nil))
+}
 
+func (s *Server) enableDbCache() {
+	if *s.enDbCache {
+		cacher := xorm.NewLRUCacher(xorm.NewMemoryStore(), *s.cacheAmout)
+		DB.SetDefaultCacher(cacher)
+	}
 }
 
 func (s *Server) Run() {

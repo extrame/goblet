@@ -119,6 +119,10 @@ func (c *Context) getLayout() string {
 	}
 }
 
+func (c *Context) ResetDB() error {
+	return c.Server.connectDB()
+}
+
 func (c *Context) RenderAs(name string) {
 	c.method = name
 }

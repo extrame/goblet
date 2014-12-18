@@ -236,46 +236,50 @@ func (c *GroupBlockOption) MatchSuffix(suffix string) bool {
 }
 
 func (g *GroupBlockOption) Parse(ctx *Context) error {
-	name := ctx.suffix[1:]
+	if len(ctx.suffix) > 1 {
+		name := ctx.suffix[1:]
 
-	val := reflect.ValueOf(g.block)
+		val := reflect.ValueOf(g.block)
 
-	typ := val.Type()
+		typ := val.Type()
 
-	var method reflect.Value
+		var method reflect.Value
 
-	if g.ignoreCase {
-		for i := 0; i < val.NumMethod(); i++ {
-			m := typ.Method(i)
-			if strings.ToLower(m.Name) == strings.ToLower(name) {
-				name = strings.ToLower(name)
-				method = val.Method(i)
+		if g.ignoreCase {
+			for i := 0; i < val.NumMethod(); i++ {
+				m := typ.Method(i)
+				if strings.ToLower(m.Name) == strings.ToLower(name) {
+					name = strings.ToLower(name)
+					method = val.Method(i)
+				}
+			}
+		} else {
+			method = val.MethodByName(name)
+		}
+		if !method.IsValid() {
+			if name = ctx.Request.URL.Query().Get("method"); name == "" {
+				name = ctx.Request.Method
+			}
+			name = strings.ToLower(name)
+			switch name {
+			case "post":
+				method = val.MethodByName("Post")
+			case "get":
+				method = val.MethodByName("Get")
 			}
 		}
+		if !method.IsValid() {
+			return NOSUCHROUTER
+		} else {
+			ctx.method = name
+			arg := reflect.ValueOf(ctx)
+			method.Call([]reflect.Value{arg})
+		}
+		return nil
 	} else {
-		method = val.MethodByName(name)
-	}
-	if !method.IsValid() {
-		if name = ctx.Request.URL.Query().Get("method"); name == "" {
-			name = ctx.Request.Method
-		}
-		name = strings.ToLower(name)
-		switch name {
-		case "post":
-			method = val.MethodByName("Post")
-		case "get":
-			method = val.MethodByName("Get")
-		}
-	}
-	if !method.IsValid() {
 		return NOSUCHROUTER
-	} else {
-		ctx.method = name
-		arg := reflect.ValueOf(ctx)
-		method.Call([]reflect.Value{arg})
 	}
 
-	return nil
 }
 
 type StaticBlockOption struct {
@@ -382,18 +386,13 @@ func newBlock(basic BasicBlockOption, block interface{}, ignoreCase bool) BlockO
 		return &GroupBlockOption{basic, ignoreCase}
 	}
 
-	if _, ok := block.(HtmlGetBlock); ok {
+	switch block.(type) {
+	case HtmlGetBlock, HtmlPostBlock:
 		return &HtmlBlockOption{basic}
-	} else if _, ok := block.(HtmlPostBlock); ok {
-		return &HtmlBlockOption{basic}
+	case RestNewBlock, RestReadManyBlock, RestReadBlock, RestUpdateBlock, RestUpdateManyBlock, RestDeleteBlock, RestDeleteManyBlock, RestEditBlock, RestCreateBlock:
+		return &RestBlockOption{basic}
+	default:
+		return &GroupBlockOption{basic, ignoreCase}
 	}
 
-	if _, ok := block.(RestNewBlock); ok {
-		return &RestBlockOption{basic}
-	} else if _, ok := block.(RestReadManyBlock); ok {
-		return &RestBlockOption{basic}
-	} else if _, ok := block.(RestReadBlock); ok {
-		return &RestBlockOption{basic}
-	}
-	return &GroupBlockOption{basic, ignoreCase}
 }

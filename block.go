@@ -29,16 +29,16 @@ type RestReadBlock interface {
 	Read(string, *Context)
 }
 
-type RestUpdateManyBlock interface {
-	UpdateMany(*Context)
-}
-
 type RestDeleteManyBlock interface {
 	DeleteMany(*Context)
 }
 
 type RestDeleteBlock interface {
 	Delete(string, *Context)
+}
+
+type RestUpdateManyBlock interface {
+	UpdateMany(*Context)
 }
 
 type RestUpdateBlock interface {

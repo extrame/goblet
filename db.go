@@ -11,12 +11,12 @@ import (
 
 var DB *xorm.Engine
 
-func newDB(engine, user, pwd, host, name string, port int) (err error) {
+func newDB(engine, user, pwd, host, name string, port int, con_to int, ka_intv int) (err error) {
 	var q string
 	if engine == "mysql" {
 		q = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", user, pwd, host, port, name)
 	} else if engine == "mssql" {
-		q = fmt.Sprintf("Server=%s;Database=%s;User ID=%s;Password=%s;", host, name, user, pwd)
+		q = fmt.Sprintf("Server=%s;Database=%s;User ID=%s;Password=%s;connection timeout=%d;keepAlive=%d", host, name, user, pwd, con_to, ka_intv)
 	} else if engine == "sqlite3" {
 		if info, err := os.Stat(host); err == nil {
 			if info.IsDir() {
