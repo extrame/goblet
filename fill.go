@@ -182,7 +182,7 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 			case reflect.Slice:
 				fType := rtype.Field(i).Type
 				subRType := rtype.Field(i).Type.Elem()
-				if fType.PkgPath() == "net" && fType.Name() == "IP" {
+				if fType.PkgPath() == "net" && fType.Name() == "IP" && len(form_values) > 0 && used_offset < len(form_values) {
 					rvalue.Field(i).Set(reflect.ValueOf(net.ParseIP(form_values[used_offset])))
 					continue
 				}
@@ -288,7 +288,7 @@ func unmarshalField(context string, form *map[string][]string, v reflect.Value, 
 		}
 	case reflect.String:
 		// copy string
-		if len(tags) > 0 && tags[0] == "md5" {
+		if len(tags) > 0 && tags[len(tags)-1] == "md5" {
 			h := md5.New()
 			h.Write([]byte(form_value))
 			v.SetString(hex.EncodeToString(h.Sum(nil)))

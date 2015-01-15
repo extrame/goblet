@@ -282,16 +282,23 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 
 }
 
-type StaticBlockOption struct {
+type _staticBlockOption struct {
 	BasicBlockOption
 }
 
-func (c *StaticBlockOption) MatchSuffix(suffix string) bool {
+func (c *_staticBlockOption) MatchSuffix(suffix string) bool {
 	return true
 }
 
-func (c *StaticBlockOption) Parse(ctx *Context) error {
-	return NOSUCHROUTER
+func (c *_staticBlockOption) Parse(ctx *Context) error {
+	if len(ctx.suffix) > 1 {
+		ctx.method = ctx.suffix[1:]
+	} else {
+		ctx.method = "index"
+	}
+	ctx.forceFormat = "html"
+	ctx.layout = "default"
+	return nil
 }
 
 func PrepareOption(block interface{}) BlockOption {

@@ -33,6 +33,7 @@ type Server struct {
 	enDbCache     *bool
 	cacheAmout    *int
 	logFile       *string
+	name          string
 }
 
 type Handler interface {
@@ -50,7 +51,8 @@ type PageHandler interface {
 
 func (s *Server) Organize(name string, opts ...Option) {
 	var err error
-	if err = s.parseConfig(name); err == nil {
+	s.name = name
+	if err = s.parseConfig(s.name); err == nil {
 		var opt Option
 		opt.overlay(opts)
 		s.router.init()
@@ -94,6 +96,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	if err := s.router.route(s, w, r); err == NOSUCHROUTER {
+		log.Println(err)
 		var path string
 		if strings.HasSuffix(r.URL.Path, "/") {
 			path = r.URL.Path + "index.html"
@@ -120,11 +123,11 @@ func (s *Server) parseConfig(name string) (err error) {
 	s.cacheAmout = toml.Int("cache.amount", 1000)
 	s.logFile = toml.String("log.file", "")
 	flag.Parse()
-	s.initLog()
 	*path = filepath.FromSlash(*path)
 	err = toml.Parse(*path)
 	if err == nil {
-		s.dbHost = toml.String(*s.dbEngine+".host", "")
+		s.initLog()
+		s.dbHost = toml.String(*s.dbEngine+".host", s.name)
 		s.dbUser = toml.String(*s.dbEngine+".user", "")
 		s.dbPwd = toml.String(*s.dbEngine+".password", "")
 		s.dbName = toml.String(*s.dbEngine+".name", "")

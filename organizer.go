@@ -1,9 +1,9 @@
 package goblet
 
-import ()
+var DefaultServer *Server
 
 func Organize(name string) *Server {
-	s := new(Server)
-	s.Organize(name)
-	return s
+	DefaultServer := new(Server)
+	DefaultServer.Organize(name)
+	return DefaultServer
 }

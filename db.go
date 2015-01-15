@@ -18,13 +18,18 @@ func newDB(engine, user, pwd, host, name string, port int, con_to int, ka_intv i
 	} else if engine == "mssql" {
 		q = fmt.Sprintf("Server=%s;Database=%s;User ID=%s;Password=%s;connection timeout=%d;keepAlive=%d", host, name, user, pwd, con_to, ka_intv)
 	} else if engine == "sqlite3" {
-		if info, err := os.Stat(host); err == nil {
+		if info, err := os.Stat(host + ".db"); err == nil {
 			if info.IsDir() {
 				return fmt.Errorf("If you want to use sqlite3, please set db.host as rw file")
 			}
 		}
-		q = host
+		q = host + ".db"
 	}
 	DB, err = xorm.NewEngine(engine, q)
 	return
+}
+
+func ResetDB() error {
+	DB.Close()
+	return DefaultServer.connectDB()
 }

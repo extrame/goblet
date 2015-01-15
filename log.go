@@ -5,16 +5,23 @@ import (
 	"os"
 )
 
+var LogFile *os.File
+
 func (s *Server) initLog() {
+	var err error
+
 	if *s.logFile != "" {
-		if file, err := os.OpenFile(*s.logFile, os.O_APPEND|os.O_RDWR, 0666); err != nil {
+		if LogFile, err = os.OpenFile(*s.logFile, os.O_APPEND|os.O_RDWR, 0666); err != nil {
 			if os.IsNotExist(err) {
-				file, err = os.Create(*s.logFile)
+				LogFile, err = os.Create(*s.logFile)
+				if err != nil {
+					panic(err)
+				}
 			}
-			if err != nil {
-				panic(err)
-			}
-			log.SetOutput(file)
 		}
+		log.Println("Change ontput to ", *s.logFile)
+		log.SetOutput(LogFile)
+	} else {
+		LogFile = os.Stderr
 	}
 }

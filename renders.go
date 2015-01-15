@@ -36,8 +36,11 @@ func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 
 	err = errors.New("")
 
-	if ctx.status_code != 200 {
-		layout, _ = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
+	if ctx.status_code >= 300 {
+		layout, err = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
+		if err != nil {
+			layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+		}
 		yield, err = h.getTemplate(strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join(strconv.Itoa(ctx.status_code)+h.suffix))
 		if err != nil {
 			log.Println("Find Err Code Fail, ", err)
@@ -67,6 +70,14 @@ func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
 				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
 			}
+		case *_staticBlockOption:
+			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			}
+			if err == nil {
+				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
+				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
+			}
 		}
 	}
 	if err == nil {
@@ -78,7 +89,7 @@ func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 
 func (h *HtmlRender) Init(s *Server) {
 	h.root = template.New("REST_HTTP_ROOT")
-	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml})
+	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml})
 	h.dir = *s.WwwRoot
 	h.suffix = ".html"
 	h.initGlobalTemplate(h.dir)
@@ -142,7 +153,11 @@ func (h *HtmlRender) getTemplate(args ...string) (*template.Template, error) {
 					h.models[name] = t
 				}
 			} else {
-				return nil, err
+				if os.IsNotExist(err) {
+					return nil, NOSUCHROUTER
+				} else {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -155,14 +170,20 @@ type HttpRenderInstance struct {
 }
 
 func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) error {
+	funcMap := template.FuncMap{
+		"yield": func() (template.HTML, error) {
+			err := h.yield.Execute(wr, data)
+			// return safe html here since we are rendering our own template
+			return template.HTML(""), err
+		},
+		"status": func() int {
+			return status
+		},
+	}
+	h.layout.Funcs(funcMap)
+	h.yield.Funcs(funcMap)
+
 	if h.layout != nil {
-		h.layout.Funcs(template.FuncMap{
-			"yield": func() (template.HTML, error) {
-				err := h.yield.Execute(wr, data)
-				// return safe html here since we are rendering our own template
-				return template.HTML(""), err
-			},
-		})
 		return h.layout.Execute(wr, data)
 	} else if h.yield != nil {
 		return h.yield.Execute(wr, data)

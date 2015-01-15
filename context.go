@@ -65,6 +65,14 @@ func (c *Context) Respond(data interface{}) {
 	}
 }
 
+func (c *Context) RespondOK() {
+	c.status_code = http.StatusOK
+}
+
+func (c *Context) RespondError(err error) {
+	c.RespondWithStatus(err, http.StatusBadRequest)
+}
+
 //Reset the context renders
 func (c *Context) UseRender(render string) {
 	c.forceFormat = render
