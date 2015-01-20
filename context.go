@@ -2,6 +2,7 @@ package goblet
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 )
@@ -23,20 +24,29 @@ type Context struct {
 	responseMap    map[string]interface{}
 	layout         string
 	status_code    int
+	already_writed bool
 }
 
 func (c *Context) handleData() {
 
 }
 
+func (c *Context) Writer() io.Writer {
+	c.already_writed = true
+	c.writer.WriteHeader(c.status_code)
+	return c.writer
+}
+
 func (c *Context) render() (err error) {
-	if c.renderInstance != nil {
-		return c.renderInstance.render(c.writer, c.response, c.status_code)
-	} else {
-		c.writer.WriteHeader(500)
-		c.writer.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))
-		return nil
+	if !c.already_writed {
+		if c.renderInstance != nil {
+			return c.renderInstance.render(c.writer, c.response, c.status_code)
+		} else {
+			c.writer.WriteHeader(500)
+			c.writer.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))
+		}
 	}
+	return nil
 }
 
 //Respond with multi data, data will tread as a key-value map
