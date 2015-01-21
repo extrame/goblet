@@ -36,16 +36,21 @@ func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 
 	err = errors.New("")
 
+	var root *template.Template
+
 	if !h.saveTemp {
-		h.initGlobalTemplate(h.dir)
+		root, _ = h.root.Clone()
+		h.initGlobalTemplate(root, h.dir)
+	} else {
+		root = h.root
 	}
 
 	if ctx.status_code >= 300 {
-		layout, err = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
+		layout, err = h.getTemplate(root, "layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
 		if err != nil {
-			layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 		}
-		yield, err = h.getTemplate(strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join(strconv.Itoa(ctx.status_code)+h.suffix))
+		yield, err = h.getTemplate(root, strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join(strconv.Itoa(ctx.status_code)+h.suffix))
 		if err != nil {
 			log.Println("Find Err Code Fail, ", err)
 		}
@@ -54,33 +59,33 @@ func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 		switch typ := ctx.option.(type) {
 
 		case *HtmlBlockOption:
-			layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 			if err == nil {
-				yield, err = h.getTemplate(ctx.method + h.suffix)
+				yield, err = h.getTemplate(root, ctx.method+h.suffix)
 			}
 		case *RestBlockOption:
-			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			if layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 			}
 			if err == nil {
 				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
-				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
+				yield, err = h.getTemplate(root, typ.htmlRenderFileOrDir+"/"+ctx.method+h.suffix)
 			}
 		case *GroupBlockOption:
-			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			if layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 			}
 			if err == nil {
 				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
-				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
+				yield, err = h.getTemplate(root, typ.htmlRenderFileOrDir+"/"+ctx.method+h.suffix)
 			}
 		case *_staticBlockOption:
-			if layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate("layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			if layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
 			}
 			if err == nil {
 				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
-				yield, err = h.getTemplate(typ.htmlRenderFileOrDir + "/" + ctx.method + h.suffix)
+				yield, err = h.getTemplate(root, typ.htmlRenderFileOrDir+"/"+ctx.method+h.suffix)
 			}
 		}
 	}
@@ -96,19 +101,21 @@ func (h *HtmlRender) Init(s *Server) {
 	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml})
 	h.dir = *s.WwwRoot
 	h.suffix = ".html"
-	h.initGlobalTemplate(h.dir)
 	h.models = make(map[string]*template.Template)
 	h.saveTemp = (*s.env == "production")
+	if h.saveTemp {
+		h.initGlobalTemplate(h.root, h.dir)
+	}
 }
 
-func (f *HtmlRender) initGlobalTemplate(dir string) {
+func (f *HtmlRender) initGlobalTemplate(root *template.Template, dir string) {
 	f.root.New("")
 	//scan for the helpers
 	filepath.Walk(filepath.Join(f.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), f.suffix) {
 			fmt.Println("Parse helper:", path)
 			name := strings.TrimSuffix(info.Name(), f.suffix)
-			e := parseFileWithName(f.root, "global/"+name, path)
+			e := parseFileWithName(root, "global/"+name, path)
 			if e != nil {
 				fmt.Printf("ERROR template.ParseFile: %v", e)
 			}
@@ -133,7 +140,7 @@ func (h *HtmlRender) initModelTemplate(layout *template.Template, dir string) {
 	})
 }
 
-func (h *HtmlRender) getTemplate(args ...string) (*template.Template, error) {
+func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*template.Template, error) {
 	var name, file string
 	if len(args) == 1 {
 		name = args[0]
@@ -146,7 +153,7 @@ func (h *HtmlRender) getTemplate(args ...string) (*template.Template, error) {
 	t := h.models[name]
 
 	if t == nil {
-		cloned_rest_model, err := h.root.Clone()
+		cloned_rest_model, err := root.Clone()
 
 		if err == nil {
 
