@@ -96,7 +96,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	if err := s.router.route(s, w, r); err == NOSUCHROUTER {
-		log.Println(err)
 		var path string
 		if strings.HasSuffix(r.URL.Path, "/") {
 			path = r.URL.Path + "index.html"
@@ -117,7 +116,7 @@ func (s *Server) parseConfig(name string) (err error) {
 	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")
 	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
 	s.HashSecret = toml.String("secret", "cX8Os0wfB6uCGZZSZHIi6rKsy7b0scE9")
-	s.env = toml.String("basic.env", "development")
+	s.env = toml.String("basic.env", "production")
 	s.dbEngine = toml.String("basic.db_engine", "mysql")
 	s.enDbCache = toml.Bool("cache.enable", false)
 	s.cacheAmout = toml.Int("cache.amount", 1000)

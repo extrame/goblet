@@ -37,6 +37,10 @@ func (c *Context) Writer() io.Writer {
 	return c.writer
 }
 
+func (c *Context) SetHeader(key, value string) {
+	c.writer.Header().Set(key, value)
+}
+
 func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {

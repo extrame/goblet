@@ -36,6 +36,10 @@ func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 
 	err = errors.New("")
 
+	if !h.saveTemp {
+		h.initGlobalTemplate(h.dir)
+	}
+
 	if ctx.status_code >= 300 {
 		layout, err = h.getTemplate("layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
 		if err != nil {
