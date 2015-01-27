@@ -62,7 +62,9 @@ func (s *Server) Organize(name string, opts ...Option) {
 		s.Renders["json"] = new(JsonRender)
 		s.Renders["raw"] = new(RawRender)
 		if err = s.connectDB(); err == nil {
-
+			if *s.env == "development" {
+				DB.ShowSQL = true
+			}
 		}
 	} else {
 		log.Fatalln(err)
