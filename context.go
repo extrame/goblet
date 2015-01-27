@@ -64,7 +64,7 @@ func (c *Context) AddRespond(datas ...interface{}) {
 		}
 		for i := 0; i < len(datas)/2; i++ {
 			k := fmt.Sprintf("%s", datas[i])
-			v := datas[i+1]
+			v := autoHide(datas[i+1])
 			c.responseMap[k] = v
 		}
 	}

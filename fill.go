@@ -84,6 +84,9 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 // of the request body. The body will be decoded based
 // on the content-type and an apropriate RequestDecoder
 // automatically selected
+// If you want to use md5 function for the specified field, please add
+// md5 tag for it. AND the md5 tag must be the last one of the tags, so
+// if you have no other tag, please add ',' before md5
 func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	// get content type
 	ct := cx.Request.Header.Get("Content-Type")
