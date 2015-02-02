@@ -60,6 +60,16 @@ func (c *Context) AddSignedCookie(cookie *http.Cookie) (*http.Cookie, error) {
 
 }
 
+func (c *Context) AddCookie(cookie *http.Cookie) error {
+
+	// add the cookies
+	http.SetCookie(c.writer, cookie)
+
+	// return the new signed cookie (and no error)
+	return nil
+
+}
+
 // Gets the cookie specified by name and validates that its value has not been
 // tampered with by checking the signed cookie too.  Will return CookieNotValid error
 // if it has been tampered with, otherwise, it will return the actual cookie.
