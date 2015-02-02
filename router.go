@@ -42,6 +42,9 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 				err = context.render()
 			}
 		}
+		if *s.env == "development" {
+			log.Println("Err in Dynamic :", err)
+		}
 		return
 	}
 	return NOSUCHROUTER

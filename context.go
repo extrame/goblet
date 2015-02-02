@@ -37,7 +37,7 @@ func (c *Context) Writer() http.ResponseWriter {
 }
 
 func (c *Context) SetHeader(key, value string) {
-	c.writer.Header().Set(key, value)
+	c.writer.Header().Add(key, value)
 }
 
 func (c *Context) render() (err error) {
@@ -111,12 +111,14 @@ func (c *Context) RespondWithRender(data interface{}, render string) {
 }
 
 func (c *Context) prepareRender() (err error) {
-	//test required format in allow list or not
-	var format string
-	if format, err = c.option.GetRender(c); err == nil {
-		re := c.Server.Renders[format]
-		if re != nil {
-			c.renderInstance, err = re.render(c)
+	if !c.already_writed {
+		//test required format in allow list or not
+		var format string
+		if format, err = c.option.GetRender(c); err == nil {
+			re := c.Server.Renders[format]
+			if re != nil {
+				c.renderInstance, err = re.render(c)
+			}
 		}
 	}
 	return
