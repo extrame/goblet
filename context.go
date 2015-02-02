@@ -32,7 +32,8 @@ func (c *Context) handleData() {
 
 func (c *Context) Writer() http.ResponseWriter {
 	c.already_writed = true
-	c.writer.WriteHeader(c.status_code)
+	//TODO
+	// c.writer.WriteHeader(c.status_code)
 	return c.writer
 }
 
