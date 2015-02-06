@@ -1,7 +1,7 @@
 package goblet
 
 import (
-	"fmt"
+	"github.com/extrame/goblet/error"
 	"log"
 	"net/http"
 	"strings"
@@ -10,8 +10,6 @@ import (
 type _Router struct {
 	anchor *Anchor
 }
-
-var NOSUCHROUTER = fmt.Errorf("no such router")
 
 func (r *_Router) init() {
 	r.anchor = &Anchor{0, "/", "", []*Anchor{}, &_staticBlockOption{}}
@@ -47,7 +45,7 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 		}
 		return
 	}
-	return NOSUCHROUTER
+	return ge.NOSUCHROUTER
 }
 
 func (r *_Router) add(opt BlockOption) {

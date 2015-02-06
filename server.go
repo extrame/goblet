@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	toml "github.com/extrame/go-toml-config"
+	"github.com/extrame/goblet/error"
+	"github.com/extrame/goblet/render"
 	"github.com/extrame/xorm"
 	"log"
 	"net/http"
@@ -13,14 +15,14 @@ import (
 )
 
 type Server struct {
-	WwwRoot       *string
+	wwwRoot       *string
 	PublicDir     *string
 	UploadsDir    *string
 	ListenPort    *int
 	IgnoreUrlCase *bool
 	router        _Router
 	env           *string
-	Renders       map[string]_Render
+	Renders       map[string]render.Render
 	HashSecret    *string
 	dbEngine      *string
 	dbUser        *string
@@ -56,11 +58,11 @@ func (s *Server) Organize(name string, opts ...Option) {
 		var opt Option
 		opt.overlay(opts)
 		s.router.init()
-		s.Renders = make(map[string]_Render)
-		s.Renders["html"] = new(HtmlRender)
+		s.Renders = make(map[string]render.Render)
+		s.Renders["html"] = new(render.HtmlRender)
 		s.Renders["html"].Init(s)
-		s.Renders["json"] = new(JsonRender)
-		s.Renders["raw"] = new(RawRender)
+		s.Renders["json"] = new(render.JsonRender)
+		s.Renders["raw"] = new(render.RawRender)
 		if err = s.connectDB(); err == nil {
 			if *s.env == "development" {
 				DB.ShowSQL = true
@@ -88,7 +90,14 @@ func (s *Server) AddModel(models ...interface{}) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+}
 
+func (s *Server) Env() string {
+	return *s.env
+}
+
+func (s *Server) WwwRoot() string {
+	return *s.wwwRoot
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -97,14 +106,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			WrapError(w, err, true)
 		}
 	}()
-	if err := s.router.route(s, w, r); err == NOSUCHROUTER {
+	if err := s.router.route(s, w, r); err == ge.NOSUCHROUTER {
 		var path string
 		if strings.HasSuffix(r.URL.Path, "/") {
 			path = r.URL.Path + "index.html"
 		} else {
 			path = r.URL.Path
 		}
-		http.ServeFile(w, r, filepath.Join(*s.WwwRoot, *s.PublicDir, path))
+		http.ServeFile(w, r, filepath.Join(*s.wwwRoot, *s.PublicDir, path))
 	} else if err != nil {
 		WrapError(w, err, false)
 	}
@@ -112,7 +121,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) parseConfig(name string) (err error) {
 	path := flag.String("config", "./"+name+".conf", "设置配置文件的路径")
-	s.WwwRoot = toml.String("basic.www_root", "./www")
+	s.wwwRoot = toml.String("basic.www_root", "./www")
 	s.ListenPort = toml.Int("basic.port", 8080)
 	s.PublicDir = toml.String("basic.public_dir", "public")
 	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")

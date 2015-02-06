@@ -2,6 +2,8 @@ package goblet
 
 import (
 	"fmt"
+	"github.com/extrame/goblet/render"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -18,7 +20,7 @@ type Context struct {
 	forceFormat    string
 	tempRenders    []string
 	method         string
-	renderInstance RenderInstance
+	renderInstance render.RenderInstance
 	response       interface{}
 	responseMap    map[string]interface{}
 	layout         string
@@ -44,7 +46,7 @@ func (c *Context) SetHeader(key, value string) {
 func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {
-			return c.renderInstance.render(c.writer, c.response, c.status_code)
+			return c.renderInstance.Render(c.writer, c.response, c.status_code)
 		} else {
 			c.writer.WriteHeader(500)
 			c.writer.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))
@@ -118,7 +120,7 @@ func (c *Context) prepareRender() (err error) {
 		if format, err = c.option.GetRender(c); err == nil {
 			re := c.Server.Renders[format]
 			if re != nil {
-				c.renderInstance, err = re.render(c)
+				c.renderInstance, err = re.PrepareInstance(c)
 			}
 		}
 	}
@@ -131,11 +133,11 @@ func (c *Context) checkResponse() {
 	}
 }
 
-func (c *Context) Layout(l string) {
+func (c *Context) SetLayout(l string) {
 	c.layout = l
 }
 
-func (c *Context) getLayout() string {
+func (c *Context) Layout() string {
 	if c.layout != "" {
 		return c.layout
 	} else {
@@ -164,4 +166,32 @@ func (c *Context) RedirectTo(url string) {
 	c.writer.Header().Set("Location", url)
 	c.writer.WriteHeader(302)
 	c.format = "raw"
+}
+
+///////////for renders/////////////
+func (c *Context) BlockOptionType() string {
+	switch c.option.(type) {
+	case *RestBlockOption:
+		return "Rest"
+	case *GroupBlockOption:
+		return "Group"
+	case *_staticBlockOption:
+		return "Static"
+	case *HtmlBlockOption:
+		return "Html"
+	}
+	log.Panic("err of block option type!!!")
+	return ""
+}
+
+func (c *Context) Method() string {
+	return c.method
+}
+
+func (c *Context) StatusCode() int {
+	return c.status_code
+}
+
+func (c *Context) TemplatePath() string {
+	return c.option.TemplatePath()
 }

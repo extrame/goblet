@@ -1,27 +1,19 @@
-package goblet
+package render
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/extrame/goblet/error"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 )
-
-type RenderInstance interface {
-	render(wr http.ResponseWriter, data interface{}, status int) error
-}
-
-type _Render interface {
-	render(*Context) (RenderInstance, error)
-	Init(*Server)
-}
 
 type HtmlRender struct {
 	root     *template.Template
@@ -31,7 +23,7 @@ type HtmlRender struct {
 	saveTemp bool
 }
 
-func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
+func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance, err error) {
 	var layout, yield *template.Template
 
 	err = errors.New("")
@@ -45,47 +37,47 @@ func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 		root = h.root
 	}
 
-	if ctx.status_code >= 300 {
+	if ctx.StatusCode() >= 300 {
 		layout, err = h.getTemplate(root, "layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
 		if err != nil {
-			layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 		}
-		yield, err = h.getTemplate(root, strconv.Itoa(ctx.status_code)+h.suffix, filepath.Join(strconv.Itoa(ctx.status_code)+h.suffix))
+		yield, err = h.getTemplate(root, strconv.Itoa(ctx.StatusCode())+h.suffix, filepath.Join(strconv.Itoa(ctx.StatusCode())+h.suffix))
 		if err != nil {
 			log.Println("Find Err Code Fail, ", err)
 		}
 	}
 	if err != nil {
-		switch typ := ctx.option.(type) {
+		switch ctx.BlockOptionType() {
 
-		case *HtmlBlockOption:
-			layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+		case "Html":
+			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			if err == nil {
-				yield, err = h.getTemplate(root, ctx.method+h.suffix)
+				yield, err = h.getTemplate(root, ctx.Method()+h.suffix)
 			}
-		case *RestBlockOption:
-			if layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
-			}
-			if err == nil {
-				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
-				yield, err = h.getTemplate(root, typ.htmlRenderFileOrDir+"/"+ctx.method+h.suffix)
-			}
-		case *GroupBlockOption:
-			if layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+		case "Rest":
+			if layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
-				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
-				yield, err = h.getTemplate(root, typ.htmlRenderFileOrDir+"/"+ctx.method+h.suffix)
+				h.initModelTemplate(layout, ctx.TemplatePath())
+				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
 			}
-		case *_staticBlockOption:
-			if layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join(typ.htmlRenderFileOrDir, "layout", ctx.getLayout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate(root, "layout/"+ctx.getLayout()+h.suffix, filepath.Join("layout", ctx.getLayout()+h.suffix))
+		case "Group":
+			if layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
-				h.initModelTemplate(layout, typ.htmlRenderFileOrDir)
-				yield, err = h.getTemplate(root, typ.htmlRenderFileOrDir+"/"+ctx.method+h.suffix)
+				h.initModelTemplate(layout, ctx.TemplatePath())
+				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
+			}
+		case "Static":
+			if layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
+			}
+			if err == nil {
+				h.initModelTemplate(layout, ctx.TemplatePath())
+				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
 			}
 		}
 	}
@@ -96,13 +88,13 @@ func (h *HtmlRender) render(ctx *Context) (instance RenderInstance, err error) {
 	return
 }
 
-func (h *HtmlRender) Init(s *Server) {
+func (h *HtmlRender) Init(s RenderServer) {
 	h.root = template.New("REST_HTTP_ROOT")
-	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml})
-	h.dir = *s.WwwRoot
+	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml})
+	h.dir = s.WwwRoot()
 	h.suffix = ".html"
 	h.models = make(map[string]*template.Template)
-	h.saveTemp = (*s.env == "production")
+	h.saveTemp = (s.Env() == "production")
 	if h.saveTemp {
 		h.initGlobalTemplate(h.root, h.dir)
 	}
@@ -165,7 +157,7 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 				}
 			} else {
 				if os.IsNotExist(err) {
-					return nil, NOSUCHROUTER
+					return nil, ge.NOSUCHROUTER
 				} else {
 					return nil, err
 				}
@@ -180,7 +172,9 @@ type HttpRenderInstance struct {
 	yield  *template.Template
 }
 
-func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) error {
+func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int) error {
+	var mask_map = make(map[string]bool)
+
 	funcMap := template.FuncMap{
 		"yield": func() (template.HTML, error) {
 			err := h.yield.Execute(wr, data)
@@ -190,6 +184,14 @@ func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}, st
 		"status": func() int {
 			return status
 		},
+		"mask": func(tag string) string {
+			if _, ok := mask_map[tag]; ok {
+				return "true"
+			} else {
+				mask_map[tag] = true
+			}
+			return ""
+		},
 	}
 	h.layout.Funcs(funcMap)
 	h.yield.Funcs(funcMap)
@@ -198,48 +200,6 @@ func (h *HttpRenderInstance) render(wr http.ResponseWriter, data interface{}, st
 		return h.layout.Execute(wr, data)
 	} else if h.yield != nil {
 		return h.yield.Execute(wr, data)
-	}
-	return nil
-}
-
-type JsonRender struct {
-}
-
-func (j *JsonRender) render(c *Context) (RenderInstance, error) {
-	return new(JsonRenderInstance), nil
-}
-
-func (j *JsonRender) Init(s *Server) {
-
-}
-
-type JsonRenderInstance int8
-
-func (r *JsonRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) (err error) {
-	var v []byte
-	wr.WriteHeader(status)
-	v, err = json.Marshal(data)
-	if err == nil {
-		wr.Write(v)
-	}
-	return
-}
-
-type RawRender int8
-
-func (r *RawRender) render(c *Context) (RenderInstance, error) {
-	return new(RawRenderInstance), nil
-}
-
-func (r *RawRender) Init(s *Server) {
-}
-
-type RawRenderInstance int8
-
-func (r *RawRenderInstance) render(wr http.ResponseWriter, data interface{}, status int) error {
-	switch tdata := data.(type) {
-	case []byte:
-		wr.Write(tdata)
 	}
 	return nil
 }
@@ -270,3 +230,22 @@ func parseFileWithName(parent *template.Template, name string, filepath string) 
 }
 
 func RawHtml(text string) template.HTML { return template.HTML(text) }
+
+func Slice(obj interface{}, leng int) interface{} {
+	slice := reflect.ValueOf(obj)
+	new_leng := slice.Len() / leng
+
+	if slice.Len()%leng != 0 {
+		new_leng++
+	}
+	new_array := reflect.MakeSlice(reflect.SliceOf(slice.Type()), new_leng, new_leng)
+	for i := 0; i < new_leng; i++ {
+		end := (i + 1) * leng
+		if end > slice.Len() {
+			end = slice.Len()
+		}
+		item_array_in_new_array := slice.Slice(i*leng, end)
+		new_array.Index(i).Set(item_array_in_new_array)
+	}
+	return new_array.Interface()
+}

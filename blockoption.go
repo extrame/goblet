@@ -2,6 +2,7 @@ package goblet
 
 import (
 	"fmt"
+	"github.com/extrame/goblet/error"
 	"reflect"
 	"strings"
 )
@@ -39,6 +40,7 @@ type BlockOption interface {
 	//the render prepared. So you can change function and render in here
 	Parse(*Context) error
 	Layout() string
+	TemplatePath() string
 }
 
 type BasicBlockOption struct {
@@ -74,6 +76,10 @@ func (h *HtmlBlockOption) Parse(c *Context) error {
 
 func (b *BasicBlockOption) Layout() string {
 	return b.layout
+}
+
+func (b *BasicBlockOption) TemplatePath() string {
+	return b.htmlRenderFileOrDir
 }
 
 func (h *BasicBlockOption) UpdateRender(o string, ctx *Context) {
@@ -269,7 +275,7 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 			}
 		}
 		if !method.IsValid() {
-			return NOSUCHROUTER
+			return ge.NOSUCHROUTER
 		} else {
 			ctx.method = name
 			arg := reflect.ValueOf(ctx)
@@ -277,7 +283,7 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 		}
 		return nil
 	} else {
-		return NOSUCHROUTER
+		return ge.NOSUCHROUTER
 	}
 
 }
