@@ -79,10 +79,9 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 		}
 		for i := 0; i < len(full_stored_path); i++ {
 			if path[a.loc+1-len(full_stored_path):a.loc+1-i] == full_stored_path[:len(full_stored_path)-i] {
-
 				var branch *Anchor
 				if i != 0 {
-					branch = &Anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, opt}
+					branch = &Anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, a.opt}
 					a.branches = []*Anchor{branch}
 				} else {
 					if path[a.loc-len(a.prefix):] == full_stored_path {
