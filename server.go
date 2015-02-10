@@ -36,6 +36,7 @@ type Server struct {
 	cacheAmout    *int
 	logFile       *string
 	name          string
+	plugins       []Plugin
 }
 
 type Handler interface {
@@ -51,12 +52,11 @@ type PageHandler interface {
 	Page() (int, interface{})
 }
 
-func (s *Server) Organize(name string, opts ...Option) {
+func (s *Server) Organize(name string, plugins []Plugin) {
 	var err error
 	s.name = name
-	if err = s.parseConfig(s.name); err == nil {
-		var opt Option
-		opt.overlay(opts)
+	s.plugins = plugins
+	if err = s.parseConfig(); err == nil {
 		s.router.init()
 		s.Renders = make(map[string]render.Render)
 		s.Renders["html"] = new(render.HtmlRender)
@@ -119,8 +119,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) parseConfig(name string) (err error) {
-	path := flag.String("config", "./"+name+".conf", "设置配置文件的路径")
+func (s *Server) parseConfig() (err error) {
+	path := flag.String("config", "./"+s.name+".conf", "设置配置文件的路径")
+	for _, plugin := range s.plugins {
+		plugin.ParseConfig()
+	}
 	s.wwwRoot = toml.String("basic.www_root", "./www")
 	s.ListenPort = toml.Int("basic.port", 8080)
 	s.PublicDir = toml.String("basic.public_dir", "public")
