@@ -41,6 +41,10 @@ func (s *_SmtpSender) ParseConfig() (err error) {
 	return
 }
 
+func SendTo(template_name string, receivers []string, args map[string]interface{}) (err error) {
+	return Daemon.SendTo(template_name, receivers, args)
+}
+
 func (s *_SmtpSender) SendTo(template_name string, receivers []string, args map[string]interface{}) (err error) {
 
 	var template *template.Template
