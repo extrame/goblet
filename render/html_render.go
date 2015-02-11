@@ -90,7 +90,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 func (h *HtmlRender) Init(s RenderServer) {
 	h.root = template.New("REST_HTTP_ROOT")
-	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml})
+	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat})
 	h.dir = s.WwwRoot()
 	h.suffix = ".html"
 	h.models = make(map[string]*template.Template)
@@ -248,4 +248,12 @@ func Slice(obj interface{}, leng int) interface{} {
 		new_array.Index(i).Set(item_array_in_new_array)
 	}
 	return new_array.Interface()
+}
+
+func Repeat(count int) []int {
+	res := make([]int, count)
+	for i := 0; i < count; i++ {
+		res[i] = i
+	}
+	return res
 }
