@@ -100,14 +100,14 @@ func (h *HtmlRender) Init(s RenderServer) {
 	}
 }
 
-func (f *HtmlRender) initGlobalTemplate(root *template.Template, dir string) {
-	f.root.New("")
+func (h *HtmlRender) initTemplate(parent *template.Template, dir string, typ string) {
+	parent.New("")
 	//scan for the helpers
-	filepath.Walk(filepath.Join(f.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
-		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), f.suffix) {
-			fmt.Println("Parse helper:", path)
-			name := strings.TrimSuffix(info.Name(), f.suffix)
-			e := parseFileWithName(root, "global/"+name, path)
+	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
+		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
+			name := strings.TrimSuffix(info.Name(), h.suffix)
+			log.Printf("Parse helper:%s(%s)", typ+"/"+name, path)
+			e := parseFileWithName(parent, typ+"/"+name, path)
 			if e != nil {
 				fmt.Printf("ERROR template.ParseFile: %v", e)
 			}
@@ -116,20 +116,12 @@ func (f *HtmlRender) initGlobalTemplate(root *template.Template, dir string) {
 	})
 }
 
-func (h *HtmlRender) initModelTemplate(layout *template.Template, dir string) {
-	layout.New("")
-	//scan for the helpers
-	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
-		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
-			fmt.Println("Parse helper:", path)
-			name := strings.TrimSuffix(info.Name(), h.suffix)
-			e := parseFileWithName(layout, "model/"+name, path)
-			if e != nil {
-				fmt.Printf("ERROR template.ParseFile: %v", e)
-			}
-		}
-		return nil
-	})
+func (h *HtmlRender) initGlobalTemplate(parent *template.Template, dir string) {
+	h.initTemplate(parent, dir, "global")
+}
+
+func (h *HtmlRender) initModelTemplate(parent *template.Template, dir string) {
+	h.initTemplate(parent, dir, "model")
 }
 
 func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*template.Template, error) {
