@@ -32,7 +32,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 	if !h.saveTemp {
 		root, _ = h.root.Clone()
-		h.initGlobalTemplate(root, h.dir)
+		h.initGlobalTemplate(root)
 	} else {
 		root = h.root
 	}
@@ -96,7 +96,7 @@ func (h *HtmlRender) Init(s RenderServer) {
 	h.models = make(map[string]*template.Template)
 	h.saveTemp = (s.Env() == "production")
 	if h.saveTemp {
-		h.initGlobalTemplate(h.root, h.dir)
+		h.initGlobalTemplate(h.root)
 	}
 }
 
@@ -119,8 +119,8 @@ func (h *HtmlRender) initTemplate(parent *template.Template, dir string, typ str
 	})
 }
 
-func (h *HtmlRender) initGlobalTemplate(parent *template.Template, dir string) {
-	h.initTemplate(parent, dir, "global")
+func (h *HtmlRender) initGlobalTemplate(parent *template.Template) {
+	h.initTemplate(parent, ".", "global")
 }
 
 func (h *HtmlRender) initModelTemplate(parent *template.Template, dir string) {
