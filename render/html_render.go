@@ -102,6 +102,9 @@ func (h *HtmlRender) Init(s RenderServer) {
 
 func (h *HtmlRender) initTemplate(parent *template.Template, dir string, typ string) {
 	parent.New("")
+	if !h.saveTemp { //for debug
+		log.Println("init template in ", filepath.Join(h.dir, dir, "helper"))
+	}
 	//scan for the helpers
 	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
