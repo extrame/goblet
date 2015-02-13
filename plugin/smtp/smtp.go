@@ -1,11 +1,14 @@
 package smtp
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/smtpoverttl"
 	"io"
+	"net/mail"
 	"net/smtp"
 	"path/filepath"
 	"text/template"
@@ -14,6 +17,12 @@ import (
 var Daemon = new(_SmtpSender)
 var StandardHeader = `To:{{ $.Receiver }}
 From: {{ $.Sender}}
+Subject: {{ $.Subject }}
+MIME-Version: "1.0"
+Content-Type: "text/html; charset=UTF-8"
+Content-Transfer-Encoding: "base64"
+
+{{ $.Body }}
 `
 
 type _SmtpSender struct {
@@ -49,11 +58,11 @@ func (s *_SmtpSender) ParseConfig() (err error) {
 	return
 }
 
-func SendTo(template_name string, receivers []string, args map[string]interface{}) (err error) {
-	return Daemon.SendTo(template_name, receivers, args)
+func SendTo(template_name string, subject string, receivers []mail.Address, args map[string]interface{}) (err error) {
+	return Daemon.SendTo(template_name, subject, receivers, args)
 }
 
-func (s *_SmtpSender) SendTo(template_name string, receivers []string, args map[string]interface{}) (err error) {
+func (s *_SmtpSender) SendTo(template_name string, subject string, receivers []mail.Address, args map[string]interface{}) (err error) {
 
 	var template *template.Template
 	var ok bool
@@ -71,32 +80,44 @@ func (s *_SmtpSender) SendTo(template_name string, receivers []string, args map[
 		var config tls.Config
 		config.ServerName = *s.Server
 		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", *s.Server, *s.Port), &config); err == nil {
-			return s.sendMail(c, template, receivers, args)
+			return s.sendMail(c, subject, template, receivers, args)
 		}
 	} else {
 		if c, err = smtp.Dial(*s.Server); err == nil {
-			return s.sendMail(c, template, receivers, args)
+			return s.sendMail(c, subject, template, receivers, args)
 		}
 	}
 	return
 }
 
-func (s *_SmtpSender) sendMail(c client, mail_body *template.Template, receivers []string, args map[string]interface{}) (err error) {
+func (s *_SmtpSender) sendMail(c client, subject string, mail_body *template.Template, receivers []mail.Address, args map[string]interface{}) (err error) {
+	b64 := base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+
 	var standard_header_template *template.Template
 
 	if standard_header_template, err = template.New("standard_header").Parse(StandardHeader); err == nil {
 		if err = c.Auth(smtpoverttl.PlainAuth("", *s.User, *s.Pwd, *s.Server)); err == nil {
 			for _, receiver := range receivers {
 				if err = c.Mail(*s.User); err == nil {
-					if err = c.Rcpt(receiver); err == nil {
+					if err = c.Rcpt(receiver.Address); err == nil {
 						// Send the email body.
 						var wc io.WriteCloser
 						if wc, err = c.Data(); err == nil {
 							defer wc.Close()
-							if err = standard_header_template.Execute(wc, map[string]string{"Receiver": receiver, "Sender": *s.User}); err != nil {
+
+							from := mail.Address{"数据家黑帽子先生", *s.User}
+
+							body_writer := new(bytes.Buffer)
+							if err = mail_body.Execute(body_writer, args); err != nil {
 								return
 							}
-							if err = mail_body.Execute(wc, args); err != nil {
+
+							if err = standard_header_template.Execute(wc, map[string]string{
+								"Receiver": receiver.String(),
+								"Sender":   from.String(),
+								"Body":     b64.EncodeToString(body_writer.Bytes()),
+								"Subject":  fmt.Sprintf("=?UTF-8?B?%s?=", b64.EncodeToString([]byte(subject))),
+							}); err != nil {
 								return
 							}
 						}
