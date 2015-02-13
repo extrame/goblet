@@ -72,6 +72,9 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 		log.Fatalln(err)
 	}
 	s.enableDbCache()
+	for _, plugin := range s.plugins {
+		plugin.Init()
+	}
 }
 
 func (s *Server) connectDB() error {

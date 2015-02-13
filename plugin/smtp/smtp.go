@@ -23,6 +23,11 @@ type _SmtpSender struct {
 	Templates map[string]*template.Template
 }
 
+func (s *_SmtpSender) Init() error {
+	s.Templates = make(map[string]*template.Template)
+	return nil
+}
+
 type client interface {
 	Auth(a smtp.Auth) error
 	Mail(from string) error
