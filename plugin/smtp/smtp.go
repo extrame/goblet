@@ -1,6 +1,7 @@
 package smtp
 
 import (
+	"crypto/tls"
 	"fmt"
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/smtpoverttl"
@@ -65,7 +66,9 @@ func (s *_SmtpSender) SendTo(template_name string, receivers []string, args map[
 
 	var c client
 	if *s.Ttl {
-		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", *s.Server, *s.Port), nil); err == nil {
+		var config tls.Config
+		config.ServerName = *s.Server
+		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", *s.Server, *s.Port), &config); err == nil {
 			s.sendMail(c, template, receivers, args)
 		}
 	} else {
