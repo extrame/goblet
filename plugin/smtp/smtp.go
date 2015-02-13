@@ -6,13 +6,16 @@ import (
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/smtpoverttl"
 	"io"
-	"log"
 	"net/smtp"
 	"path/filepath"
 	"text/template"
 )
 
 var Daemon = new(_SmtpSender)
+var StandardHeader = `
+To:{{ $.Receiver }}
+From: {{ $.Sender}}
+`
 
 type _SmtpSender struct {
 	Root      *string
@@ -64,38 +67,44 @@ func (s *_SmtpSender) SendTo(template_name string, receivers []string, args map[
 		}
 	}
 
-	args["Sender"] = *s.User
-
 	var c client
 	if *s.Ttl {
 		var config tls.Config
 		config.ServerName = *s.Server
 		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", *s.Server, *s.Port), &config); err == nil {
-			s.sendMail(c, template, receivers, args)
+			return s.sendMail(c, template, receivers, args)
 		}
 	} else {
 		if c, err = smtp.Dial(*s.Server); err == nil {
-			s.sendMail(c, template, receivers, args)
+			return s.sendMail(c, template, receivers, args)
 		}
 	}
 	return
 }
 
-func (s *_SmtpSender) sendMail(c client, mail_body *template.Template, receivers []string, args map[string]interface{}) {
-	if err := c.Auth(smtpoverttl.PlainAuth("", *s.User, *s.Pwd, *s.Server)); err == nil {
-		for _, receiver := range receivers {
-			args["Receiver"] = receiver
-			if err = c.Mail(*s.User); err == nil {
-				if err = c.Rcpt(receiver); err == nil {
-					// Send the email body.
-					if wc, err := c.Data(); err == nil {
-						defer wc.Close()
-						if err = mail_body.Execute(wc, args); err != nil {
-							log.Println(err)
+func (s *_SmtpSender) sendMail(c client, mail_body *template.Template, receivers []string, args map[string]interface{}) (err error) {
+	var standard_header_template *template.Template
+
+	if standard_header_template, err = template.New("standard_header").Parse(StandardHeader); err == nil {
+		if err = c.Auth(smtpoverttl.PlainAuth("", *s.User, *s.Pwd, *s.Server)); err == nil {
+			for _, receiver := range receivers {
+				if err = c.Mail(*s.User); err == nil {
+					if err = c.Rcpt(receiver); err == nil {
+						// Send the email body.
+						var wc io.WriteCloser
+						if wc, err = c.Data(); err == nil {
+							defer wc.Close()
+							if err = standard_header_template.Execute(wc, map[string]string{"Receiver": receiver, "Sender": *s.User}); err != nil {
+								return
+							}
+							if err = mail_body.Execute(wc, args); err != nil {
+								return
+							}
 						}
 					}
 				}
 			}
 		}
 	}
+	return
 }
