@@ -12,8 +12,7 @@ import (
 )
 
 var Daemon = new(_SmtpSender)
-var StandardHeader = `
-To:{{ $.Receiver }}
+var StandardHeader = `To:{{ $.Receiver }}
 From: {{ $.Sender}}
 `
 
