@@ -65,7 +65,7 @@ func (s *_SmtpSender) SendTo(template_name string, receivers []string, args map[
 
 	var c client
 	if *s.Ttl {
-		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", s.Server, s.Port), nil); err == nil {
+		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", *s.Server, *s.Port), nil); err == nil {
 			s.sendMail(c, template, receivers, args)
 		}
 	} else {
