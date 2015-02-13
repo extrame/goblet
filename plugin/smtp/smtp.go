@@ -64,6 +64,8 @@ func (s *_SmtpSender) SendTo(template_name string, receivers []string, args map[
 		}
 	}
 
+	args["Sender"] = *s.User
+
 	var c client
 	if *s.Ttl {
 		var config tls.Config
@@ -79,9 +81,10 @@ func (s *_SmtpSender) SendTo(template_name string, receivers []string, args map[
 	return
 }
 
-func (s *_SmtpSender) sendMail(c client, mail_body *template.Template, receivers []string, obj interface{}) {
+func (s *_SmtpSender) sendMail(c client, mail_body *template.Template, receivers []string, obj map[string]interface{}) {
 	if err := c.Auth(smtpoverttl.PlainAuth("", *s.User, *s.Pwd, *s.Server)); err == nil {
 		for _, receiver := range receivers {
+			args["Receiver"] = receiver
 			if err = c.Mail(*s.User); err == nil {
 				if err = c.Rcpt(receiver); err == nil {
 					// Send the email body.
