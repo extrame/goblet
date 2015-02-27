@@ -312,13 +312,14 @@ func PrepareOption(block interface{}) BlockOption {
 	var basic BasicBlockOption
 	basic.block = block
 	val := reflect.ValueOf(block)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
-	}
 
 	initMethod := val.MethodByName("Init")
 	if initMethod.IsValid() {
 		initMethod.Call(nil)
+	}
+
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
 	}
 
 	valtype := val.Type()
