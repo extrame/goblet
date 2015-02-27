@@ -316,6 +316,11 @@ func PrepareOption(block interface{}) BlockOption {
 		val = val.Elem()
 	}
 
+	initMethod := val.MethodByName("Init")
+	if initMethod.IsValid() {
+		initMethod.Call(nil)
+	}
+
 	valtype := val.Type()
 	ignoreCase := true
 

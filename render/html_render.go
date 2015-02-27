@@ -173,6 +173,9 @@ func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, st
 	funcMap := template.FuncMap{
 		"yield": func() (template.HTML, error) {
 			err := h.yield.Execute(wr, data)
+			if err != nil {
+				log.Printf("%v%T", err, err)
+			}
 			// return safe html here since we are rendering our own template
 			return template.HTML(""), err
 		},
