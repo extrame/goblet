@@ -56,7 +56,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 				yield, err = h.getTemplate(root, ctx.Method()+h.suffix)
 			}
 		case "Rest":
-			if layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
@@ -64,7 +64,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
 			}
 		case "Group":
-			if layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
@@ -72,7 +72,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
 			}
 		case "Static":
-			if layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
