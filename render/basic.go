@@ -10,6 +10,7 @@ type RenderContext interface {
 	Method() string
 	TemplatePath() string
 	BlockOptionType() string
+	Callback() string
 }
 
 type RenderServer interface {

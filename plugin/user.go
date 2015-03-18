@@ -26,7 +26,6 @@ func (u *UserModule) TableName() string {
 func (u *User) UpdateMany(cx *goblet.Context) {
 	rec := new(UserModule)
 	cx.Fill(rec)
-	fmt.Println(rec)
 	var err error
 	if rec.Name != "" && rec.Pwd != "" {
 		var has bool

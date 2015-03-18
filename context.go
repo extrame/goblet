@@ -15,7 +15,7 @@ type Context struct {
 	Request        *http.Request
 	writer         http.ResponseWriter
 	option         BlockOption
-	suffix         string
+	Suffix         string
 	format         string
 	forceFormat    string
 	tempRenders    []string
@@ -37,6 +37,10 @@ func (c *Context) Writer() http.ResponseWriter {
 	//TODO
 	// c.writer.WriteHeader(c.status_code)
 	return c.writer
+}
+
+func (c *Context) Callback() string {
+	return c.Request.FormValue("callback")
 }
 
 func (c *Context) SetHeader(key, value string) {
