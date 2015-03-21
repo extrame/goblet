@@ -12,7 +12,7 @@ func (j *JsonRender) PrepareInstance(c RenderContext) (RenderInstance, error) {
 	if cb := c.Callback(); cb != "" {
 		return &JsonCbRenderInstance{Cb: cb}, nil
 	}
-	return new(JsonCbRenderInstance), nil
+	return new(JsonRenderInstance), nil
 }
 
 func (j *JsonRender) Init(s RenderServer) {
