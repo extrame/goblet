@@ -209,7 +209,7 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 					len_fv := len(form_values)
 					rvnew := reflect.MakeSlice(rtype.Field(i).Type, len_fv, len_fv)
 					for j := 0; j < len_fv; j++ {
-						unmarshalField(context, form, rvnew.Index(j), form_values[i], autofill, tag)
+						unmarshalField(context, form, rvnew.Index(j), form_values[j], autofill, tag)
 					}
 					rvalue.Field(i).Set(rvnew)
 				}
