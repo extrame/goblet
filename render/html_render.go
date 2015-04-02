@@ -136,6 +136,9 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		name = args[1]
 		file = args[1]
 	}
+	if !h.saveTemp { //for debug
+		log.Println("get template of ", name, file)
+	}
 	file = filepath.FromSlash(file)
 	t := h.models[name]
 

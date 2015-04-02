@@ -19,18 +19,29 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 	defer func() {
 		ErrorWrap(w)
 	}()
+	var anch *Anchor
+	var suffix_url string
 	var main, suffix string
-	suff := strings.LastIndex(r.URL.Path, ".")
-	if suff > 0 && suff < len(r.URL.Path) {
-		suffix = r.URL.Path[suff+1:]
-		main = r.URL.Path[:suff]
-	} else {
-		main = r.URL.Path
+
+	if r.URL.Path == "/" {
+		anch, suffix_url = rou.anchor.match("/index", 6)
+		log.Printf("routing /index\n", r.URL.Path)
 	}
 
-	anch, suffix_url := rou.anchor.match(main, len(main))
+	if anch == nil {
 
-	log.Printf("routing %s\n", r.URL.Path)
+		suff := strings.LastIndex(r.URL.Path, ".")
+		if suff > 0 && suff < len(r.URL.Path) {
+			suffix = r.URL.Path[suff+1:]
+			main = r.URL.Path[:suff]
+		} else {
+			main = r.URL.Path
+		}
+		anch, suffix_url = rou.anchor.match(main, len(main))
+		log.Printf("routing %s\n", r.URL.Path)
+	} else {
+		suffix = "html"
+	}
 
 	if anch != nil {
 		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false}
