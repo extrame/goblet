@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -251,14 +252,30 @@ func getFormField(prefix string, form *map[string][]string, t reflect.StructFiel
 
 func fill_struct(typ reflect.Type, form *map[string][]string, val reflect.Value, id string, form_values []string, tag []string, used_offset int, autofill bool) error {
 	if typ.PkgPath() == "time" && typ.Name() == "Time" {
-		if len(tag) > 0 && tag[0] == "fillby(now)" && autofill {
+		var fillby string
+		var fillby_valid = regexp.MustCompile(`^\s*fillby\(\s*(\w*)\s*\)\s*$`)
+		for _, v := range tag {
+			matched := fillby_valid.FindStringSubmatch(v)
+			if len(matched) == 2 {
+				fillby = matched[1]
+			}
+		}
+		value := form_values[used_offset]
+
+		switch fillby {
+		case "now":
 			val.Set(reflect.ValueOf(time.Now()))
-		} else if len(form_values) > 0 {
-			time, err := time.Parse(time.RFC3339, form_values[used_offset])
+		case "timestamp":
+			if unix, err := strconv.ParseInt(value, 10, 64); err == nil {
+				val.Set(reflect.ValueOf(time.Unix(unix, 0)))
+			} else {
+				return err
+			}
+		default:
+			time, err := time.Parse(time.RFC3339, value)
 			if err == nil {
 				val.Set(reflect.ValueOf(time))
 			} else {
-				fmt.Println(err)
 				return err
 			}
 		}

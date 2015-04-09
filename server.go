@@ -7,7 +7,7 @@ import (
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet/error"
 	"github.com/extrame/goblet/render"
-	"github.com/extrame/xorm"
+	"github.com/go-xorm/xorm"
 	"log"
 	"net/http"
 	"path/filepath"

@@ -3,8 +3,8 @@ package goblet
 import (
 	"fmt"
 	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/extrame/xorm"
 	_ "github.com/go-sql-driver/MySQL"
+	"github.com/go-xorm/xorm"
 	_ "github.com/mattn/go-sqlite3"
 	"os"
 )
