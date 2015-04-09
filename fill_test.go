@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 )
@@ -31,4 +32,17 @@ func TestFillByMatch(t *testing.T) {
 	if len(matched) != 2 || matched[1] != "now" {
 		t.Errorf("fail in both empty in func")
 	}
+}
+
+type A struct {
+	Item string `goblet:"item"`
+}
+
+type B A
+
+func TestAlias(t *testing.T) {
+	form := map[string][]string{"item": []string{"value"}}
+	b := new(B)
+	UnmarshalForm(&form, b, true)
+	fmt.Println(b)
 }

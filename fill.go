@@ -260,7 +260,10 @@ func fill_struct(typ reflect.Type, form *map[string][]string, val reflect.Value,
 				fillby = matched[1]
 			}
 		}
-		value := form_values[used_offset]
+		var value string
+		if len(form_values) > used_offset {
+			value = form_values[used_offset]
+		}
 
 		switch fillby {
 		case "now":
