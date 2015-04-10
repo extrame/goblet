@@ -35,14 +35,24 @@ func TestFillByMatch(t *testing.T) {
 }
 
 type A struct {
-	Item string `goblet:"item"`
+	Item string `goblet:"item,valu3"`
 }
 
 type B A
 
 func TestAlias(t *testing.T) {
-	form := map[string][]string{"item": []string{"value"}}
 	b := new(B)
-	UnmarshalForm(&form, b, true)
+	UnmarshalForm(func(tag string) []string {
+		form := map[string][]string{"item": []string{"value"}}
+		return form[tag]
+	}, b, true)
+	fmt.Println(b)
+}
+
+func TestDefault(t *testing.T) {
+	b := new(A)
+	UnmarshalForm(func(tag string) []string {
+		return []string{}
+	}, b, true)
 	fmt.Println(b)
 }

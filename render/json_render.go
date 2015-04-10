@@ -2,6 +2,7 @@ package render
 
 import (
 	"encoding/json"
+	"html/template"
 	"net/http"
 )
 
@@ -20,7 +21,7 @@ func (j *JsonRender) Init(s RenderServer) {
 
 type JsonRenderInstance int8
 
-func (r *JsonRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int) (err error) {
+func (r *JsonRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
 	wr.WriteHeader(status)
 	v, err = json.Marshal(data)
@@ -34,7 +35,7 @@ type JsonCbRenderInstance struct {
 	Cb string
 }
 
-func (r *JsonCbRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int) (err error) {
+func (r *JsonCbRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
 	wr.WriteHeader(status)
 	v, err = json.Marshal(data)

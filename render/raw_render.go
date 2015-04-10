@@ -1,6 +1,7 @@
 package render
 
 import (
+	"html/template"
 	"net/http"
 )
 
@@ -15,7 +16,7 @@ func (r *RawRender) Init(s RenderServer) {
 
 type RawRenderInstance int8
 
-func (r *RawRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int) error {
+func (r *RawRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error {
 	switch tdata := data.(type) {
 	case []byte:
 		wr.Write(tdata)

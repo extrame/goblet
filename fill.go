@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"reflect"
 	"regexp"
@@ -54,9 +55,14 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 	if cx.Request.Form == nil {
 		cx.Request.ParseForm()
 	}
-	var values *map[string][]string
-	values = (*map[string][]string)(&cx.Request.Form)
-	return UnmarshalForm(values, v, autofill)
+
+	return UnmarshalForm(func(tag string) []string {
+		values := (*map[string][]string)(&cx.Request.Form)
+		if values != nil {
+			return (*values)[tag]
+		}
+		return []string{}
+	}, v, autofill)
 }
 
 // a form-enc decoder for request body
@@ -68,7 +74,9 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 	for k, v := range cx.Request.MultipartForm.Value {
 		values[k] = v
 	}
-	return UnmarshalForm(&values, v, autofill)
+	return UnmarshalForm(func(tag string) []string {
+		return values[tag]
+	}, v, autofill)
 }
 
 // map of Content-Type -> RequestDecoders
@@ -121,7 +129,7 @@ func (cx *Context) FillAs(v interface{}, autofill bool, ct string) error {
 }
 
 // Fill a struct `v` from the values in `goblet`
-func UnmarshalForm(form *map[string][]string, v interface{}, autofill bool) error {
+func UnmarshalForm(value_getter func(string) []string, v interface{}, autofill bool) error {
 	// check v is valid
 	rv := reflect.ValueOf(v).Elem()
 	// dereference pointer
@@ -130,23 +138,15 @@ func UnmarshalForm(form *map[string][]string, v interface{}, autofill bool) erro
 	}
 
 	if rv.Kind() == reflect.Struct {
-
 		// for each struct field on v
-		unmarshalStructInForm("", form, rv, 0, autofill, false)
-	} else if rv.Kind() == reflect.Map && !rv.IsNil() {
-		// for each form value add it to the map
-		for k, v := range *form {
-			if len(v) > 0 {
-				rv.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v[0]))
-			}
-		}
+		unmarshalStructInForm("", value_getter, rv, 0, autofill, false)
 	} else {
-		return fmt.Errorf("v must point to a struct or a non-nil map type")
+		return fmt.Errorf("v must point to a struct type")
 	}
 	return nil
 }
 
-func unmarshalStructInForm(context string, form *map[string][]string, rvalue reflect.Value, offset int, autofill bool, inarray bool) (err error) {
+func unmarshalStructInForm(context string, values_getter func(string) []string, rvalue reflect.Value, offset int, autofill bool, inarray bool) (err error) {
 
 	if rvalue.Type().Kind() == reflect.Ptr {
 
@@ -157,7 +157,8 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 	success := false
 
 	for i := 0; i < rtype.NumField(); i++ {
-		id, form_values, tag, increaseOffset := getFormField(context, form, rtype.Field(i), offset, inarray)
+		id, form_values, tag := getFormField(context, values_getter, rtype.Field(i), offset, inarray)
+		increaseOffset := !(context != "" && inarray)
 		var used_offset = 0
 		if increaseOffset {
 			used_offset = offset
@@ -170,14 +171,14 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 				if val.IsNil() {
 					val.Set(reflect.New(typ))
 				}
-				if err := fill_struct(typ, form, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
+				if err := fill_struct(typ, values_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
 					fmt.Println(err)
 					return err
 				} else {
 					break
 				}
 			case reflect.Struct:
-				if err := fill_struct(rtype.Field(i).Type, form, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
+				if err := fill_struct(rtype.Field(i).Type, values_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
 					fmt.Println(err)
 					return err
 				} else {
@@ -196,7 +197,7 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 					subRValue := reflect.New(subRType)
 					offset := 0
 					for {
-						err = unmarshalStructInForm(id, form, subRValue, offset, autofill, true)
+						err = unmarshalStructInForm(id, values_getter, subRValue, offset, autofill, true)
 						if err != nil {
 							fmt.Println(err)
 							break
@@ -210,16 +211,20 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 					len_fv := len(form_values)
 					rvnew := reflect.MakeSlice(rtype.Field(i).Type, len_fv, len_fv)
 					for j := 0; j < len_fv; j++ {
-						unmarshalField(context, form, rvnew.Index(j), form_values[j], autofill, tag)
+						unmarshalField(context, rvnew.Index(j), form_values[j], autofill, tag)
 					}
 					rvalue.Field(i).Set(rvnew)
 				}
 			default:
 				if len(form_values) > 0 && used_offset < len(form_values) {
-					unmarshalField(context, form, rvalue.Field(i), form_values[used_offset], autofill, tag)
+					unmarshalField(context, rvalue.Field(i), form_values[used_offset], autofill, tag)
 					success = true
+				} else if len(tag) > 0 {
+					unmarshalField(context, rvalue.Field(i), tag[0], autofill, tag)
 				}
 			}
+		} else {
+			log.Println("cannot set value in fill")
 		}
 	}
 	if !success {
@@ -228,29 +233,30 @@ func unmarshalStructInForm(context string, form *map[string][]string, rvalue ref
 	return nil
 }
 
-func getFormField(prefix string, form *map[string][]string, t reflect.StructField, offset int, inarray bool) (string, []string, []string, bool) {
+func getFormField(prefix string, values_getter func(string) []string, t reflect.StructField, offset int, inarray bool) (string, []string, []string) {
 	tags := strings.Split(t.Tag.Get("goblet"), ",")
 	tag := tags[0]
-	var values = (*form)[tag]
-	var increaseOffset = true
-	if len(tags) == 0 || tags[0] == "" {
-		tag = t.Name
-		values = (*form)[tag]
-	}
+
+	// values := []string{}
+
+	// if form != nil {
+	// 	values = (*form)[tag]
+	// }
+
 	if prefix != "" {
 		if inarray {
-			increaseOffset = false
 			tag = fmt.Sprintf(prefix+"[%d]"+"["+tag+"]", offset)
 		} else {
-			increaseOffset = true
 			tag = prefix + "[" + tag + "]"
 		}
-		values = (*form)[tag]
 	}
-	return tag, values, tags[1:], increaseOffset
+
+	values := values_getter(tag)
+
+	return tag, values, tags[1:]
 }
 
-func fill_struct(typ reflect.Type, form *map[string][]string, val reflect.Value, id string, form_values []string, tag []string, used_offset int, autofill bool) error {
+func fill_struct(typ reflect.Type, values_getter func(string) []string, val reflect.Value, id string, form_values []string, tag []string, used_offset int, autofill bool) error {
 	if typ.PkgPath() == "time" && typ.Name() == "Time" {
 		var fillby string
 		var fillby_valid = regexp.MustCompile(`^\s*fillby\(\s*(\w*)\s*\)\s*$`)
@@ -283,16 +289,18 @@ func fill_struct(typ reflect.Type, form *map[string][]string, val reflect.Value,
 			}
 		}
 	} else {
-		unmarshalStructInForm(id, form, val, 0, autofill, false)
+		unmarshalStructInForm(id, values_getter, val, 0, autofill, false)
 	}
 	return nil
 }
 
-func unmarshalField(context string, form *map[string][]string, v reflect.Value, form_value string, autofill bool, tags []string) error {
+func unmarshalField(contex string, v reflect.Value, form_value string, autofill bool, tags []string) error {
 	// string -> type conversion
 	switch v.Kind() {
 	case reflect.Int64:
-		fallthrough
+		if i, err := strconv.ParseInt(form_value, 10, 64); err == nil {
+			v.SetInt(i)
+		}
 	case reflect.Int:
 		fallthrough
 	case reflect.Int8:

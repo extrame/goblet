@@ -170,7 +170,7 @@ type HttpRenderInstance struct {
 	yield  *template.Template
 }
 
-func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int) error {
+func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error {
 	var mask_map = make(map[string]bool)
 
 	funcMap := template.FuncMap{
@@ -193,6 +193,9 @@ func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, st
 			}
 			return ""
 		},
+	}
+	for k, v := range funcs {
+		funcMap[k] = v
 	}
 	h.layout.Funcs(funcMap)
 	h.yield.Funcs(funcMap)

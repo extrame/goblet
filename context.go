@@ -1,8 +1,10 @@
 package goblet
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/extrame/goblet/render"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -50,7 +52,7 @@ func (c *Context) SetHeader(key, value string) {
 func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {
-			return c.renderInstance.Render(c.writer, c.response, c.status_code)
+			return c.renderInstance.Render(c.writer, c.response, c.status_code, c.Server.funcs)
 		} else {
 			c.writer.WriteHeader(500)
 			c.writer.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))
@@ -74,6 +76,11 @@ func (c *Context) AddRespond(datas ...interface{}) {
 			c.responseMap[k] = v
 		}
 	}
+}
+
+func (c *Context) RespondReader(reader io.Reader) {
+	bufio.NewWriter(c.writer).ReadFrom(reader)
+	c.already_writed = true
 }
 
 func (c *Context) Respond(data interface{}) {
