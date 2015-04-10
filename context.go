@@ -55,8 +55,9 @@ func (c *Context) render() (err error) {
 		if c.renderInstance != nil {
 			funcMap := make(template.FuncMap)
 			for i := 0; i < len(c.Server.funcs); i++ {
+				var fn = c.Server.funcs[i].Fn
 				funcMap[c.Server.funcs[i].Name] = func() interface{} {
-					return c.Server.funcs[i].Fn(c)
+					return fn(c)
 				}
 			}
 			return c.renderInstance.Render(c.writer, c.response, c.status_code, funcMap)
