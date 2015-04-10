@@ -15,6 +15,11 @@ import (
 	"strings"
 )
 
+type Fn struct {
+	Name string
+	Fn   func(*Context) interface{}
+}
+
 type Server struct {
 	wwwRoot       *string
 	PublicDir     *string
@@ -38,7 +43,7 @@ type Server struct {
 	logFile       *string
 	name          string
 	plugins       []Plugin
-	funcs         map[string]func(*Context) interface{}
+	funcs         []Fn
 }
 
 type Handler interface {
@@ -60,7 +65,7 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 	s.plugins = plugins
 	if err = s.parseConfig(); err == nil {
 		s.router.init()
-		s.funcs = make(map[string]func(*Context) interface{})
+		s.funcs = make([]Fn, 0)
 		if err = s.connectDB(); err == nil {
 			if *s.env == "development" {
 				DB.ShowSQL = true
@@ -171,11 +176,11 @@ func (s *Server) Run() {
 	s.Renders = make(map[string]render.Render)
 	s.Renders["html"] = new(render.HtmlRender)
 	var tempFuncMap = make(template.FuncMap)
-	for k, _ := range s.funcs {
+	for _, v := range s.funcs {
 		tempFunc := func() int {
 			return 0
 		}
-		tempFuncMap[k] = tempFunc
+		tempFuncMap[v.Name] = tempFunc
 	}
 	s.Renders["html"].Init(s, tempFuncMap)
 	s.Renders["json"] = new(render.JsonRender)
