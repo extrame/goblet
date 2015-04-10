@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/extrame/goblet/render"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -52,7 +53,13 @@ func (c *Context) SetHeader(key, value string) {
 func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {
-			return c.renderInstance.Render(c.writer, c.response, c.status_code, c.Server.funcs)
+			funcMap := make(template.FuncMap)
+			for k, v := range c.Server.funcs {
+				funcMap[k] = func() interface{} {
+					return v(c)
+				}
+			}
+			return c.renderInstance.Render(c.writer, c.response, c.status_code, funcMap)
 		} else {
 			c.writer.WriteHeader(500)
 			c.writer.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))

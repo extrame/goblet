@@ -8,7 +8,6 @@ import (
 	"github.com/extrame/goblet/error"
 	"github.com/extrame/goblet/render"
 	"github.com/go-xorm/xorm"
-	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -38,7 +37,7 @@ type Server struct {
 	logFile       *string
 	name          string
 	plugins       []Plugin
-	funcs         template.FuncMap
+	funcs         map[string]func(*Context) interface{}
 }
 
 type Handler interface {
@@ -60,7 +59,7 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 	s.plugins = plugins
 	if err = s.parseConfig(); err == nil {
 		s.router.init()
-		s.funcs = make(template.FuncMap)
+		s.funcs = make(map[string]func(*Context) interface{})
 		s.Renders = make(map[string]render.Render)
 		s.Renders["html"] = new(render.HtmlRender)
 		s.Renders["html"].Init(s)
