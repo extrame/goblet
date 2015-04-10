@@ -8,6 +8,7 @@ import (
 	"github.com/extrame/goblet/error"
 	"github.com/extrame/goblet/render"
 	"github.com/go-xorm/xorm"
+	"html/template"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -60,11 +61,6 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 	if err = s.parseConfig(); err == nil {
 		s.router.init()
 		s.funcs = make(map[string]func(*Context) interface{})
-		s.Renders = make(map[string]render.Render)
-		s.Renders["html"] = new(render.HtmlRender)
-		s.Renders["html"].Init(s)
-		s.Renders["json"] = new(render.JsonRender)
-		s.Renders["raw"] = new(render.RawRender)
 		if err = s.connectDB(); err == nil {
 			if *s.env == "development" {
 				DB.ShowSQL = true
@@ -172,6 +168,18 @@ func (s *Server) enableDbCache() {
 }
 
 func (s *Server) Run() {
+	s.Renders = make(map[string]render.Render)
+	s.Renders["html"] = new(render.HtmlRender)
+	var tempFuncMap = make(template.FuncMap)
+	for k, _ := range s.funcs {
+		tempFunc := func() int {
+			return 0
+		}
+		tempFuncMap[k] = tempFunc
+	}
+	s.Renders["html"].Init(s, tempFuncMap)
+	s.Renders["json"] = new(render.JsonRender)
+	s.Renders["raw"] = new(render.RawRender)
 	log.Println("Listen at ", fmt.Sprintf(":%d", *s.ListenPort))
 	http.ListenAndServe(fmt.Sprintf(":%d", *s.ListenPort), s)
 }

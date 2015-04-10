@@ -16,7 +16,7 @@ func (j *JsonRender) PrepareInstance(c RenderContext) (RenderInstance, error) {
 	return new(JsonRenderInstance), nil
 }
 
-func (j *JsonRender) Init(s RenderServer) {
+func (j *JsonRender) Init(s RenderServer, funcs template.FuncMap) {
 }
 
 type JsonRenderInstance int8

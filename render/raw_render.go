@@ -11,7 +11,7 @@ func (r *RawRender) PrepareInstance(c RenderContext) (RenderInstance, error) {
 	return new(RawRenderInstance), nil
 }
 
-func (r *RawRender) Init(s RenderServer) {
+func (r *RawRender) Init(s RenderServer, funcs template.FuncMap) {
 }
 
 type RawRenderInstance int8

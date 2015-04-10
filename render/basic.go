@@ -28,5 +28,5 @@ type Render interface {
 	//返回一个RenderInstance用于具体的渲染
 	PrepareInstance(RenderContext) (RenderInstance, error)
 	//初始化
-	Init(RenderServer)
+	Init(RenderServer, template.FuncMap)
 }

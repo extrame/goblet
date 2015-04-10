@@ -88,9 +88,13 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 	return
 }
 
-func (h *HtmlRender) Init(s RenderServer) {
+func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.root = template.New("REST_HTTP_ROOT")
-	h.root.Funcs(template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat})
+	origin_funcs := template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
+	for k, v := range funcs {
+		origin_funcs[k] = v
+	}
+	h.root.Funcs(origin_funcs)
 	h.dir = s.WwwRoot()
 	h.suffix = ".html"
 	h.models = make(map[string]*template.Template)
