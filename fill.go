@@ -281,11 +281,13 @@ func fill_struct(typ reflect.Type, values_getter func(string) []string, val refl
 				return err
 			}
 		default:
-			time, err := time.Parse(time.RFC3339, value)
-			if err == nil {
-				val.Set(reflect.ValueOf(time))
-			} else {
-				return err
+			if value != "" {
+				time, err := time.Parse(time.RFC3339, value)
+				if err == nil {
+					val.Set(reflect.ValueOf(time))
+				} else {
+					return err
+				}
 			}
 		}
 	} else {
