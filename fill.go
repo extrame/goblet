@@ -234,8 +234,15 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 }
 
 func getFormField(prefix string, values_getter func(string) []string, t reflect.StructField, offset int, inarray bool) (string, []string, []string) {
-	tags := strings.Split(t.Tag.Get("goblet"), ",")
-	tag := tags[0]
+
+	tags := []string{""}
+	tag := t.Tag.Get("goblet")
+	if tag != "" {
+		tags = strings.Split(tag, ",")
+		tag = tags[0]
+	} else {
+		tag = t.Name
+	}
 
 	// values := []string{}
 

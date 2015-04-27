@@ -56,3 +56,16 @@ func TestDefault(t *testing.T) {
 	}, b, true)
 	fmt.Println(b)
 }
+
+type C struct {
+	Item string
+}
+
+func TestEmptyTag(t *testing.T) {
+	b := new(C)
+	UnmarshalForm(func(tag string) []string {
+		form := map[string][]string{"Item": []string{"value"}}
+		return form[tag]
+	}, b, true)
+	fmt.Println(b)
+}
