@@ -48,6 +48,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 	}
 	if err != nil {
+		h.initModelTemplate(root, ctx.TemplatePath())
 		switch ctx.BlockOptionType() {
 
 		case "Html":
@@ -60,7 +61,6 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
-				h.initModelTemplate(layout, ctx.TemplatePath())
 				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
 			}
 		case "Group":
@@ -68,7 +68,6 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
-				h.initModelTemplate(layout, ctx.TemplatePath())
 				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
 			}
 		case "Static":
@@ -76,13 +75,12 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
-				h.initModelTemplate(layout, ctx.TemplatePath())
 				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
 			}
 		}
 	}
 	if err == nil {
-		return &HttpRenderInstance{layout, yield}, nil
+		return &HttpRenderInstance{layout, yield, "/css/" + ctx.TemplatePath() + "/" + ctx.Method() + ".css", "/js/" + ctx.TemplatePath() + "/" + ctx.Method() + ".js"}, nil
 	}
 
 	return
@@ -90,7 +88,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.root = template.New("REST_HTTP_ROOT")
-	origin_funcs := template.FuncMap{"raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
+	origin_funcs := template.FuncMap{"js": RawHtml, "css": RawHtml, "raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
 	for k, v := range funcs {
 		origin_funcs[k] = v
 	}
@@ -107,7 +105,7 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 func (h *HtmlRender) initTemplate(parent *template.Template, dir string, typ string) {
 	parent.New("")
 	if !h.saveTemp { //for debug
-		log.Println("init template in ", filepath.Join(h.dir, dir, "helper"))
+		log.Println("init template in ", h.dir, dir, "helper")
 	}
 	//scan for the helpers
 	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
@@ -128,7 +126,9 @@ func (h *HtmlRender) initGlobalTemplate(parent *template.Template) {
 }
 
 func (h *HtmlRender) initModelTemplate(parent *template.Template, dir string) {
-	h.initTemplate(parent, dir, "model")
+	if dir != "" || dir != "." {
+		h.initTemplate(parent, dir, "model")
+	}
 }
 
 func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*template.Template, error) {
@@ -170,8 +170,10 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 }
 
 type HttpRenderInstance struct {
-	layout *template.Template
-	yield  *template.Template
+	layout   *template.Template
+	yield    *template.Template
+	css_file string
+	js_file  string
 }
 
 func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error {
@@ -196,6 +198,12 @@ func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, st
 				mask_map[tag] = true
 			}
 			return ""
+		},
+		"css": func() template.HTML {
+			return template.HTML(`<link rel="stylesheet" type="text/css" href="` + h.css_file + `"></link>`)
+		},
+		"js": func() template.HTML {
+			return template.HTML(`<script src="` + h.js_file + `"></script>`)
 		},
 	}
 	for k, v := range funcs {

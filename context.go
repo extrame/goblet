@@ -50,6 +50,11 @@ func (c *Context) SetHeader(key, value string) {
 	c.writer.Header().Add(key, value)
 }
 
+func (c *Context) IntFormValue(key string) (int64, error) {
+	str := c.Request.FormValue(key)
+	return strconv.ParseInt(str, 10, 64)
+}
+
 func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {
