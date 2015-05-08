@@ -47,40 +47,42 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 			log.Println("Find Err Code Fail, ", err)
 		}
 	}
+	path := ctx.TemplatePath() + "/" + ctx.Method()
 	if err != nil {
 		h.initModelTemplate(root, ctx.TemplatePath())
 		switch ctx.BlockOptionType() {
 
 		case "Html":
 			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
+			path = ctx.Method()
 			if err == nil {
-				yield, err = h.getTemplate(root, ctx.Method()+h.suffix)
+				yield, err = h.getTemplate(root, path+h.suffix)
 			}
 		case "Rest":
 			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
-				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
+				yield, err = h.getTemplate(root, path+h.suffix)
 			}
 		case "Group":
 			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
-				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
+				yield, err = h.getTemplate(root, path+h.suffix)
 			}
 		case "Static":
 			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
 			if err == nil {
-				yield, err = h.getTemplate(root, ctx.TemplatePath()+"/"+ctx.Method()+h.suffix)
+				yield, err = h.getTemplate(root, path+h.suffix)
 			}
 		}
 	}
 	if err == nil {
-		return &HttpRenderInstance{layout, yield, "/css/" + ctx.TemplatePath() + "/" + ctx.Method() + ".css", "/js/" + ctx.TemplatePath() + "/" + ctx.Method() + ".js"}, nil
+		return &HttpRenderInstance{layout, yield, "/css/" + path + ".css", "/js/" + path + ".js"}, nil
 	}
 
 	return
