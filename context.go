@@ -50,9 +50,14 @@ func (c *Context) SetHeader(key, value string) {
 	c.writer.Header().Add(key, value)
 }
 
-func (c *Context) IntFormValue(key string) (int64, error) {
+func (c *Context) IntFormValue(key string) int64 {
 	str := c.Request.FormValue(key)
-	return strconv.ParseInt(str, 10, 64)
+	val, _ := strconv.ParseInt(str, 10, 64)
+	return val
+}
+
+func (c *Context) StrFormValue(key string) string {
+	return c.Request.FormValue(key)
 }
 
 func (c *Context) render() (err error) {
