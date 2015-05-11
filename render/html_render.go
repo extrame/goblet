@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -76,6 +77,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 			}
+			path = ctx.Method()
 			if err == nil {
 				yield, err = h.getTemplate(root, path+h.suffix)
 			}
@@ -90,7 +92,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.root = template.New("REST_HTTP_ROOT")
-	origin_funcs := template.FuncMap{"js": RawHtml, "css": RawHtml, "raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
+	origin_funcs := template.FuncMap{"noescape": Noescape, "js": RawHtml, "css": RawHtml, "raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
 	for k, v := range funcs {
 		origin_funcs[k] = v
 	}
@@ -274,4 +276,10 @@ func Repeat(count int) []int {
 		res[i] = i
 	}
 	return res
+}
+
+// Htmlunquote returns unquoted html string.
+func Noescape(src string) string {
+	str, _ := url.QueryUnescape(src)
+	return str
 }

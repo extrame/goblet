@@ -14,10 +14,11 @@ import (
 var USERCOOKIENAME = "user"
 
 type Context struct {
-	Server         *Server
-	Request        *http.Request
-	writer         http.ResponseWriter
-	option         BlockOption
+	Server  *Server
+	Request *http.Request
+	writer  http.ResponseWriter
+	option  BlockOption
+	//默认请求类型：HTML
 	Suffix         string
 	format         string
 	forceFormat    string
