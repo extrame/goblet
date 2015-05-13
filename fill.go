@@ -139,14 +139,14 @@ func UnmarshalForm(value_getter func(string) []string, v interface{}, autofill b
 
 	if rv.Kind() == reflect.Struct {
 		// for each struct field on v
-		unmarshalStructInForm("", value_getter, rv, 0, autofill, false)
+		unmarshalStructInForm("", value_getter, rv, 0, autofill, false, make(map[string]bool))
 	} else {
 		return fmt.Errorf("v must point to a struct type")
 	}
 	return nil
 }
 
-func unmarshalStructInForm(context string, values_getter func(string) []string, rvalue reflect.Value, offset int, autofill bool, inarray bool) (err error) {
+func unmarshalStructInForm(context string, values_getter func(string) []string, rvalue reflect.Value, offset int, autofill bool, inarray bool, parents map[string]bool) (err error) {
 
 	if rvalue.Type().Kind() == reflect.Ptr {
 
@@ -154,9 +154,11 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 	}
 	rtype := rvalue.Type()
 
+	parents[rtype.PkgPath()+"/"+rtype.Name()] = true
+
 	success := false
 
-	for i := 0; i < rtype.NumField(); i++ {
+	for i := 0; i < rtype.NumField() && err == nil; i++ {
 		id, form_values, tag := getFormField(context, values_getter, rtype.Field(i), offset, inarray)
 		increaseOffset := !(context != "" && inarray)
 		var used_offset = 0
@@ -171,14 +173,14 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 				if val.IsNil() {
 					val.Set(reflect.New(typ))
 				}
-				if err := fill_struct(typ, values_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
+				if err = fill_struct(typ, values_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill, parents); err != nil {
 					fmt.Println(err)
 					return err
 				} else {
 					break
 				}
 			case reflect.Struct:
-				if err := fill_struct(rtype.Field(i).Type, values_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill); err != nil {
+				if err = fill_struct(rtype.Field(i).Type, values_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill, parents); err != nil {
 					fmt.Println(err)
 					return err
 				} else {
@@ -193,20 +195,22 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 				}
 				switch subRType.Kind() {
 				case reflect.Struct:
-					rvalueTemp := reflect.MakeSlice(rtype.Field(i).Type, 0, 0)
-					subRValue := reflect.New(subRType)
-					offset := 0
-					for {
-						err = unmarshalStructInForm(id, values_getter, subRValue, offset, autofill, true)
-						if err != nil {
-							fmt.Println(err)
-							break
+					if _, ok := parents[subRType.PkgPath()+"/"+subRType.Name()]; !ok {
+						rvalueTemp := reflect.MakeSlice(rtype.Field(i).Type, 0, 0)
+						subRValue := reflect.New(subRType)
+						offset := 0
+						for {
+							err = unmarshalStructInForm(id, values_getter, subRValue, offset, autofill, true, parents)
+							if err != nil {
+								break
+							}
+							offset++
+							rvalueTemp = reflect.Append(rvalueTemp, subRValue.Elem())
 						}
-
-						offset++
-						rvalueTemp = reflect.Append(rvalueTemp, subRValue.Elem())
+						rvalue.Field(i).Set(rvalueTemp)
+					} else {
+						err = fmt.Errorf("Too deep of type reuse %v", parents)
 					}
-					rvalue.Field(i).Set(rvalueTemp)
 				default:
 					len_fv := len(form_values)
 					rvnew := reflect.MakeSlice(rtype.Field(i).Type, len_fv, len_fv)
@@ -227,10 +231,10 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 			log.Println("cannot set value in fill")
 		}
 	}
-	if !success {
-		return errors.New("no more element")
+	if !success && err == nil {
+		err = errors.New("no more element")
 	}
-	return nil
+	return
 }
 
 func getFormField(prefix string, values_getter func(string) []string, t reflect.StructField, offset int, inarray bool) (string, []string, []string) {
@@ -263,7 +267,7 @@ func getFormField(prefix string, values_getter func(string) []string, t reflect.
 	return tag, values, tags[1:]
 }
 
-func fill_struct(typ reflect.Type, values_getter func(string) []string, val reflect.Value, id string, form_values []string, tag []string, used_offset int, autofill bool) error {
+func fill_struct(typ reflect.Type, values_getter func(string) []string, val reflect.Value, id string, form_values []string, tag []string, used_offset int, autofill bool, parents map[string]bool) error {
 	if typ.PkgPath() == "time" && typ.Name() == "Time" {
 		var fillby string
 		var fillby_valid = regexp.MustCompile(`^\s*fillby\(\s*(\w*)\s*\)\s*$`)
@@ -298,7 +302,7 @@ func fill_struct(typ reflect.Type, values_getter func(string) []string, val refl
 			}
 		}
 	} else {
-		unmarshalStructInForm(id, values_getter, val, 0, autofill, false)
+		unmarshalStructInForm(id, values_getter, val, 0, autofill, false, parents)
 	}
 	return nil
 }
