@@ -176,6 +176,9 @@ func (s *Server) Run() {
 	s.Renders = make(map[string]render.Render)
 	s.Renders["html"] = new(render.HtmlRender)
 	var tempFuncMap = make(template.FuncMap)
+	tempFuncMap["bower"] = func(name string, version ...string) (template.HTML, error) {
+		return s.Bower(name, version...)
+	}
 	for _, v := range s.funcs {
 		tempFunc := func() int {
 			return 0
