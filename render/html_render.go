@@ -92,7 +92,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.root = template.New("REST_HTTP_ROOT")
-	origin_funcs := template.FuncMap{"noescape": Noescape, "js": RawHtml, "css": RawHtml, "raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
+	origin_funcs := template.FuncMap{"bower": RawHtml, "noescape": Noescape, "js": RawHtml, "css": RawHtml, "raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
 	for k, v := range funcs {
 		origin_funcs[k] = v
 	}

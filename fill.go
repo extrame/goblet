@@ -244,7 +244,8 @@ func getFormField(prefix string, values_getter func(string) []string, t reflect.
 	if tag != "" {
 		tags = strings.Split(tag, ",")
 		tag = tags[0]
-	} else {
+	}
+	if tag == "" {
 		tag = t.Name
 	}
 
@@ -270,18 +271,20 @@ func getFormField(prefix string, values_getter func(string) []string, t reflect.
 func fill_struct(typ reflect.Type, values_getter func(string) []string, val reflect.Value, id string, form_values []string, tag []string, used_offset int, autofill bool, parents map[string]bool) error {
 	if typ.PkgPath() == "time" && typ.Name() == "Time" {
 		var fillby string
-		var fillby_valid = regexp.MustCompile(`^\s*fillby\(\s*(\w*)\s*\)\s*$`)
+		var fillby_valid = regexp.MustCompile(`^\s*fillby\((.*)\)\s*$`)
 		for _, v := range tag {
 			matched := fillby_valid.FindStringSubmatch(v)
 			if len(matched) == 2 {
 				fillby = matched[1]
 			}
 		}
+		fillby = strings.TrimSpace(fillby)
 		var value string
 		if len(form_values) > used_offset {
 			value = form_values[used_offset]
 		}
 
+		fmt.Println(fillby, value, form_values)
 		switch fillby {
 		case "now":
 			val.Set(reflect.ValueOf(time.Now()))
@@ -292,11 +295,15 @@ func fill_struct(typ reflect.Type, values_getter func(string) []string, val refl
 				return err
 			}
 		default:
+			if fillby == "" {
+				fillby = time.RFC3339
+			}
 			if value != "" {
-				time, err := time.Parse(time.RFC3339, value)
+				time, err := time.Parse(fillby, value)
 				if err == nil {
 					val.Set(reflect.ValueOf(time))
 				} else {
+					log.Println(err)
 					return err
 				}
 			}

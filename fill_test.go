@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 )
 
 func TestFillByMatch(t *testing.T) {
@@ -64,7 +65,22 @@ type C struct {
 func TestEmptyTag(t *testing.T) {
 	b := new(C)
 	UnmarshalForm(func(tag string) []string {
+		fmt.Println(tag)
 		form := map[string][]string{"Item": []string{"value"}}
+		return form[tag]
+	}, b, true)
+	fmt.Println(b)
+}
+
+type D struct {
+	ExpectAt time.Time `goblet:",fillby(2006年1月2日)"`
+}
+
+func TestTimeFormat(t *testing.T) {
+	b := new(D)
+	UnmarshalForm(func(tag string) []string {
+		fmt.Println(tag)
+		form := map[string][]string{"ExpectAt": []string{"2015年11月2日"}}
 		return form[tag]
 	}, b, true)
 	fmt.Println(b)

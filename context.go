@@ -30,6 +30,7 @@ type Context struct {
 	layout         string
 	status_code    int
 	already_writed bool
+	bower_stack    map[string]bool
 }
 
 func (c *Context) handleData() {
@@ -65,6 +66,20 @@ func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {
 			funcMap := make(template.FuncMap)
+			funcMap["bower"] = func(name string, version ...string) (template.HTML, error) {
+				if c.bower_stack == nil {
+					c.bower_stack = make(map[string]bool)
+				}
+				maps, err := c.Server.Bower(name, version...)
+				res := ""
+				for _, strs := range maps {
+					if _, loaded := c.bower_stack[strs[0]]; !loaded {
+						res += strs[1]
+						c.bower_stack[strs[0]] = true
+					}
+				}
+				return template.HTML(res), err
+			}
 			for i := 0; i < len(c.Server.funcs); i++ {
 				var fn = c.Server.funcs[i].Fn
 				funcMap[c.Server.funcs[i].Name] = func() interface{} {
