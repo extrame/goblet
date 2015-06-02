@@ -63,7 +63,7 @@ func appendHtml(s *Server, b *bower.Component, name string, maps *[][2]string) {
 	for k, _ := range b.Dependencies {
 		if bts, e := ioutil.ReadFile(filepath.Join(root, k, "bower.json")); e == nil {
 			if b1, err := bower.ParseBowerJSON(bts); err == nil {
-				appendHtml(s, b1, name, maps)
+				appendHtml(s, b1, b1.Name, maps)
 			} else {
 				log.Println(err)
 			}
