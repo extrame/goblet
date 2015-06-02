@@ -43,7 +43,7 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 
 	if bts, e := ioutil.ReadFile(filepath.Join(root, "bower.json")); e == nil {
 		b, _ := bower.ParseBowerJSON(bts)
-		appendHtml(s, b, &res)
+		appendHtml(s, b, name, &res)
 	} else {
 		err = e
 	}
@@ -57,13 +57,13 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 	return
 }
 
-func appendHtml(s *Server, b *bower.Component, maps *[][2]string) {
+func appendHtml(s *Server, b *bower.Component, name string, maps *[][2]string) {
 
 	root := filepath.Join(*s.wwwRoot, "public", "plugins")
 	for k, _ := range b.Dependencies {
 		if bts, e := ioutil.ReadFile(filepath.Join(root, k, "bower.json")); e == nil {
 			if b1, err := bower.ParseBowerJSON(bts); err == nil {
-				appendHtml(s, b1, maps)
+				appendHtml(s, b1, name, maps)
 			} else {
 				log.Println(err)
 			}
@@ -73,15 +73,15 @@ func appendHtml(s *Server, b *bower.Component, maps *[][2]string) {
 	switch bs := b.Main.(type) {
 	case []interface{}:
 		for _, v := range bs {
-			res += appendHtmlItem(*s.env, root, b.Name, v.(string))
+			res += appendHtmlItem(*s.env, root, name, v.(string))
 		}
 	case string:
-		res += appendHtmlItem(*s.env, root, b.Name, bs)
+		res += appendHtmlItem(*s.env, root, name, bs)
 	default:
 		log.Panicf("%v,%T", b.Main, b.Main)
 	}
 
-	*maps = append(*maps, [2]string{b.Name, res})
+	*maps = append(*maps, [2]string{name, res})
 
 	return
 }
