@@ -321,22 +321,32 @@ func unmarshalField(contex string, v reflect.Value, form_value string, autofill 
 		if i, err := strconv.ParseInt(form_value, 10, 64); err == nil {
 			v.SetInt(i)
 		}
-	case reflect.Int:
-		fallthrough
-	case reflect.Int8:
-		if i, err := strconv.ParseInt(form_value, 10, 8); err == nil {
+	case reflect.Uint64:
+		if i, err := strconv.ParseUint(form_value, 10, 64); err == nil {
+			v.SetUint(i)
+		}
+	case reflect.Int, reflect.Int32:
+		if i, err := strconv.ParseInt(form_value, 10, 32); err == nil {
 			v.SetInt(i)
 		}
+	case reflect.Uint32:
+		if i, err := strconv.ParseUint(form_value, 10, 32); err == nil {
+			v.SetUint(i)
+		}
 	case reflect.Int16:
-		// convert to Int
-		// convert to Int64
 		if i, err := strconv.ParseInt(form_value, 10, 16); err == nil {
 			v.SetInt(i)
 		}
 	case reflect.Uint16:
-		// convert to Int
-		// convert to Int64
 		if i, err := strconv.ParseUint(form_value, 10, 16); err == nil {
+			v.SetUint(i)
+		}
+	case reflect.Int8:
+		if i, err := strconv.ParseInt(form_value, 10, 8); err == nil {
+			v.SetInt(i)
+		}
+	case reflect.Uint8:
+		if i, err := strconv.ParseUint(form_value, 10, 8); err == nil {
 			v.SetUint(i)
 		}
 	case reflect.String:
@@ -355,10 +365,6 @@ func unmarshalField(contex string, v reflect.Value, form_value string, autofill 
 	case reflect.Float32:
 		if f, err := strconv.ParseFloat(form_value, 32); err == nil {
 			v.SetFloat(f)
-		}
-	case reflect.Uint8:
-		if i, err := strconv.ParseUint(form_value, 10, 8); err == nil {
-			v.SetUint(i)
 		}
 	case reflect.Bool:
 		// the following strings convert to true
