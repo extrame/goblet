@@ -131,8 +131,8 @@ func (r *RestBlockOption) Parse(c *Context) error {
 		method = c.Request.Method
 	}
 	method = strings.ToUpper(method)
-	if len(c.Suffix) > 0 {
-		id := c.Suffix[1:]
+	if len(c.suffix) > 0 {
+		id := c.suffix[1:]
 		if id == "new" {
 			r.renderAsNew(c)
 		} else if method == "GET" {
@@ -245,8 +245,8 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 	val := reflect.ValueOf(g.block)
 	var method reflect.Value
 	var name string
-	if len(ctx.Suffix) > 1 {
-		name = ctx.Suffix[1:]
+	if len(ctx.suffix) > 1 {
+		name = ctx.suffix[1:]
 
 		typ := val.Type()
 
@@ -307,8 +307,8 @@ func (c *_staticBlockOption) MatchSuffix(suffix string) bool {
 }
 
 func (c *_staticBlockOption) Parse(ctx *Context) error {
-	if len(ctx.Suffix) > 1 {
-		ctx.method = ctx.Suffix
+	if len(ctx.suffix) > 1 {
+		ctx.method = ctx.suffix
 	} else {
 		ctx.method = "index"
 	}

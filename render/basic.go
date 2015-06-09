@@ -12,10 +12,13 @@ type RenderContext interface {
 	TemplatePath() string
 	BlockOptionType() string
 	Callback() string
+	Suffix() string
+	Format() string
 }
 
 type RenderServer interface {
 	WwwRoot() string
+	PublicDir() string
 	Env() string
 }
 

@@ -22,7 +22,7 @@ type Fn struct {
 
 type Server struct {
 	wwwRoot       *string
-	PublicDir     *string
+	publicDir     *string
 	UploadsDir    *string
 	ListenPort    *int
 	IgnoreUrlCase *bool
@@ -119,7 +119,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			path = r.URL.Path
 		}
-		http.ServeFile(w, r, filepath.Join(*s.wwwRoot, *s.PublicDir, path))
+		http.ServeFile(w, r, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
 	} else if err != nil {
 		WrapError(w, err, false)
 	}
@@ -132,7 +132,7 @@ func (s *Server) parseConfig() (err error) {
 	}
 	s.wwwRoot = toml.String("basic.www_root", "./www")
 	s.ListenPort = toml.Int("basic.port", 8080)
-	s.PublicDir = toml.String("basic.public_dir", "public")
+	s.publicDir = toml.String("basic.public_dir", "public")
 	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")
 	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
 	s.HashSecret = toml.String("secret", "cX8Os0wfB6uCGZZSZHIi6rKsy7b0scE9")
@@ -163,6 +163,10 @@ func (s *Server) Hash(str string) string {
 	hash.Write([]byte(str))
 	hash.Write([]byte(*s.HashSecret))
 	return fmt.Sprintf("%x", hash.Sum(nil))
+}
+
+func (s *Server) PublicDir() string {
+	return *s.publicDir
 }
 
 func (s *Server) enableDbCache() {

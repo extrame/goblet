@@ -1,7 +1,6 @@
 package render
 
 import (
-	"errors"
 	"fmt"
 	"github.com/extrame/goblet/error"
 	"html/template"
@@ -21,15 +20,16 @@ type HtmlRender struct {
 	dir      string
 	models   map[string]*template.Template
 	suffix   string
+	public   string
 	saveTemp bool
 }
 
 func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance, err error) {
 	var layout, yield *template.Template
 
-	err = errors.New("")
-
 	var root *template.Template
+
+	var status_code = ctx.StatusCode()
 
 	if !h.saveTemp {
 		root, _ = h.root.Clone()
@@ -38,51 +38,59 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		root = h.root
 	}
 
-	if ctx.StatusCode() >= 300 {
+	path := ctx.TemplatePath() + "/" + ctx.Method()
+
+	h.initModelTemplate(root, ctx.TemplatePath())
+	switch ctx.BlockOptionType() {
+
+	case "Html":
+		layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
+		path = ctx.Method()
+		if err == nil {
+			yield, err = h.getTemplate(root, path+h.suffix)
+		}
+	case "Rest":
+		if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
+		}
+		if err == nil {
+			yield, err = h.getTemplate(root, path+h.suffix)
+		}
+	case "Group":
+		if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
+		}
+		if err == nil {
+			yield, err = h.getTemplate(root, path+h.suffix)
+		}
+	case "Static":
+		if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
+			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
+		}
+		path = ctx.Method()
+		if err == nil {
+			yield, err = h.getTemplate(root, path+h.suffix)
+		}
+		//for static file
+		if err == ge.NOSUCHROUTER {
+			file := filepath.Join(h.dir, h.public, fmt.Sprintf("%s.%s", path, ctx.Format()))
+			if _, err := os.Stat(file); os.IsNotExist(err) {
+				status_code = 404
+			}
+		}
+	}
+
+	if status_code >= 300 {
 		layout, err = h.getTemplate(root, "layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
 		if err != nil {
 			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 		}
-		yield, err = h.getTemplate(root, strconv.Itoa(ctx.StatusCode())+h.suffix, filepath.Join(strconv.Itoa(ctx.StatusCode())+h.suffix))
+		yield, err = h.getTemplate(root, strconv.Itoa(status_code)+h.suffix, filepath.Join(strconv.Itoa(status_code)+h.suffix))
 		if err != nil {
 			log.Println("Find Err Code Fail, ", err)
 		}
 	}
-	path := ctx.TemplatePath() + "/" + ctx.Method()
-	if err != nil {
-		h.initModelTemplate(root, ctx.TemplatePath())
-		switch ctx.BlockOptionType() {
 
-		case "Html":
-			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
-			path = ctx.Method()
-			if err == nil {
-				yield, err = h.getTemplate(root, path+h.suffix)
-			}
-		case "Rest":
-			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
-			}
-			if err == nil {
-				yield, err = h.getTemplate(root, path+h.suffix)
-			}
-		case "Group":
-			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
-			}
-			if err == nil {
-				yield, err = h.getTemplate(root, path+h.suffix)
-			}
-		case "Static":
-			if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
-				layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
-			}
-			path = ctx.Method()
-			if err == nil {
-				yield, err = h.getTemplate(root, path+h.suffix)
-			}
-		}
-	}
 	if err == nil {
 		return &HttpRenderInstance{layout, yield, "/css/" + path + ".css", "/js/" + path + ".js"}, nil
 	}
@@ -98,6 +106,7 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	}
 	h.root.Funcs(origin_funcs)
 	h.dir = s.WwwRoot()
+	h.public = s.PublicDir()
 	h.suffix = ".html"
 	h.models = make(map[string]*template.Template)
 	h.saveTemp = (s.Env() == "production")

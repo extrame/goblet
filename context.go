@@ -19,7 +19,7 @@ type Context struct {
 	writer  http.ResponseWriter
 	option  BlockOption
 	//默认请求类型：HTML
-	Suffix         string
+	suffix         string
 	format         string
 	forceFormat    string
 	tempRenders    []string
@@ -46,6 +46,10 @@ func (c *Context) Writer() http.ResponseWriter {
 
 func (c *Context) Callback() string {
 	return c.Request.FormValue("callback")
+}
+
+func (c *Context) Suffix() string {
+	return c.suffix
 }
 
 func (c *Context) SetHeader(key, value string) {
@@ -231,6 +235,10 @@ func (c *Context) BlockOptionType() string {
 
 func (c *Context) Method() string {
 	return c.method
+}
+
+func (c *Context) Format() string {
+	return c.format
 }
 
 func (c *Context) StatusCode() int {
