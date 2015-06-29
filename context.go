@@ -122,9 +122,11 @@ func (c *Context) RespondReader(reader io.Reader) {
 }
 
 func (c *Context) Respond(data interface{}) {
-	switch data.(type) {
+	switch td := data.(type) {
 	case error:
 		c.RespondWithStatus(data, http.StatusInternalServerError)
+	case []byte:
+		c.writer.Write(td)
 	default:
 		c.RespondWithStatus(data, http.StatusOK)
 	}

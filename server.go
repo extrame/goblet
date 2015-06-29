@@ -15,6 +15,8 @@ import (
 	"strings"
 )
 
+var NotImplemented = fmt.Errorf("this method is not implemented")
+
 type Fn struct {
 	Name string
 	Fn   func(*Context) interface{}
