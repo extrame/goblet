@@ -126,7 +126,8 @@ func (c *Context) Respond(data interface{}) {
 	case error:
 		c.RespondWithStatus(data, http.StatusInternalServerError)
 	case []byte:
-		c.writer.Write(td)
+		c.format = "raw"
+		c.Writer().Write(td)
 	default:
 		c.RespondWithStatus(data, http.StatusOK)
 	}
