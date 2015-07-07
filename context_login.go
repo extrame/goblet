@@ -18,6 +18,26 @@ func (c *Context) GetLoginIdAs(name string) (string, bool) {
 	return "", false
 }
 
+func (c *Context) AddLoginIdAs(id interface{}, name string, timeduration ...time.Duration) {
+	if name == "" {
+		name = "user"
+	}
+	var userid string
+	switch rid := id.(type) {
+	case string:
+		userid = rid
+	case int64:
+		userid = strconv.FormatInt(rid, 10)
+
+	}
+	if timeduration == nil {
+		c.addLoginAs(name, userid)
+	} else {
+		c.addLoginAs(name, userid, timeduration[0])
+	}
+
+}
+
 func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
 	var userid string
 	switch rid := id.(type) {
