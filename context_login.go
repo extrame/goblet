@@ -18,21 +18,33 @@ func (c *Context) GetLoginIdAs(name string) (string, bool) {
 	return "", false
 }
 
-func (c *Context) AddLoginId(id interface{}) {
+func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
+	var userid string
 	switch rid := id.(type) {
 	case string:
-		c.addLoginAs("user", rid)
+		userid = rid
 	case int64:
-		c.addLoginAs("user", strconv.FormatInt(rid, 10))
+		userid = strconv.FormatInt(rid, 10)
+
 	}
+	if timeduration == nil {
+		c.addLoginAs("user", userid)
+	} else {
+		c.addLoginAs("user", userid, timeduration[0])
+	}
+
 }
 
-func (c *Context) addLoginAs(name string, id string) {
+func (c *Context) addLoginAs(name string, id string, timeduration ...time.Duration) {
 	expire := time.Now().AddDate(0, 0, 1)
+	if timeduration != nil {
+		expire = time.Now().Add(timeduration[0])
+	}
 	cookie := new(http.Cookie)
 	cookie.Name = name + "Id"
 	cookie.Value = id
 	cookie.Expires = expire
+	cookie.Path = "/"
 	cookie.RawExpires = expire.Format(time.UnixDate)
 	c.AddSignedCookie(cookie)
 }
