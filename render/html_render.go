@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -217,6 +218,11 @@ func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, st
 		},
 		"js": func() template.HTML {
 			return template.HTML(`<script src="` + h.js_file + `"></script>`)
+		},
+		"sort": func(array []interface{}, by string) []interface{} {
+			s := sorter{array, by}
+			sort.Sort(&s)
+			return array
 		},
 	}
 	for k, v := range funcs {
