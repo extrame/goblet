@@ -186,6 +186,21 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 				} else {
 					break
 				}
+			case reflect.Interface:
+				//ask the parent to tell me how to unmarshal it
+				values := rvalue.MethodByName("UnmarshallForm").Call([]reflect.Value{reflect.ValueOf(rtype.Field(i).Name)})
+				if len(values) == 2 && values[1].Interface() == nil {
+					res := values[0].Interface()
+					resValue := reflect.ValueOf(res)
+					resType := reflect.TypeOf(res)
+					if err = fill_struct(resType, values_getter, resValue, id, form_values, tag, used_offset, autofill, parents); err != nil {
+						rvalue.Field(i).Set(resValue)
+						fmt.Println(res, rvalue)
+						return err
+					} else {
+						break
+					}
+				}
 			case reflect.Slice:
 				fType := rtype.Field(i).Type
 				subRType := rtype.Field(i).Type.Elem()

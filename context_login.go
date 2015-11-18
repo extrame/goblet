@@ -71,10 +71,10 @@ func (c *Context) addLoginAs(name string, id string, timeduration ...time.Durati
 
 //Delete the login cookie saved
 func (c *Context) DelLogin() {
-	c.delLoginAs("user")
+	c.DelLoginAs("user")
 }
 
-func (c *Context) delLoginAs(name string) {
+func (c *Context) DelLoginAs(name string) {
 	cookie, err := c.SignedCookie(name + "Id")
 	if cookie != nil && err == nil {
 		cookie.MaxAge = -1
