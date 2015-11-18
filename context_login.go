@@ -26,9 +26,12 @@ func (c *Context) AddLoginIdAs(id interface{}, name string, timeduration ...time
 	switch rid := id.(type) {
 	case string:
 		userid = rid
+	case int:
+		userid = strconv.FormatInt(int64(rid), 10)
+	case int32:
+		userid = strconv.FormatInt(int64(rid), 10)
 	case int64:
 		userid = strconv.FormatInt(rid, 10)
-
 	}
 	if timeduration == nil {
 		c.addLoginAs(name, userid)
@@ -43,9 +46,12 @@ func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
 	switch rid := id.(type) {
 	case string:
 		userid = rid
+	case int:
+		userid = strconv.FormatInt(int64(rid), 10)
+	case int32:
+		userid = strconv.FormatInt(int64(rid), 10)
 	case int64:
 		userid = strconv.FormatInt(rid, 10)
-
 	}
 	if timeduration == nil {
 		c.addLoginAs("user", userid)
