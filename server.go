@@ -15,6 +15,11 @@ import (
 	"strings"
 )
 
+const (
+	DevelopEnv = "development"
+	ProductEnv = "product"
+)
+
 var NotImplemented = fmt.Errorf("this method is not implemented")
 
 type Fn struct {
@@ -69,7 +74,7 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 		s.router.init()
 		s.funcs = make([]Fn, 0)
 		if err = s.connectDB(); err == nil {
-			if *s.env == "development" {
+			if *s.env == DevelopEnv {
 				DB.ShowSQL = true
 			}
 		}

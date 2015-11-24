@@ -80,6 +80,7 @@ func (c *Context) DelLogin() {
 	c.DelLoginAs("user")
 }
 
+//Delete the login cookie as specified name
 func (c *Context) DelLoginAs(name string) {
 	cookie, err := c.SignedCookie(name + "Id")
 	if cookie != nil && err == nil {

@@ -138,7 +138,7 @@ func (c *Context) RespondOK() {
 }
 
 func (c *Context) RespondError(err error) {
-	c.RespondWithStatus(err, http.StatusBadRequest)
+	c.RespondWithStatus(err.Error(), http.StatusBadRequest)
 }
 
 //Reset the context renders
