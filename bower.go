@@ -30,7 +30,7 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 		if len(version) > 0 {
 			name = name + "#" + version[0]
 		}
-		c := exec.Command("bower", "install", "-S", name)
+		c := exec.Command("bower", "install", "-S", name, "--allow-root")
 		c.Env = os.Environ()
 		c.Dir = filepath.Join(*s.wwwRoot, "public")
 		c.Stderr = LogFile
