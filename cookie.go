@@ -3,7 +3,7 @@ package goblet
 import (
 	"errors"
 	"fmt"
-	"net/http"
+	"github.com/valyala/fasthttp"
 )
 
 // CookieIsMissing is returned when a cookie is missing.
@@ -32,38 +32,36 @@ func toSignedCookieName(name string) string {
 // AddSignedCookie adds the specified cookie to the response and also adds an
 // additional 'signed' cookie that is used to validate the cookies value when
 // SignedCookie is called.
-func (c *Context) AddSignedCookie(cookie *http.Cookie) (*http.Cookie, error) {
+func (c *Context) AddSignedCookie(cookie *fasthttp.Cookie) (*fasthttp.Cookie, error) {
 
 	// make the signed cookie
-	signedCookie := new(http.Cookie)
+	signedCookie := new(fasthttp.Cookie)
 
 	// copy the cookie settings
-	signedCookie.Path = cookie.Path
-	signedCookie.Domain = cookie.Domain
-	signedCookie.RawExpires = cookie.RawExpires
-	signedCookie.Expires = cookie.Expires
-	signedCookie.MaxAge = cookie.MaxAge
-	signedCookie.Secure = cookie.Secure
-	signedCookie.HttpOnly = cookie.HttpOnly
-	signedCookie.Raw = cookie.Raw
-
+	signedCookie.SetPathBytes(cookie.Path())
+	signedCookie.SetDomainBytes(cookie.Domain())
+	signedCookie.SetExpire(cookie.Expire())
+	// signedCookie.MaxAge = cookie.MaxAge
+	// signedCookie.Secure = cookie.Secure
+	// signedCookie.HttpOnly = cookie.HttpOnly
+	// signedCookie.Raw = cookie.Raw
+	signedCookie.SetKey(toSignedCookieName(string(cookie.Key())))
 	// set the signed cookie specifics
-	signedCookie.Name = toSignedCookieName(cookie.Name)
-	signedCookie.Value = c.Server.Hash(cookie.Value)
+	signedCookie.SetValue(c.Server.HashBytes(cookie.Value()))
 
 	// add the cookies
-	http.SetCookie(c.writer, cookie)
-	http.SetCookie(c.writer, signedCookie)
+	c.ctx.Response.Header.SetCookie(cookie)
+	c.ctx.Response.Header.SetCookie(signedCookie)
 
 	// return the new signed cookie (and no error)
 	return signedCookie, nil
 
 }
 
-func (c *Context) AddCookie(cookie *http.Cookie) error {
+func (c *Context) AddCookie(cookie *fasthttp.Cookie) error {
 
 	// add the cookies
-	http.SetCookie(c.writer, cookie)
+	c.ctx.Response.Header.SetCookie(cookie)
 
 	// return the new signed cookie (and no error)
 	return nil
@@ -73,11 +71,14 @@ func (c *Context) AddCookie(cookie *http.Cookie) error {
 // Gets the cookie specified by name and validates that its value has not been
 // tampered with by checking the signed cookie too.  Will return CookieNotValid error
 // if it has been tampered with, otherwise, it will return the actual cookie.
-func (c *Context) SignedCookie(name string) (*http.Cookie, error) {
+func (c *Context) SignedCookie(name string) (*fasthttp.Cookie, error) {
 
 	valid, validErr := c.cookieIsValid(name)
 	if valid {
-		return c.Request.Cookie(name)
+		bts := c.ctx.Request.Header.Cookie(name)
+		cookie := new(fasthttp.Cookie)
+		cookie.ParseBytes(bts)
+		return cookie, nil
 	} else if validErr != nil {
 		return nil, validErr
 	}
@@ -90,25 +91,28 @@ func (c *Context) SignedCookie(name string) (*http.Cookie, error) {
 func (c *Context) cookieIsValid(name string) (bool, error) {
 
 	// get the cookies
-	cookie, cookieErr := c.Request.Cookie(name)
-	signedCookie, signedCookieErr := c.Request.Cookie(toSignedCookieName(name))
+	cookie := new(fasthttp.Cookie)
+	parseCookieErr := cookie.ParseBytes(c.ctx.Request.Header.Cookie(name))
+	signedCookie := new(fasthttp.Cookie)
+	parseSCookieErr := signedCookie.ParseBytes(c.ctx.Request.Header.Cookie(toSignedCookieName(name)))
 
 	// handle errors reading cookies
-	if cookieErr == http.ErrNoCookie {
-		return false, CookieIsMissing
+
+	if parseCookieErr != nil {
+		if parseCookieErr.Error() == "no cookies found" {
+			return false, CookieIsMissing
+		}
+		return false, parseCookieErr
 	}
-	if cookieErr != nil {
-		return false, cookieErr
-	}
-	if signedCookieErr == http.ErrNoCookie {
-		return false, SignedCookieIsMissing
-	}
-	if signedCookieErr != nil {
-		return false, signedCookieErr
+	if parseSCookieErr != nil {
+		if parseSCookieErr.Error() == "no cookies found" {
+			return false, SignedCookieIsMissing
+		}
+		return false, parseSCookieErr
 	}
 
 	// check the cookies
-	if c.Server.Hash(cookie.Value) != signedCookie.Value {
+	if c.Server.HashBytes(cookie.Value()) != string(signedCookie.Value()) {
 		return false, nil
 	}
 

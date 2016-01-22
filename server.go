@@ -8,9 +8,9 @@ import (
 	"github.com/extrame/goblet/error"
 	"github.com/extrame/goblet/render"
 	"github.com/go-xorm/xorm"
+	"github.com/valyala/fasthttp"
 	"html/template"
 	"log"
-	"net/http"
 	"path/filepath"
 	"strings"
 )
@@ -113,22 +113,24 @@ func (s *Server) WwwRoot() string {
 	return *s.wwwRoot
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// request handler in net/http style, i.e. method bound to MyHandler struct.
+func (s *Server) HandleFastHTTP(ctx *fasthttp.RequestCtx) {
 	defer func() {
 		if err := recover(); err != nil {
-			WrapError(w, err, true)
+			WrapError(ctx, err, true)
 		}
 	}()
-	if err := s.router.route(s, w, r); err == ge.NOSUCHROUTER {
+	if err := s.router.route(s, ctx); err == ge.NOSUCHROUTER {
+		orig_path := string(ctx.Path())
 		var path string
-		if strings.HasSuffix(r.URL.Path, "/") {
-			path = r.URL.Path + "index.html"
+		if strings.HasSuffix(orig_path, "/") {
+			path = orig_path + "index.html"
 		} else {
-			path = r.URL.Path
+			path = orig_path
 		}
-		http.ServeFile(w, r, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
+		fasthttp.ServeFile(ctx, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
 	} else if err != nil {
-		WrapError(w, err, false)
+		WrapError(ctx, err, false)
 	}
 }
 
@@ -166,8 +168,12 @@ func (s *Server) parseConfig() (err error) {
 }
 
 func (s *Server) Hash(str string) string {
+	return s.HashBytes([]byte(str))
+}
+
+func (s *Server) HashBytes(bts []byte) string {
 	hash := sha1.New()
-	hash.Write([]byte(str))
+	hash.Write(bts)
 	hash.Write([]byte(*s.HashSecret))
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
@@ -197,5 +203,5 @@ func (s *Server) Run() {
 	s.Renders["json"] = new(render.JsonRender)
 	s.Renders["raw"] = new(render.RawRender)
 	log.Println("Listen at ", fmt.Sprintf(":%d", *s.ListenPort))
-	http.ListenAndServe(fmt.Sprintf(":%d", *s.ListenPort), s)
+	fasthttp.ListenAndServe(fmt.Sprintf(":%d", *s.ListenPort), s.HandleFastHTTP)
 }

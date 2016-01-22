@@ -2,12 +2,12 @@ package goblet
 
 import (
 	"fmt"
-	"net/http"
+	"github.com/valyala/fasthttp"
 	"runtime/debug"
 )
 
-func WrapError(w http.ResponseWriter, err interface{}, withStack bool) {
-	w.WriteHeader(500)
+func WrapError(w *fasthttp.RequestCtx, err interface{}, withStack bool) {
+	w.SetStatusCode(500)
 	w.Write([]byte("<body><h4>"))
 	w.Write([]byte(fmt.Sprintf("%T,%v", err, err)))
 	w.Write([]byte("</h4>"))

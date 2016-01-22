@@ -1,8 +1,8 @@
 package render
 
 import (
+	"github.com/valyala/fasthttp"
 	"html/template"
-	"net/http"
 )
 
 type RawRender int8
@@ -16,10 +16,10 @@ func (r *RawRender) Init(s RenderServer, funcs template.FuncMap) {
 
 type RawRenderInstance int8
 
-func (r *RawRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error {
+func (r *RawRenderInstance) Render(ctx *fasthttp.RequestCtx, data interface{}, status int, funcs template.FuncMap) error {
 	switch tdata := data.(type) {
 	case []byte:
-		wr.Write(tdata)
+		ctx.Write(tdata)
 	}
 	return nil
 }

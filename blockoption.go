@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/extrame/goblet/error"
 	"reflect"
@@ -62,11 +63,11 @@ func (h *HtmlBlockOption) MatchSuffix(suffix string) bool {
 
 func (h *HtmlBlockOption) Parse(c *Context) error {
 	c.method = h.htmlRenderFileOrDir
-	if c.Request.Method == "GET" {
+	if bytes.Compare(c.ctx.Method(), []byte{'G', 'E', 'T'}) == 0 {
 		if get, ok := h.BasicBlockOption.block.(HtmlGetBlock); ok {
 			get.Get(c)
 		}
-	} else if c.Request.Method == "POST" {
+	} else if bytes.Compare(c.ctx.Method(), []byte{'P', 'O', 'S', 'T'}) == 0 {
 		if post, ok := h.BasicBlockOption.block.(HtmlPostBlock); ok {
 			post.Post(c)
 		}
@@ -127,10 +128,11 @@ func (r *RestBlockOption) UpdateRender(obj string, ctx *Context) {
 
 func (r *RestBlockOption) Parse(c *Context) error {
 	var method string
-	if method = c.Request.URL.Query().Get("method"); method == "" {
-		method = c.Request.Method
+	if m := c.ctx.QueryArgs().Peek("method"); len(m) == 0 {
+		method = string(c.ctx.Method())
+	} else {
+		method = strings.ToUpper(string(m))
 	}
-	method = strings.ToUpper(method)
 	if len(c.suffix) > 0 {
 		id := c.suffix[1:]
 		if id == "new" {
@@ -261,25 +263,14 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 		} else {
 			method = val.MethodByName(name)
 		}
-		if !method.IsValid() {
-			if name = ctx.Request.URL.Query().Get("method"); name == "" {
-				name = ctx.Request.Method
-			}
-			name = strings.ToLower(name)
-			switch name {
-			case "post":
-				method = val.MethodByName("Post")
-			case "get":
-				method = val.MethodByName("Get")
-			}
-		}
 	}
 
 	if !method.IsValid() {
-		if name = ctx.Request.URL.Query().Get("method"); name == "" {
-			name = ctx.Request.Method
+		if n := ctx.ctx.QueryArgs().Peek("method"); len(n) == 0 {
+			name = string(ctx.ctx.Method())
+		} else {
+			name = strings.ToLower(string(n))
 		}
-		name = strings.ToLower(name)
 		switch name {
 		case "post":
 			method = val.MethodByName("Post")

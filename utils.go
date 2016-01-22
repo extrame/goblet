@@ -1,17 +1,18 @@
 package goblet
 
 import (
+	"github.com/valyala/fasthttp"
 	"log"
 	"net/http"
 	"runtime/debug"
 )
 
-func ErrorWrap(w http.ResponseWriter) {
+func ErrorWrap(ctx *fasthttp.RequestCtx) {
 	if e := recover(); e != nil {
 		log.Print("panic:", e, "\n", string(debug.Stack()))
-		w.WriteHeader(http.StatusInternalServerError)
+		ctx.SetStatusCode(http.StatusInternalServerError)
 		if err, ok := e.(error); ok {
-			w.Write([]byte(err.Error()))
+			ctx.Write([]byte(err.Error()))
 		}
 	}
 }

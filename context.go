@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/extrame/goblet/render"
+	"github.com/valyala/fasthttp"
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 )
@@ -14,10 +16,9 @@ import (
 var USERCOOKIENAME = "user"
 
 type Context struct {
-	Server  *Server
-	Request *http.Request
-	writer  http.ResponseWriter
-	option  BlockOption
+	Server *Server
+	ctx    *fasthttp.RequestCtx
+	option BlockOption
 	//默认请求类型：HTML
 	suffix         string
 	format         string
@@ -37,15 +38,15 @@ func (c *Context) handleData() {
 
 }
 
-func (c *Context) Writer() http.ResponseWriter {
+func (c *Context) Writer() io.Writer {
 	c.already_writed = true
 	//TODO
 	// c.writer.WriteHeader(c.status_code)
-	return c.writer
+	return c.ctx
 }
 
 func (c *Context) Callback() string {
-	return c.Request.FormValue("callback")
+	return string(c.ctx.QueryArgs().Peek("callback"))
 }
 
 func (c *Context) Suffix() string {
@@ -53,17 +54,24 @@ func (c *Context) Suffix() string {
 }
 
 func (c *Context) SetHeader(key, value string) {
-	c.writer.Header().Add(key, value)
+	c.ctx.Response.Header.Set(key, value)
 }
 
 func (c *Context) IntFormValue(key string) int64 {
-	str := c.Request.FormValue(key)
-	val, _ := strconv.ParseInt(str, 10, 64)
+	bts := c.ctx.QueryArgs().Peek(key)
+	if len(bts) == 0 {
+		bts = c.ctx.PostArgs().Peek(key)
+	}
+	val, _ := strconv.ParseInt(string(bts), 10, 64)
 	return val
 }
 
 func (c *Context) StrFormValue(key string) string {
-	return c.Request.FormValue(key)
+	bts := c.ctx.QueryArgs().Peek(key)
+	if len(bts) == 0 {
+		bts = c.ctx.PostArgs().Peek(key)
+	}
+	return string(bts)
 }
 
 func (c *Context) render() (err error) {
@@ -90,10 +98,10 @@ func (c *Context) render() (err error) {
 					return fn(c)
 				}
 			}
-			return c.renderInstance.Render(c.writer, c.response, c.status_code, funcMap)
+			return c.renderInstance.Render(c.ctx, c.response, c.status_code, funcMap)
 		} else {
-			c.writer.WriteHeader(500)
-			c.writer.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))
+			c.ctx.SetStatusCode(500)
+			c.ctx.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))
 		}
 	}
 	return nil
@@ -117,7 +125,7 @@ func (c *Context) AddRespond(datas ...interface{}) {
 }
 
 func (c *Context) RespondReader(reader io.Reader) {
-	bufio.NewWriter(c.writer).ReadFrom(reader)
+	bufio.NewWriter(c.ctx).ReadFrom(reader)
 	c.already_writed = true
 }
 
@@ -214,10 +222,18 @@ func (c *Context) RestRedirectToRead(id interface{}) {
 	}
 }
 
+func (c *Context) RemoteAddr() net.Addr {
+	return c.ctx.RemoteAddr()
+}
+
+func (c *Context) FormValue(key string) string {
+	return string(c.ctx.FormValue(key))
+}
+
 func (c *Context) RedirectTo(url string) {
-	c.writer.Header().Set("Location", url)
-	c.writer.WriteHeader(302)
-	c.format = "raw"
+	c.ctx.Response.Header.Set("Location", url)
+	c.ctx.SetStatusCode(302)
+	c.forceFormat = "raw"
 }
 
 ///////////for renders/////////////

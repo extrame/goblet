@@ -1,8 +1,8 @@
 package render
 
 import (
+	"github.com/valyala/fasthttp"
 	"html/template"
-	"net/http"
 )
 
 type RenderContext interface {
@@ -24,7 +24,7 @@ type RenderServer interface {
 
 //每一类的Render都必须返回一个RenderInstance用于具体的渲染
 type RenderInstance interface {
-	Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error
+	Render(ctx *fasthttp.RequestCtx, data interface{}, status int, funcs template.FuncMap) error
 }
 
 type Render interface {

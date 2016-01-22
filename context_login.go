@@ -1,7 +1,7 @@
 package goblet
 
 import (
-	"net/http"
+	"github.com/valyala/fasthttp"
 	"strconv"
 	"time"
 )
@@ -13,7 +13,7 @@ func (c *Context) GetLoginId() (string, bool) {
 func (c *Context) GetLoginIdAs(name string) (string, bool) {
 	cookie, err := c.SignedCookie(name + "Id")
 	if cookie != nil && err == nil {
-		return cookie.Value, true
+		return string(cookie.Value()), true
 	}
 	return "", false
 }
@@ -66,12 +66,12 @@ func (c *Context) addLoginAs(name string, id string, timeduration ...time.Durati
 	if timeduration != nil {
 		expire = time.Now().Add(timeduration[0])
 	}
-	cookie := new(http.Cookie)
-	cookie.Name = name + "Id"
-	cookie.Value = id
-	cookie.Expires = expire
-	cookie.Path = "/"
-	cookie.RawExpires = expire.Format(time.UnixDate)
+	cookie := new(fasthttp.Cookie)
+	cookie.SetKey(name + "Id")
+	cookie.SetValue(id)
+	cookie.SetExpire(expire)
+	cookie.SetPath("/")
+	// cookie.RawExpires = expire.Format(time.UnixDate)
 	c.AddSignedCookie(cookie)
 }
 
@@ -84,10 +84,10 @@ func (c *Context) DelLogin() {
 func (c *Context) DelLoginAs(name string) {
 	cookie, err := c.SignedCookie(name + "Id")
 	if cookie != nil && err == nil {
-		cookie.MaxAge = -1
+		// cookie.MaxAge = -1
 		expire := time.Now()
-		cookie.Expires = expire
-		cookie.RawExpires = expire.Format(time.UnixDate)
+		cookie.SetExpire(expire)
+		// cookie.RawExpires = expire.Format(time.UnixDate)
 		c.AddSignedCookie(cookie)
 	}
 }

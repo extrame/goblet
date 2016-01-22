@@ -1,10 +1,8 @@
 package goblet
 
 import (
-	"io"
+	"github.com/valyala/fasthttp"
 	"mime/multipart"
-	"net/http"
-	"os"
 	"path/filepath"
 )
 
@@ -18,13 +16,13 @@ const (
 
 func (cx *Context) SaveFileAt(path ...string) *filerSaver {
 	path = append([]string{*cx.Server.UploadsDir}, path...)
-	return &filerSaver{filepath.Join(path...), setName, cx.Request, "", nil}
+	return &filerSaver{filepath.Join(path...), setName, cx.ctx, "", nil}
 }
 
 type filerSaver struct {
 	path       string
 	nameSetter func(string) string
-	request    *http.Request
+	ctx        *fasthttp.RequestCtx
 	key        string
 	header     *multipart.FileHeader
 }
@@ -41,33 +39,43 @@ func (f *filerSaver) NameBy(fn func(string) string) *filerSaver {
 
 //Execute the file save process and return the result
 func (f *filerSaver) Exec() (path string, status int, err error) {
-	if _, err := os.Stat(f.path); err == nil {
-		if err := os.MkdirAll(f.path, 0755); err == nil {
-			var file multipart.File
-			file, f.header, err = f.request.FormFile(f.key)
-			if file != nil {
-				defer file.Close()
-			}
-			if err == nil {
-				fname := f.nameSetter(f.header.Filename)
-				var fwriter *os.File
-				path = filepath.Join(f.path, fname)
-				fwriter, err = os.Create(path)
-				if err == nil {
-					defer fwriter.Close()
-					_, err = io.Copy(fwriter, file)
-				} else {
-					status = SAVEFILE_COPY_ERROR
-				}
-			} else {
-				status = SAVEFILE_FORMFILE_ERROR
-			}
-		} else {
-			status = SAVEFILE_CREATE_DIR_ERROR
-		}
+	var header *multipart.FileHeader
+	if header, err = f.ctx.FormFile(f.key); err != nil {
+		status = SAVEFILE_FORMFILE_ERROR
 	} else {
-		status = SAVEFILE_STATE_DIR_ERROR
+		if err = fasthttp.SaveMultipartFile(header, path); err != nil {
+			status = SAVEFILE_COPY_ERROR
+		}
 	}
+	status = SAVEFILE_SUCCESS
+	// if _, err := os.Stat(f.path); err == nil {
+	// 	if err := os.MkdirAll(f.path, 0755); err == nil {
+	// 		var file multipart.File
+	// 		f.header, err = f.ctx.FormFile(f.key)
+	// 		f.header.
+	// 		if file != nil {
+	// 			defer file.Close()
+	// 		}
+	// 		if err == nil {
+	// 			fname := f.nameSetter(f.header.Filename)
+	// 			var fwriter *os.File
+	// 			path = filepath.Join(f.path, fname)
+	// 			fwriter, err = os.Create(path)
+	// 			if err == nil {
+	// 				defer fwriter.Close()
+	// 				_, err = io.Copy(fwriter, file)
+	// 			} else {
+	// 				status = SAVEFILE_COPY_ERROR
+	// 			}
+	// 		} else {
+	// 			status = SAVEFILE_FORMFILE_ERROR
+	// 		}
+	// 	} else {
+	// 		status = SAVEFILE_CREATE_DIR_ERROR
+	// 	}
+	// } else {
+	// 	status = SAVEFILE_STATE_DIR_ERROR
+	// }
 	return
 }
 

@@ -2,8 +2,8 @@ package goblet
 
 import (
 	"github.com/extrame/goblet/error"
+	"github.com/valyala/fasthttp"
 	"log"
-	"net/http"
 	"strings"
 )
 
@@ -15,43 +15,44 @@ func (r *_Router) init() {
 	r.anchor = &Anchor{0, "/", "", []*Anchor{}, &_staticBlockOption{}}
 }
 
-func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (err error) {
+func (rou *_Router) route(s *Server, ctx *fasthttp.RequestCtx) (err error) {
 	defer func() {
-		ErrorWrap(w)
+		ErrorWrap(ctx)
 	}()
 	var anch *Anchor
 	var suffix_url string
 	var main, suffix string
 
-	if r.URL.Path == "/" {
+	var path = string(ctx.Path())
+	if path == "/" {
 		anch, suffix_url = rou.anchor.match("/index", 6)
-		log.Printf("routing /index\n", r.URL.Path)
+		log.Printf("routing /index\n", path)
 	}
 
 	if anch == nil {
-		suff := strings.LastIndex(r.URL.Path, ".")
-		if suff > 0 && suff < len(r.URL.Path) {
-			suffix = r.URL.Path[suff+1:]
-			main = r.URL.Path[:suff]
+		suff := strings.LastIndex(path, ".")
+		if suff > 0 && suff < len(path) {
+			suffix = path[suff+1:]
+			main = path[:suff]
 		} else {
-			main = r.URL.Path
+			main = path
 		}
 		anch, suffix_url = rou.anchor.match(main, len(main))
-		log.Printf("routing matched %s\n", r.URL.Path)
+		log.Printf("routing matched %s\n", path)
 	} else {
 		suffix = "html"
 	}
 
 	if anch != nil {
-		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false, nil}
+		context := &Context{s, ctx, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false, nil}
 		if err = anch.opt.Parse(context); err == nil {
 			context.checkResponse()
 			if err = context.prepareRender(); err == nil {
 				err = context.render()
 			}
 		}
-		if *s.env == DevelopEnv {
-			log.Println("Err in Dynamic :", err)
+		if *s.env == DevelopEnv && err != nil {
+			log.Println("Error happen in Dynamic :", err)
 		}
 		return
 	}

@@ -7,7 +7,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"github.com/valyala/fasthttp"
 	"log"
 	"net"
 	"reflect"
@@ -29,10 +29,7 @@ type JsonRequestDecoder struct{}
 func (d *JsonRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) (err error) {
 	var request []byte
 	// read body
-	request, err = ioutil.ReadAll(cx.Request.Body)
-	if err != nil {
-		return err
-	}
+	request = cx.ctx.Request.Body()
 	return json.Unmarshal(request, v)
 }
 
@@ -41,27 +38,41 @@ type XmlRequestDecoder struct{}
 
 func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
 	// read body
-	data, err := ioutil.ReadAll(cx.Request.Body)
-	if err != nil {
-		return err
-	}
-	return xml.Unmarshal(data, v)
+	return xml.Unmarshal(cx.ctx.Request.Body(), v)
 }
 
 // a form-enc decoder for request body
 type FormRequestDecoder struct{}
 
 func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	if cx.Request.Form == nil {
-		cx.Request.ParseForm()
-	}
+	// if cx.Request.Form == nil {
+	// 	cx.Request.ParseForm()
+	// }
 
 	return UnmarshalForm(func(tag string) []string {
-		values := (*map[string][]string)(&cx.Request.Form)
-		if values != nil {
-			return (*values)[tag]
+		arg := cx.ctx.FormValue(tag)
+		return []string{string(arg)}
+	}, v, autofill)
+}
+
+// a form-enc decoder for request body
+type UrlEncodedFormRequestDecoder struct{}
+
+func (d *UrlEncodedFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
+	// if cx.Request.Form == nil {
+	// 	cx.Request.ParseForm()
+	// }
+	body := cx.ctx.PostBody()
+	args := new(fasthttp.Args)
+	args.ParseBytes(body)
+
+	return UnmarshalForm(func(tag string) []string {
+		arg := cx.ctx.FormValue(tag)
+		if len(arg) == 0 {
+			arg = args.Peek(tag)
+			fmt.Println(arg)
 		}
-		return []string{}
+		return []string{string(arg)}
 	}, v, autofill)
 }
 
@@ -69,14 +80,24 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 type MultiFormRequestDecoder struct{}
 
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	cx.Request.ParseMultipartForm(32 << 20)
-	values := (map[string][]string)(cx.Request.Form)
-	for k, v := range cx.Request.MultipartForm.Value {
-		values[k] = v
+	if mform, err := cx.ctx.MultipartForm(); err == nil {
+		return UnmarshalForm(func(tag string) []string {
+			qarg := cx.ctx.QueryArgs().Peek(tag)
+			parg := cx.ctx.PostArgs().Peek(tag)
+			margs := mform.Value[tag]
+			res := make([]string, 0)
+			if len(qarg) > 0 {
+				res = append(res, string(qarg))
+			}
+			if len(parg) > 0 {
+				res = append(res, string(parg))
+			}
+			res = append(res, margs...)
+			return res
+		}, v, autofill)
+	} else {
+		return err
 	}
-	return UnmarshalForm(func(tag string) []string {
-		return values[tag]
-	}, v, autofill)
 }
 
 // map of Content-Type -> RequestDecoders
@@ -84,7 +105,7 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 	"application/json":                  new(JsonRequestDecoder),
 	"application/xml":                   new(XmlRequestDecoder),
 	"text/xml":                          new(XmlRequestDecoder),
-	"application/x-www-form-urlencoded": new(FormRequestDecoder),
+	"application/x-www-form-urlencoded": new(UrlEncodedFormRequestDecoder),
 	"text/plain":                        new(FormRequestDecoder),
 	"multipart/form-data":               new(MultiFormRequestDecoder),
 }
@@ -98,7 +119,7 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 // if you have no other tag, please add ',' before md5
 func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	// get content type
-	ct := cx.Request.Header.Get("Content-Type")
+	ct := string(cx.ctx.Request.Header.Peek("Content-Type"))
 	// default to urlencoded
 	if ct == "" {
 		ct = "application/x-www-form-urlencoded"

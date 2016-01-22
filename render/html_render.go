@@ -3,10 +3,10 @@ package render
 import (
 	"fmt"
 	"github.com/extrame/goblet/error"
+	"github.com/valyala/fasthttp"
 	"html/template"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -190,12 +190,13 @@ type HttpRenderInstance struct {
 	js_file  string
 }
 
-func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error {
+func (h *HttpRenderInstance) Render(ctx *fasthttp.RequestCtx, data interface{}, status int, funcs template.FuncMap) error {
+	ctx.SetContentType("text/html")
 	var mask_map = make(map[string]bool)
 
 	funcMap := template.FuncMap{
 		"yield": func() (template.HTML, error) {
-			err := h.yield.Execute(wr, data)
+			err := h.yield.Execute(ctx, data)
 			if err != nil {
 				log.Printf("%v%T", err, err)
 			}
@@ -232,9 +233,9 @@ func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, st
 	h.yield.Funcs(funcMap)
 
 	if h.layout != nil {
-		return h.layout.Execute(wr, data)
+		return h.layout.Execute(ctx, data)
 	} else if h.yield != nil {
-		return h.yield.Execute(wr, data)
+		return h.yield.Execute(ctx, data)
 	}
 	return nil
 }
