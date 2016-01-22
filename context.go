@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 )
@@ -250,4 +251,26 @@ func (c *Context) StatusCode() int {
 
 func (c *Context) TemplatePath() string {
 	return c.option.TemplatePath()
+}
+
+type RemoteAddr struct {
+	str string
+}
+
+func (r *RemoteAddr) String() string {
+	return r.str
+}
+
+func (r *RemoteAddr) Network() string {
+	return "tcp"
+}
+
+func (c *Context) RemoteAddr() net.Addr {
+	addr := new(RemoteAddr)
+	addr.str = c.Request.RemoteAddr
+	return addr
+}
+
+func (c *Context) FormValue(key string) string {
+	return c.Request.FormValue(key)
 }
