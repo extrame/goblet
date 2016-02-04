@@ -236,6 +236,11 @@ func (c *Context) RedirectTo(url string) {
 	c.forceFormat = "raw"
 }
 
+//return the charset of the files
+func (c *Context) CharSet() string {
+	return *c.Server.charSet
+}
+
 ///////////for renders/////////////
 func (c *Context) BlockOptionType() string {
 	switch c.option.(type) {

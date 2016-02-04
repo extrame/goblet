@@ -48,6 +48,7 @@ type Server struct {
 	enDbCache     *bool
 	cacheAmout    *int
 	logFile       *string
+	charSet       *string
 	name          string
 	plugins       []Plugin
 	funcs         []Fn
@@ -150,6 +151,7 @@ func (s *Server) parseConfig() (err error) {
 	s.enDbCache = toml.Bool("cache.enable", false)
 	s.cacheAmout = toml.Int("cache.amount", 1000)
 	s.logFile = toml.String("log.file", "")
+	s.charSet = toml.String("charset", "UTF-8")
 	flag.Parse()
 	*path = filepath.FromSlash(*path)
 	err = toml.Parse(*path)

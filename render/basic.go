@@ -14,6 +14,8 @@ type RenderContext interface {
 	Callback() string
 	Suffix() string
 	Format() string
+	//return the charset of the files
+	CharSet() string
 }
 
 type RenderServer interface {

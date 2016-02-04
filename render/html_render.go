@@ -93,7 +93,11 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 	}
 
 	if err == nil {
-		return &HttpRenderInstance{layout, yield, "/css/" + path + ".css", "/js/" + path + ".js"}, nil
+		var charset string
+		if charset = ctx.CharSet(); charset == "" {
+			charset = "UTF-8"
+		}
+		return &HttpRenderInstance{layout, yield, "/css/" + path + ".css", "/js/" + path + ".js", charset}, nil
 	}
 
 	return
@@ -188,10 +192,11 @@ type HttpRenderInstance struct {
 	yield    *template.Template
 	css_file string
 	js_file  string
+	charset  string
 }
 
 func (h *HttpRenderInstance) Render(ctx *fasthttp.RequestCtx, data interface{}, status int, funcs template.FuncMap) error {
-	ctx.SetContentType("text/html")
+	ctx.SetContentType("text/html;; charset=" + h.charset)
 	var mask_map = make(map[string]bool)
 
 	funcMap := template.FuncMap{
