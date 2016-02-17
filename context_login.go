@@ -62,14 +62,13 @@ func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
 }
 
 func (c *Context) addLoginAs(name string, id string, timeduration ...time.Duration) {
-	expire := time.Now().AddDate(0, 0, 1)
-	if timeduration != nil {
-		expire = time.Now().Add(timeduration[0])
-	}
 	cookie := new(fasthttp.Cookie)
 	cookie.SetKey(name + "Id")
 	cookie.SetValue(id)
-	cookie.SetExpire(expire)
+	if timeduration != nil {
+		expire := time.Now().Add(timeduration[0])
+		cookie.SetExpire(expire)
+	}
 	cookie.SetPath("/")
 	// cookie.RawExpires = expire.Format(time.UnixDate)
 	c.AddSignedCookie(cookie)
@@ -85,8 +84,8 @@ func (c *Context) DelLoginAs(name string) {
 	cookie, err := c.SignedCookie(name + "Id")
 	if cookie != nil && err == nil {
 		// cookie.MaxAge = -1
-		expire := time.Now()
-		cookie.SetExpire(expire)
+		cookie.SetKey(name + "Id")
+		cookie.SetExpire(fasthttp.CookieExpireDelete)
 		// cookie.RawExpires = expire.Format(time.UnixDate)
 		c.AddSignedCookie(cookie)
 	}

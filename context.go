@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 var USERCOOKIENAME = "user"
@@ -32,6 +33,8 @@ type Context struct {
 	status_code    int
 	already_writed bool
 	bower_stack    map[string]bool
+	form_args      *fasthttp.Args
+	form_parsed    bool
 }
 
 func (c *Context) handleData() {
@@ -58,11 +61,8 @@ func (c *Context) SetHeader(key, value string) {
 }
 
 func (c *Context) IntFormValue(key string) int64 {
-	bts := c.ctx.QueryArgs().Peek(key)
-	if len(bts) == 0 {
-		bts = c.ctx.PostArgs().Peek(key)
-	}
-	val, _ := strconv.ParseInt(string(bts), 10, 64)
+	s := c.StrFormValue(key)
+	val, _ := strconv.ParseInt(s, 10, 64)
 	return val
 }
 
@@ -71,7 +71,23 @@ func (c *Context) StrFormValue(key string) string {
 	if len(bts) == 0 {
 		bts = c.ctx.PostArgs().Peek(key)
 	}
+	if len(bts) == 0 && c.parse_form() && c.form_args != nil {
+		bts = c.form_args.Peek(key)
+	}
 	return string(bts)
+}
+
+func (c *Context) parse_form() bool {
+	if c.form_args == nil && !c.form_parsed {
+		if ct := string(c.ctx.Request.Header.Peek("Content-Type")); strings.HasPrefix(ct, "application/x-www-form-urlencoded") {
+			body := c.ctx.PostBody()
+			args := new(fasthttp.Args)
+			args.ParseBytes(body)
+			c.form_args = args
+		}
+		c.form_parsed = true
+	}
+	return c.form_parsed
 }
 
 func (c *Context) render() (err error) {

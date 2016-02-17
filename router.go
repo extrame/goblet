@@ -44,7 +44,7 @@ func (rou *_Router) route(s *Server, ctx *fasthttp.RequestCtx) (err error) {
 	}
 
 	if anch != nil {
-		context := &Context{s, ctx, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false, nil}
+		context := &Context{s, ctx, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false, nil, nil, false}
 		if err = anch.opt.Parse(context); err == nil {
 			context.checkResponse()
 			if err = context.prepareRender(); err == nil {

@@ -7,7 +7,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/valyala/fasthttp"
 	"log"
 	"net"
 	"reflect"
@@ -62,15 +61,12 @@ func (d *UrlEncodedFormRequestDecoder) Unmarshal(cx *Context, v interface{}, aut
 	// if cx.Request.Form == nil {
 	// 	cx.Request.ParseForm()
 	// }
-	body := cx.ctx.PostBody()
-	args := new(fasthttp.Args)
-	args.ParseBytes(body)
+	cx.parse_form()
 
 	return UnmarshalForm(func(tag string) []string {
 		arg := cx.ctx.FormValue(tag)
-		if len(arg) == 0 {
-			arg = args.Peek(tag)
-			fmt.Println(arg)
+		if len(arg) == 0 && cx.form_args != nil {
+			arg = cx.form_args.Peek(tag)
 		}
 		return []string{string(arg)}
 	}, v, autofill)
