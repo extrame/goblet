@@ -75,7 +75,7 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 		s.funcs = make([]Fn, 0)
 		if err = s.connectDB(); err == nil {
 			if *s.env == DevelopEnv {
-				DB.ShowSQL = true
+				DB.ShowSQL(true)
 			}
 		}
 	} else {
