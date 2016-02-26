@@ -88,5 +88,5 @@ func (f *filerSaver) Exec() (path string, status int, err error) {
 }
 
 func setName(fname string) (string, error) {
-	return fname
+	return fname, nil
 }
