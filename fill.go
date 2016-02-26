@@ -29,7 +29,7 @@ type JsonRequestDecoder struct{}
 func (d *JsonRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) (err error) {
 	var request []byte
 	// read body
-	request, err = ioutil.ReadAll(cx.Request.Body)
+	request, err = ioutil.ReadAll(cx.request.Body)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ type XmlRequestDecoder struct{}
 
 func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
 	// read body
-	data, err := ioutil.ReadAll(cx.Request.Body)
+	data, err := ioutil.ReadAll(cx.request.Body)
 	if err != nil {
 		return err
 	}
@@ -52,12 +52,12 @@ func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool)
 type FormRequestDecoder struct{}
 
 func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	if cx.Request.Form == nil {
-		cx.Request.ParseForm()
+	if cx.request.Form == nil {
+		cx.request.ParseForm()
 	}
 
 	return UnmarshalForm(func(tag string) []string {
-		values := (*map[string][]string)(&cx.Request.Form)
+		values := (*map[string][]string)(&cx.request.Form)
 		if values != nil {
 			return (*values)[tag]
 		}
@@ -69,9 +69,9 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 type MultiFormRequestDecoder struct{}
 
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	cx.Request.ParseMultipartForm(32 << 20)
-	values := (map[string][]string)(cx.Request.Form)
-	for k, v := range cx.Request.MultipartForm.Value {
+	cx.request.ParseMultipartForm(32 << 20)
+	values := (map[string][]string)(cx.request.Form)
+	for k, v := range cx.request.MultipartForm.Value {
 		values[k] = v
 	}
 	return UnmarshalForm(func(tag string) []string {
@@ -98,7 +98,7 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 // if you have no other tag, please add ',' before md5
 func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	// get content type
-	ct := cx.Request.Header.Get("Content-Type")
+	ct := cx.request.Header.Get("Content-Type")
 	// default to urlencoded
 	if ct == "" {
 		ct = "application/x-www-form-urlencoded"

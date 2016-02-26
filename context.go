@@ -16,7 +16,7 @@ var USERCOOKIENAME = "user"
 
 type Context struct {
 	Server  *Server
-	Request *http.Request
+	request *http.Request
 	writer  http.ResponseWriter
 	option  BlockOption
 	//默认请求类型：HTML
@@ -46,7 +46,7 @@ func (c *Context) Writer() http.ResponseWriter {
 }
 
 func (c *Context) Callback() string {
-	return c.Request.FormValue("callback")
+	return c.request.FormValue("callback")
 }
 
 func (c *Context) Suffix() string {
@@ -58,13 +58,13 @@ func (c *Context) SetHeader(key, value string) {
 }
 
 func (c *Context) IntFormValue(key string) int64 {
-	str := c.Request.FormValue(key)
+	str := c.request.FormValue(key)
 	val, _ := strconv.ParseInt(str, 10, 64)
 	return val
 }
 
 func (c *Context) StrFormValue(key string) string {
-	return c.Request.FormValue(key)
+	return c.request.FormValue(key)
 }
 
 func (c *Context) render() (err error) {
@@ -267,10 +267,14 @@ func (r *RemoteAddr) Network() string {
 
 func (c *Context) RemoteAddr() net.Addr {
 	addr := new(RemoteAddr)
-	addr.str = c.Request.RemoteAddr
+	addr.str = c.request.RemoteAddr
 	return addr
 }
 
 func (c *Context) FormValue(key string) string {
-	return c.Request.FormValue(key)
+	return c.request.FormValue(key)
+}
+
+func (c *Context) QueryString(key string) string {
+	return c.request.URL.Query().Get(key)
 }
