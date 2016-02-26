@@ -295,3 +295,7 @@ func (c *Context) StatusCode() int {
 func (c *Context) TemplatePath() string {
 	return c.option.TemplatePath()
 }
+
+func (c *Context) Referer() string {
+	return string(c.ctx.Referer())
+}
