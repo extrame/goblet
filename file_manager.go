@@ -45,9 +45,14 @@ func (f *filerSaver) Exec() (path string, status int, err error) {
 	if header, err = f.ctx.FormFile(f.key); err != nil {
 		status = SAVEFILE_FORMFILE_ERROR
 	} else {
-
-		if err = fasthttp.SaveMultipartFile(header, path); err != nil {
-			status = SAVEFILE_COPY_ERROR
+		if fname, er := f.nameSetter(f.header.Filename); er == nil {
+			path = filepath.Join(f.path, fname)
+			if err = fasthttp.SaveMultipartFile(header, path); err != nil {
+				status = SAVEFILE_COPY_ERROR
+			}
+		} else {
+			status = SAVEFILE_RENAME_ERROR_BY_USER
+			err = er
 		}
 	}
 	status = SAVEFILE_SUCCESS

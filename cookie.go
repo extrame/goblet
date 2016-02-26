@@ -120,3 +120,12 @@ func (c *Context) cookieIsValid(name string) (bool, error) {
 	return true, nil
 
 }
+
+func (c *Context) GetCookie(name string) (string, error) {
+	bts := c.ctx.Request.Header.Cookie(name)
+	if len(bts) == 0 {
+		return "", CookieIsMissing
+	} else {
+		return string(bts), nil
+	}
+}
