@@ -7,11 +7,12 @@ import (
 )
 
 const (
-	SAVEFILE_SUCCESS          = iota
-	SAVEFILE_STATE_DIR_ERROR  = iota
-	SAVEFILE_CREATE_DIR_ERROR = iota
-	SAVEFILE_FORMFILE_ERROR   = iota
-	SAVEFILE_COPY_ERROR       = iota
+	SAVEFILE_SUCCESS              = iota
+	SAVEFILE_STATE_DIR_ERROR      = iota
+	SAVEFILE_CREATE_DIR_ERROR     = iota
+	SAVEFILE_FORMFILE_ERROR       = iota
+	SAVEFILE_RENAME_ERROR_BY_USER = iota
+	SAVEFILE_COPY_ERROR           = iota
 )
 
 func (cx *Context) SaveFileAt(path ...string) *filerSaver {
@@ -21,7 +22,7 @@ func (cx *Context) SaveFileAt(path ...string) *filerSaver {
 
 type filerSaver struct {
 	path       string
-	nameSetter func(string) string
+	nameSetter func(string) (string, error)
 	ctx        *fasthttp.RequestCtx
 	key        string
 	header     *multipart.FileHeader
@@ -32,7 +33,8 @@ func (f *filerSaver) From(key string) *filerSaver {
 	return f
 }
 
-func (f *filerSaver) NameBy(fn func(string) string) *filerSaver {
+//用于文件保存中的重命名，
+func (f *filerSaver) NameBy(fn func(string) (string, error)) *filerSaver {
 	f.nameSetter = fn
 	return f
 }
@@ -43,6 +45,7 @@ func (f *filerSaver) Exec() (path string, status int, err error) {
 	if header, err = f.ctx.FormFile(f.key); err != nil {
 		status = SAVEFILE_FORMFILE_ERROR
 	} else {
+
 		if err = fasthttp.SaveMultipartFile(header, path); err != nil {
 			status = SAVEFILE_COPY_ERROR
 		}
@@ -79,6 +82,6 @@ func (f *filerSaver) Exec() (path string, status int, err error) {
 	return
 }
 
-func setName(fname string) string {
+func setName(fname string) (string, error) {
 	return fname
 }
