@@ -19,13 +19,11 @@ const (
 
 func (cx *Context) SaveFileAt(path ...string) *filerSaver {
 	path = append([]string{*cx.Server.UploadsDir}, path...)
-	return &filerSaver{filepath.Join(path...), "", setName, cx.request, "", nil}
+	return &filerSaver{filepath.Join(path...), setName, cx.request, "", nil}
 }
 
 type filerSaver struct {
-	path string
-	//文件保存的完整路径
-	FullPath   string
+	path       string
 	nameSetter func(string) (string, error)
 	request    *http.Request
 	key        string
@@ -52,10 +50,10 @@ func (f *filerSaver) Exec() (path string, status int, err error) {
 				defer file.Close()
 			}
 			if err == nil {
-				if fname, er := f.nameSetter(f.header.Filename); er == nil {
+				if fname, err := f.nameSetter(f.header.Filename); err == nil {
 					var fwriter *os.File
-					f.FullPath = filepath.Join(f.path, fname)
-					fwriter, err = os.Create(f.FullPath)
+					path = filepath.Join(f.path, fname)
+					fwriter, err = os.Create(path)
 					if err == nil {
 						defer fwriter.Close()
 						_, err = io.Copy(fwriter, file)
@@ -63,7 +61,6 @@ func (f *filerSaver) Exec() (path string, status int, err error) {
 						status = SAVEFILE_COPY_ERROR
 					}
 				} else {
-					err = er
 					status = SAVEFILE_RENAME_ERROR_BY_USER
 				}
 			} else {
