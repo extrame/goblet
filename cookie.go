@@ -117,6 +117,6 @@ func (c *Context) cookieIsValid(name string) (bool, error) {
 }
 
 func (c *Context) GetCookie(name string) (string, error) {
-	c, err := c.request.Cookie(name)
-	return c.Value, err
+	cookie, err := c.request.Cookie(name)
+	return cookie.Value, err
 }
