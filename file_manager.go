@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	SAVEFILE_SUCCESS          = iota
-	SAVEFILE_STATE_DIR_ERROR  = iota
-	SAVEFILE_CREATE_DIR_ERROR = iota
-	SAVEFILE_FORMFILE_ERROR   = iota
-	SAVEFILE_COPY_ERROR       = iota
+	SAVEFILE_SUCCESS              = iota
+	SAVEFILE_STATE_DIR_ERROR      = iota
+	SAVEFILE_CREATE_DIR_ERROR     = iota
+	SAVEFILE_FORMFILE_ERROR       = iota
+	SAVEFILE_RENAME_ERROR_BY_USER = iota
+	SAVEFILE_COPY_ERROR           = iota
 )
 
 func (cx *Context) SaveFileAt(path ...string) *filerSaver {
@@ -23,7 +24,7 @@ func (cx *Context) SaveFileAt(path ...string) *filerSaver {
 
 type filerSaver struct {
 	path       string
-	nameSetter func(string) string
+	nameSetter func(string) (string, error)
 	request    *http.Request
 	key        string
 	header     *multipart.FileHeader
@@ -34,7 +35,7 @@ func (f *filerSaver) From(key string) *filerSaver {
 	return f
 }
 
-func (f *filerSaver) NameBy(fn func(string) string) *filerSaver {
+func (f *filerSaver) NameBy(fn func(string) (string, error)) *filerSaver {
 	f.nameSetter = fn
 	return f
 }
@@ -49,15 +50,18 @@ func (f *filerSaver) Exec() (path string, status int, err error) {
 				defer file.Close()
 			}
 			if err == nil {
-				fname := f.nameSetter(f.header.Filename)
-				var fwriter *os.File
-				path = filepath.Join(f.path, fname)
-				fwriter, err = os.Create(path)
-				if err == nil {
-					defer fwriter.Close()
-					_, err = io.Copy(fwriter, file)
+				if fname, err := f.nameSetter(f.header.Filename); err == nil {
+					var fwriter *os.File
+					path = filepath.Join(f.path, fname)
+					fwriter, err = os.Create(path)
+					if err == nil {
+						defer fwriter.Close()
+						_, err = io.Copy(fwriter, file)
+					} else {
+						status = SAVEFILE_COPY_ERROR
+					}
 				} else {
-					status = SAVEFILE_COPY_ERROR
+					status = SAVEFILE_RENAME_ERROR_BY_USER
 				}
 			} else {
 				status = SAVEFILE_FORMFILE_ERROR
@@ -71,6 +75,6 @@ func (f *filerSaver) Exec() (path string, status int, err error) {
 	return
 }
 
-func setName(fname string) string {
-	return fname
+func setName(fname string) (string, error) {
+	return fname, nil
 }
