@@ -129,6 +129,9 @@ func (c *Context) Respond(data interface{}) {
 	case []byte:
 		c.format = "raw"
 		c.Writer().Write(td)
+	case io.Reader:
+		c.format = "raw"
+		io.Copy(c.writer, td)
 	default:
 		c.RespondWithStatus(data, http.StatusOK)
 	}
