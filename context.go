@@ -281,3 +281,7 @@ func (c *Context) FormValue(key string) string {
 func (c *Context) QueryString(key string) string {
 	return c.request.URL.Query().Get(key)
 }
+
+func (c *Context) Referer() string {
+	return c.request.Referer()
+}
