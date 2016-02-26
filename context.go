@@ -273,6 +273,10 @@ func (c *Context) BlockOptionType() string {
 	return ""
 }
 
+func (c *Context) QueryValue(key string) string {
+	return string(c.ctx.URI().QueryString())
+}
+
 func (c *Context) Method() string {
 	return c.method
 }
