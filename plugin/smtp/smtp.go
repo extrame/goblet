@@ -29,6 +29,7 @@ type _SmtpSender struct {
 	Root      *string
 	Server    *string
 	User      *string
+	UserName  *string
 	Pwd       *string
 	Ttl       *bool
 	Port      *int
@@ -51,6 +52,7 @@ func (s *_SmtpSender) ParseConfig() (err error) {
 	s.Root = toml.String("mail.root", "./mail")
 	s.Server = toml.String("mail.server", "")
 	s.User = toml.String("mail.user", "")
+	s.UserName = toml.String("mail.user_name", "Sender")
 	s.Pwd = toml.String("mail.password", "")
 	s.Ttl = toml.Bool("mail.ttl", false)
 	s.Port = toml.Int("mail.port", 465)
@@ -105,7 +107,7 @@ func (s *_SmtpSender) sendMail(c client, subject string, mail_body *template.Tem
 						if wc, err = c.Data(); err == nil {
 							defer wc.Close()
 
-							from := mail.Address{"数据家黑帽子先生", *s.User}
+							from := mail.Address{*s.UserName, *s.User}
 
 							body_writer := new(bytes.Buffer)
 							if err = mail_body.Execute(body_writer, args); err != nil {
