@@ -117,6 +117,9 @@ func (c *Context) cookieIsValid(name string) (bool, error) {
 }
 
 func (c *Context) GetCookie(name string) (string, error) {
-	cookie, err := c.request.Cookie(name)
-	return cookie.Value, err
+	if cookie, err := c.request.Cookie(name); err == nil {
+		return cookie.Value, err
+	} else {
+		return "", err
+	}
 }
