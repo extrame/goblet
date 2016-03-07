@@ -55,7 +55,7 @@ func (s *_SmtpSender) ParseConfig() (err error) {
 	s.UserName = toml.String("mail.user_name", "Sender")
 	s.Pwd = toml.String("mail.password", "")
 	s.Ttl = toml.Bool("mail.ttl", false)
-	s.Port = toml.Int("mail.port", 465)
+	s.Port = toml.Int("mail.port", 25)
 	*s.Root = filepath.FromSlash(*s.Root)
 	return
 }
@@ -66,12 +66,12 @@ func SendTo(template_name string, subject string, receivers []mail.Address, args
 
 func (s *_SmtpSender) SendTo(template_name string, subject string, receivers []mail.Address, args map[string]interface{}) (err error) {
 
-	var template *template.Template
+	var templa *template.Template
 	var ok bool
 
-	if template, ok = s.Templates[template_name]; !ok {
-		if template, err = template.ParseFiles(filepath.Join(*s.Root, template_name)); err == nil {
-			s.Templates[template_name] = template
+	if templa, ok = s.Templates[template_name]; !ok {
+		if templa, err = template.ParseFiles(filepath.Join(*s.Root, template_name)); err == nil {
+			s.Templates[template_name] = templa
 		} else {
 			return
 		}
@@ -82,11 +82,11 @@ func (s *_SmtpSender) SendTo(template_name string, subject string, receivers []m
 		var config tls.Config
 		config.ServerName = *s.Server
 		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", *s.Server, *s.Port), &config); err == nil {
-			return s.sendMail(c, subject, template, receivers, args)
+			return s.sendMail(c, subject, templa, receivers, args)
 		}
 	} else {
-		if c, err = smtp.Dial(*s.Server); err == nil {
-			return s.sendMail(c, subject, template, receivers, args)
+		if c, err = smtp.Dial(fmt.Sprintf("%s:%d", *s.Server, *s.Port)); err == nil {
+			return s.sendMail(c, subject, templa, receivers, args)
 		}
 	}
 	return
