@@ -293,7 +293,7 @@ func (c *Context) PathToURL(path string) (*url.URL, error) {
 	if abs, err := filepath.Abs(path); err == nil {
 		if rel, err := filepath.Rel(c.Server.WwwRoot(), abs); err == nil {
 			rel = strings.TrimPrefix(rel, "public/")
-			return url.Parse(rel)
+			return url.Parse("/" + rel)
 		} else {
 			return nil, err
 		}
