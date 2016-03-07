@@ -9,6 +9,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
+	"path/filepath"
 	"strconv"
 )
 
@@ -284,4 +286,16 @@ func (c *Context) QueryString(key string) string {
 
 func (c *Context) Referer() string {
 	return c.request.Referer()
+}
+
+func (c *Context) PathToURL(path string) (*url.URL, error) {
+	if abs, err := filepath.Abs(path); err == nil {
+		if rel, err := filepath.Rel(c.Server.WwwRoot(), abs); err == nil {
+			return url.Parse(rel)
+		} else {
+			return nil, err
+		}
+	} else {
+		return nil, err
+	}
 }

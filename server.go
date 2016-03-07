@@ -110,7 +110,11 @@ func (s *Server) Env() string {
 }
 
 func (s *Server) WwwRoot() string {
-	return *s.wwwRoot
+	if abs, err := filepath.Abs(*s.wwwRoot); err == nil {
+		return abs
+	} else {
+		return *s.wwwRoot
+	}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
