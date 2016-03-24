@@ -75,8 +75,11 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 		s.funcs = make([]Fn, 0)
 		if err = s.connectDB(); err == nil {
 			if *s.env == DevelopEnv {
+				log.Println("connect DB success")
 				DB.ShowSQL(true)
 			}
+		} else {
+			log.Fatalln("connect error:", err)
 		}
 	} else {
 		log.Fatalln(err)
@@ -96,12 +99,20 @@ func (s *Server) ControlBy(block interface{}) {
 	s.router.add(cfg)
 }
 
-func (s *Server) AddModel(models ...interface{}) {
+func (s *Server) AddModel(models interface{}, syncs ...bool) {
 	var err error
 
-	err = DB.Sync2(models...)
-	if err != nil {
-		log.Fatalln(err)
+	var sync = true
+
+	if len(syncs) > 0 {
+		sync = syncs[0]
+	}
+
+	if sync {
+		err = DB.Sync2(models)
+		if err != nil {
+			log.Fatalln("sync error:", err)
+		}
 	}
 }
 
