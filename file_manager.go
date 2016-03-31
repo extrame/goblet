@@ -42,35 +42,35 @@ func (f *filerSaver) NameBy(fn func(string) (string, error)) *filerSaver {
 
 //Execute the file save process and return the result
 func (f *filerSaver) Exec() (path string, status int, err error) {
-	if _, err := os.Stat(f.path); err == nil {
-		if err := os.MkdirAll(f.path, 0755); err == nil {
-			var file multipart.File
-			file, f.header, err = f.request.FormFile(f.key)
-			if file != nil {
-				defer file.Close()
-			}
+	// bug  if the path's stat is not ok, try make this dir.
+	if _, err := os.Stat(f.path); err != nil {
+		if err1 := os.MkdirAll(f.path, 0755); err1 != nil {
+			//make dir fail,return status and err
+			status = SAVEFILE_CREATE_DIR_ERROR
+			return "", status, err1
+		}
+	}
+	var file multipart.File
+	file, f.header, err = f.request.FormFile(f.key)
+	if file != nil {
+		defer file.Close()
+	}
+	if err == nil {
+		if fname, err := f.nameSetter(f.header.Filename); err == nil {
+			var fwriter *os.File
+			path = filepath.Join(f.path, fname)
+			fwriter, err = os.Create(path)
 			if err == nil {
-				if fname, err := f.nameSetter(f.header.Filename); err == nil {
-					var fwriter *os.File
-					path = filepath.Join(f.path, fname)
-					fwriter, err = os.Create(path)
-					if err == nil {
-						defer fwriter.Close()
-						_, err = io.Copy(fwriter, file)
-					} else {
-						status = SAVEFILE_COPY_ERROR
-					}
-				} else {
-					status = SAVEFILE_RENAME_ERROR_BY_USER
-				}
+				defer fwriter.Close()
+				_, err = io.Copy(fwriter, file)
 			} else {
-				status = SAVEFILE_FORMFILE_ERROR
+				status = SAVEFILE_COPY_ERROR
 			}
 		} else {
-			status = SAVEFILE_CREATE_DIR_ERROR
+			status = SAVEFILE_RENAME_ERROR_BY_USER
 		}
 	} else {
-		status = SAVEFILE_STATE_DIR_ERROR
+		status = SAVEFILE_FORMFILE_ERROR
 	}
 	return
 }
