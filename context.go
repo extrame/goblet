@@ -281,6 +281,10 @@ func (c *Context) FormValue(key string) string {
 	return c.request.FormValue(key)
 }
 
+func (c *Context) Body() io.ReadCloser {
+	return c.request.Body
+}
+
 func (c *Context) QueryString(key string) string {
 	return c.request.URL.Query().Get(key)
 }
