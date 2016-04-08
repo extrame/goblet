@@ -79,9 +79,6 @@ func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {
 			funcMap := make(template.FuncMap)
-			funcMap["enable_cache"] = func() {
-				c.EnableCache()
-			}
 			funcMap["bower"] = func(name string, version ...string) (template.HTML, error) {
 				if c.bower_stack == nil {
 					c.bower_stack = make(map[string]bool)

@@ -65,6 +65,8 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 			yield, err = h.getTemplate(root, path+h.suffix)
 		}
 	case "Static":
+		fmt.Println("-------------")
+		ctx.EnableCache()
 		if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
 		}
