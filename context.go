@@ -70,10 +70,18 @@ func (c *Context) StrFormValue(key string) string {
 	return c.request.FormValue(key)
 }
 
+func (c *Context) EnableCache() {
+	c.writer.Header().Del("Cache-Control")
+	c.writer.Header().Del("Pragma")
+}
+
 func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {
 			funcMap := make(template.FuncMap)
+			funcMap["enable_cache"] = func() {
+				c.EnableCache()
+			}
 			funcMap["bower"] = func(name string, version ...string) (template.HTML, error) {
 				if c.bower_stack == nil {
 					c.bower_stack = make(map[string]bool)

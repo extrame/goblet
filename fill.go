@@ -173,8 +173,7 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 				if val.IsNil() {
 					val.Set(reflect.New(typ))
 				}
-				if err = fill_struct(typ, values_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill, parents); err != nil {
-					fmt.Println(err)
+				if err = fill_struct(typ, values_getter, val.Elem(), id, form_values, tag, used_offset, autofill, parents); err != nil {
 					return err
 				} else {
 					break
@@ -195,7 +194,6 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 					resType := reflect.TypeOf(res)
 					if err = fill_struct(resType, values_getter, resValue, id, form_values, tag, used_offset, autofill, parents); err != nil {
 						rvalue.Field(i).Set(resValue)
-						fmt.Println(res, rvalue)
 						return err
 					} else {
 						break
@@ -299,7 +297,6 @@ func fill_struct(typ reflect.Type, values_getter func(string) []string, val refl
 			value = form_values[used_offset]
 		}
 
-		fmt.Println(fillby, value, form_values)
 		switch fillby {
 		case "now":
 			val.Set(reflect.ValueOf(time.Now()))
