@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
 	"html/template"
 	"io/ioutil"
@@ -65,7 +66,6 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 			yield, err = h.getTemplate(root, path+h.suffix)
 		}
 	case "Static":
-		fmt.Println("-------------")
 		ctx.EnableCache()
 		if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
 			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
@@ -112,7 +112,7 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.public = s.PublicDir()
 	h.suffix = ".html"
 	h.models = make(map[string]*template.Template)
-	h.saveTemp = (s.Env() == "production")
+	h.saveTemp = (s.Env() == config.ProductEnv)
 	if h.saveTemp {
 		h.initGlobalTemplate(h.root)
 	}

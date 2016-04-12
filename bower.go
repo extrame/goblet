@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"github.com/extrame/goblet/config"
 	"github.com/minktech/go-bower/bower"
 	"io/ioutil"
 	"log"
@@ -13,7 +14,7 @@ import (
 var bower_cache = make(map[string][][2]string)
 
 func (s *Server) Bower(name string, version ...string) (res [][2]string, err error) {
-	if *s.env == "production" {
+	if *s.env == config.ProductEnv {
 		if res, ok := bower_cache[name]; ok {
 			return res, nil
 		}
@@ -21,7 +22,7 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 
 	root := filepath.Join(*s.wwwRoot, "public", "plugins", name)
 	if _, err = os.Stat(root); os.IsNotExist(err) {
-		if *s.env == "production" {
+		if *s.env == config.ProductEnv {
 			log.Panicf("no %s plugins in production environment", name)
 		}
 		if _, err = os.Stat(filepath.Join(*s.wwwRoot, "public", ".bowerrc")); os.IsNotExist(err) {
@@ -48,7 +49,7 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 		err = e
 	}
 
-	if *s.env == "production" {
+	if *s.env == config.ProductEnv {
 		if err == nil {
 			bower_cache[name] = res
 		}
@@ -88,7 +89,7 @@ func appendHtml(s *Server, b *bower.Component, name string, maps *[][2]string) {
 
 func appendHtmlItem(env, root, name, v string) string {
 	if strings.HasSuffix(v, ".js") {
-		if env == "production" {
+		if env == config.ProductEnv {
 			//try to use min version
 			v = strings.Replace(v, ".js", ".min.js", 1)
 			if _, err := os.Stat(filepath.Join(root, name, v)); !os.IsNotExist(err) {

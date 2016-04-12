@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	toml "github.com/extrame/go-toml-config"
+	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
 	"github.com/extrame/goblet/render"
 	"github.com/go-xorm/xorm"
@@ -15,16 +16,15 @@ import (
 	"strings"
 )
 
-const (
-	DevelopEnv = "development"
-	ProductEnv = "product"
-)
-
 var NotImplemented = fmt.Errorf("this method is not implemented")
 
 type Fn struct {
 	Name string
 	Fn   func(*Context) interface{}
+}
+
+type ControllerNeedInit interface {
+	Init()
 }
 
 type Server struct {
@@ -51,6 +51,7 @@ type Server struct {
 	name          string
 	plugins       []Plugin
 	funcs         []Fn
+	initCtrl      []ControllerNeedInit
 }
 
 type Handler interface {
@@ -74,7 +75,7 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 		s.router.init()
 		s.funcs = make([]Fn, 0)
 		if err = s.connectDB(); err == nil {
-			if *s.env == DevelopEnv {
+			if *s.env == config.DevelopEnv {
 				log.Println("connect DB success")
 				DB.ShowSQL(true)
 			}
@@ -96,6 +97,9 @@ func (s *Server) connectDB() error {
 
 func (s *Server) ControlBy(block interface{}) {
 	cfg := PrepareOption(block)
+	if bc, ok := block.(ControllerNeedInit); ok {
+		s.initCtrl = append(s.initCtrl, bc)
+	}
 	s.router.add(cfg)
 }
 
@@ -158,7 +162,7 @@ func (s *Server) parseConfig() (err error) {
 	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")
 	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
 	s.HashSecret = toml.String("secret", "cX8Os0wfB6uCGZZSZHIi6rKsy7b0scE9")
-	s.env = toml.String("basic.env", "production")
+	s.env = toml.String("basic.env", config.ProductEnv)
 	s.dbEngine = toml.String("basic.db_engine", "mysql")
 	s.enDbCache = toml.Bool("cache.enable", false)
 	s.cacheAmout = toml.Int("cache.amount", 1000)
@@ -202,6 +206,9 @@ func (s *Server) Run() {
 	s.Renders = make(map[string]render.Render)
 	s.Renders["html"] = new(render.HtmlRender)
 	var tempFuncMap = make(template.FuncMap)
+	for _, bc := range s.initCtrl {
+		bc.Init()
+	}
 	for _, v := range s.funcs {
 		tempFunc := func() int {
 			return 0

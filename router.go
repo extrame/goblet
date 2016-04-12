@@ -1,7 +1,7 @@
 package goblet
 
 import (
-	"fmt"
+	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
 	"log"
 	"net/http"
@@ -44,7 +44,6 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 	}
 
 	if anch != nil {
-		fmt.Println("+++++++++++++++++")
 		w.Header().Add("Cache-Control", "no-store,no-cache,must-revalidate,post-check=0,pre-check=0")
 		w.Header().Add("Pragma", "no-cache")
 		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false, nil}
@@ -54,7 +53,7 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 				err = context.render()
 			}
 		}
-		if *s.env == DevelopEnv {
+		if *s.env == config.DevelopEnv {
 			log.Println("Err in Dynamic :", err)
 		}
 		return
