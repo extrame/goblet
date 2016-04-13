@@ -310,3 +310,7 @@ func (c *Context) PathToURL(path string) (*url.URL, error) {
 		return nil, err
 	}
 }
+
+func (c *Context) Version() string {
+	return *c.Server.version
+}

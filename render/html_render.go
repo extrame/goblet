@@ -95,6 +95,9 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 	}
 
 	if err == nil {
+		if v := ctx.Version(); v != "" {
+			return &HttpRenderInstance{layout, yield, "/css/" + path + ".css" + "?" + v, "/js/" + path + ".js" + "?" + v}, nil
+		}
 		return &HttpRenderInstance{layout, yield, "/css/" + path + ".css", "/js/" + path + ".js"}, nil
 	}
 

@@ -15,6 +15,7 @@ type RenderContext interface {
 	Suffix() string
 	Format() string
 	EnableCache()
+	Version() string
 }
 
 type RenderServer interface {

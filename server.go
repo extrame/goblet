@@ -42,6 +42,7 @@ type Server struct {
 	dbPwd         *string
 	dbHost        *string
 	dbName        *string
+	version       *string
 	dbPort        *int
 	dbConTO       *int
 	dbKaInterval  *int
@@ -167,6 +168,7 @@ func (s *Server) parseConfig() (err error) {
 	s.enDbCache = toml.Bool("cache.enable", false)
 	s.cacheAmout = toml.Int("cache.amount", 1000)
 	s.logFile = toml.String("log.file", "")
+	s.version = toml.String("basic.version", "")
 	flag.Parse()
 	*path = filepath.FromSlash(*path)
 	err = toml.Parse(*path)
