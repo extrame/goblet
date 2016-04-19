@@ -91,9 +91,9 @@ func appendHtmlItem(env, root, name, v string) string {
 	if strings.HasSuffix(v, ".js") {
 		if env == config.ProductEnv {
 			//try to use min version
-			v = strings.Replace(v, ".js", ".min.js", 1)
-			if _, err := os.Stat(filepath.Join(root, name, v)); !os.IsNotExist(err) {
-				return "<script src=/plugins/" + name + "/" + v + "></script>"
+			min_v := strings.Replace(v, ".js", ".min.js", 1)
+			if _, err := os.Stat(filepath.Join(root, name, min_v)); !os.IsNotExist(err) {
+				return "<script src=/plugins/" + name + "/" + min_v + "></script>"
 			}
 		}
 		return "<script src=/plugins/" + name + "/" + v + "></script>"
