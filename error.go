@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -18,3 +19,5 @@ func WrapError(w http.ResponseWriter, err interface{}, withStack bool) {
 	}
 	w.Write([]byte("</body>"))
 }
+
+var Interrupted = errors.New("interrupted error")

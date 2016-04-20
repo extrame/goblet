@@ -50,6 +50,7 @@ type BasicBlockOption struct {
 	htmlRenderFileOrDir string
 	typ                 string
 	block               interface{}
+	name                string
 }
 
 type HtmlBlockOption struct {
@@ -161,66 +162,98 @@ func (r *RestBlockOption) Parse(c *Context) error {
 	return nil
 }
 
+func (r *RestBlockOption) tryPre(m string, ctx *Context) bool {
+	arg := reflect.ValueOf(ctx)
+	key := r.name + "-" + m
+	key = strings.ToLower(key)
+	if pc, ok := ctx.Server.pres[key]; ok {
+		results := pc.Call([]reflect.Value{arg})
+		if err, ok := results[0].Interface().(error); ok && err != nil {
+			ctx.RespondError(err)
+			return false
+		}
+	}
+	return true
+}
+
 func (r *RestBlockOption) renderAsRead(id string, cx *Context) {
 	if reader, ok := r.BasicBlockOption.block.(RestReadBlock); ok {
 		cx.method = REST_READ
-		reader.Read(id, cx)
+		if r.tryPre("Read", cx) {
+			reader.Read(id, cx)
+		}
 	}
 }
 
 func (r *RestBlockOption) renderAsReadMany(cx *Context) {
 	if reader, ok := r.BasicBlockOption.block.(RestReadManyBlock); ok {
 		cx.method = REST_READMANY
-		reader.ReadMany(cx)
+		if r.tryPre("ReadMany", cx) {
+			reader.ReadMany(cx)
+		}
 	}
 }
 
 func (r *RestBlockOption) renderAsNew(cx *Context) {
 	if reader, ok := r.BasicBlockOption.block.(RestNewBlock); ok {
 		cx.method = REST_NEW
-		reader.New(cx)
+		if r.tryPre("New", cx) {
+			reader.New(cx)
+		}
 	}
 }
 
 func (r *RestBlockOption) renderAsUpdateMany(cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestUpdateManyBlock); ok {
 		cx.method = REST_UPDATEMANY
-		um.UpdateMany(cx)
+		if r.tryPre("UpdateMany", cx) {
+			um.UpdateMany(cx)
+		}
 	}
 }
 
 func (r *RestBlockOption) renderAsDeleteMany(cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestDeleteManyBlock); ok {
 		cx.method = REST_DELETEMANY
-		um.DeleteMany(cx)
+		if r.tryPre("DeleteMany", cx) {
+			um.DeleteMany(cx)
+		}
 	}
 }
 
 func (r *RestBlockOption) renderAsCreate(cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestCreateBlock); ok {
 		cx.method = REST_CREATE
-		um.Create(cx)
+		if r.tryPre("Create", cx) {
+			um.Create(cx)
+		}
 	}
 }
 
 func (r *RestBlockOption) renderAsEdit(id string, cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestEditBlock); ok {
 		cx.method = REST_EDIT
-		um.Edit(id, cx)
+		if r.tryPre("Edit", cx) {
+			um.Edit(id, cx)
+		}
 	}
 }
 
 func (r *RestBlockOption) renderAsUpdate(id string, cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestUpdateBlock); ok {
 		cx.method = REST_UPDATE
-		um.Update(id, cx)
+		if r.tryPre("Update", cx) {
+			um.Update(id, cx)
+		}
 	}
 }
 
 func (r *RestBlockOption) renderAsDelete(id string, cx *Context) {
 	if um, ok := r.BasicBlockOption.block.(RestDeleteBlock); ok {
 		cx.method = REST_DELETE
-		um.Delete(id, cx)
+		if r.tryPre("Delete", cx) {
+			um.Delete(id, cx)
+		}
 	}
 }
 
@@ -292,7 +325,16 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 	} else {
 		ctx.method = name
 		arg := reflect.ValueOf(ctx)
-		method.Call([]reflect.Value{arg})
+		key := strings.ToLower(g.name + "-" + name)
+		if pc, ok := ctx.Server.pres[key]; ok {
+			results := pc.Call([]reflect.Value{arg})
+			if err, ok := results[0].Interface().(error); ok && err != nil {
+				ctx.RespondError(err)
+				return nil
+			}
+		} else {
+			method.Call([]reflect.Value{arg})
+		}
 	}
 	return nil
 
@@ -332,6 +374,7 @@ func PrepareOption(block interface{}) BlockOption {
 		val = val.Elem()
 	}
 
+	basic.name = val.Type().Name()
 	valtype := val.Type()
 	ignoreCase := true
 

@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,6 +53,8 @@ func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
 		userid = strconv.FormatInt(int64(rid), 10)
 	case int64:
 		userid = strconv.FormatInt(rid, 10)
+	default:
+		userid = fmt.Sprintf("%s", id)
 	}
 	if timeduration == nil {
 		c.addLoginAs("user", userid)

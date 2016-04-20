@@ -2,6 +2,7 @@ package goblet
 
 import (
 	"crypto/sha1"
+	"errors"
 	"flag"
 	"fmt"
 	toml "github.com/extrame/go-toml-config"
@@ -13,6 +14,9 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"reflect"
+	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -24,7 +28,7 @@ type Fn struct {
 }
 
 type ControllerNeedInit interface {
-	Init()
+	Init(*Server)
 }
 
 type Server struct {
@@ -53,6 +57,7 @@ type Server struct {
 	plugins       []Plugin
 	funcs         []Fn
 	initCtrl      []ControllerNeedInit
+	pres          map[string]reflect.Value
 }
 
 type Handler interface {
@@ -72,6 +77,7 @@ func (s *Server) Organize(name string, plugins []Plugin) {
 	var err error
 	s.name = name
 	s.plugins = plugins
+	s.pres = make(map[string]reflect.Value)
 	if err = s.parseConfig(); err == nil {
 		s.router.init()
 		s.funcs = make([]Fn, 0)
@@ -102,6 +108,27 @@ func (s *Server) ControlBy(block interface{}) {
 		s.initCtrl = append(s.initCtrl, bc)
 	}
 	s.router.add(cfg)
+}
+
+func (s *Server) caller() (string, string, error) {
+	pc := make([]uintptr, 2) // at least 1 entry needed
+	runtime.Callers(2, pc)
+	f := runtime.FuncForPC(pc[1])
+	var caller_valid = regexp.MustCompile(`[\w]*\.\(\*([\w]+)\)\.([\w]+)`)
+	matched := caller_valid.FindStringSubmatch(f.Name())
+	if len(matched) == 3 {
+		return matched[1], matched[2], nil
+	}
+	return "", "", errors.New("no matched caller")
+}
+
+func (s *Server) Pre(fn interface{}, conds ...string) {
+	if c, _, err := s.caller(); err == nil {
+		for _, m := range conds {
+			key := strings.ToLower(c + "-" + m)
+			s.pres[key] = reflect.ValueOf(fn)
+		}
+	}
 }
 
 func (s *Server) AddModel(models interface{}, syncs ...bool) {
@@ -209,7 +236,7 @@ func (s *Server) Run() {
 	s.Renders["html"] = new(render.HtmlRender)
 	var tempFuncMap = make(template.FuncMap)
 	for _, bc := range s.initCtrl {
-		bc.Init()
+		bc.Init(s)
 	}
 	for _, v := range s.funcs {
 		tempFunc := func() int {
