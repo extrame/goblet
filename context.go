@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/extrame/goblet/lower"
 	"github.com/extrame/goblet/render"
 )
 
@@ -20,7 +21,7 @@ var USERCOOKIENAME = "user"
 
 type Context struct {
 	Server  *Server
-	request *http.Request
+	request lower.Request
 	writer  http.ResponseWriter
 	option  BlockOption
 	//默认请求类型：HTML

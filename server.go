@@ -5,11 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	toml "github.com/extrame/go-toml-config"
-	"github.com/extrame/goblet/config"
-	"github.com/extrame/goblet/error"
-	"github.com/extrame/goblet/render"
-	"github.com/go-xorm/xorm"
 	"html/template"
 	"log"
 	"net/http"
@@ -18,6 +13,13 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	toml "github.com/extrame/go-toml-config"
+	"github.com/extrame/goblet/config"
+	"github.com/extrame/goblet/error"
+	"github.com/extrame/goblet/render"
+	"github.com/go-xorm/xorm"
+	"github.com/valyala/fasthttp"
 )
 
 var NotImplemented = fmt.Errorf("this method is not implemented")
@@ -47,6 +49,7 @@ type Server struct {
 	dbHost        *string
 	dbName        *string
 	version       *string
+	lowerType     *string
 	dbPort        *int
 	dbConTO       *int
 	dbKaInterval  *int
@@ -161,9 +164,10 @@ func (s *Server) WwwRoot() string {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	lowerServer := lower.Server(s.lowerType, w, r)
 	defer func() {
 		if err := recover(); err != nil {
-			WrapError(w, err, true)
+			lowerServer.WrapError(w, err, true)
 		}
 	}()
 	if err := s.router.route(s, w, r); err == ge.NOSUCHROUTER {
@@ -176,6 +180,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
 	} else if err != nil {
 		WrapError(w, err, false)
+	}
+}
+
+func (s *Server) HandleFastHTTP(ctx *fasthttp.RequestCtx) {
+	defer func() {
+		if err := recover(); err != nil {
+			lower.WrapError(ctx, err, true)
+		}
+	}()
+	if err := s.router.route(s, ctx); err == ge.NOSUCHROUTER {
+		orig_path := string(ctx.Path())
+		var path string
+		if strings.HasSuffix(orig_path, "/") {
+			path = orig_path + "index.html"
+		} else {
+			path = orig_path
+		}
+		fasthttp.ServeFile(ctx, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
+	} else if err != nil {
+		WrapError(ctx, err, false)
 	}
 }
 
@@ -196,6 +220,7 @@ func (s *Server) parseConfig() (err error) {
 	s.cacheAmout = toml.Int("cache.amount", 1000)
 	s.logFile = toml.String("log.file", "")
 	s.version = toml.String("basic.version", "")
+	s.lowerType = toml.String("basic.lower", "http")
 	flag.Parse()
 	*path = filepath.FromSlash(*path)
 	err = toml.Parse(*path)
@@ -220,6 +245,7 @@ func (s *Server) Hash(str string) string {
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
+//PublicDir 返回服务器配置的公开文件目录
 func (s *Server) PublicDir() string {
 	return *s.publicDir
 }
@@ -231,6 +257,7 @@ func (s *Server) enableDbCache() {
 	}
 }
 
+//Run 执行服务
 func (s *Server) Run() {
 	s.Renders = make(map[string]render.Render)
 	s.Renders["html"] = new(render.HtmlRender)
@@ -248,5 +275,6 @@ func (s *Server) Run() {
 	s.Renders["json"] = new(render.JsonRender)
 	s.Renders["raw"] = new(render.RawRender)
 	log.Println("Listen at ", fmt.Sprintf(":%d", *s.ListenPort))
+
 	http.ListenAndServe(fmt.Sprintf(":%d", *s.ListenPort), s)
 }

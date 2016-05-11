@@ -1,9 +1,10 @@
 package goblet
 
-var DefaultServer *Server
+var defaultServer *Server
 
+//Organize 生成一个goblet服务器
 func Organize(name string, plugins ...Plugin) *Server {
-	DefaultServer := new(Server)
-	DefaultServer.Organize(name, plugins)
-	return DefaultServer
+	defaultServer := new(Server)
+	defaultServer.Organize(name, plugins)
+	return defaultServer
 }

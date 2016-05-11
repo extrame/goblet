@@ -2,9 +2,10 @@ package goblet
 
 import (
 	"fmt"
-	"github.com/extrame/goblet/error"
 	"reflect"
 	"strings"
+
+	"github.com/extrame/goblet/error"
 )
 
 type Route byte
@@ -310,7 +311,7 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 
 	if !method.IsValid() {
 		if name = ctx.request.URL.Query().Get("method"); name == "" {
-			name = ctx.request.Method
+			name = ctx.request.Method()
 		}
 		name = strings.ToLower(name)
 		switch name {
