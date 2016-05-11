@@ -3,7 +3,6 @@ package goblet
 import (
 	"bufio"
 	"fmt"
-	"github.com/extrame/goblet/render"
 	"html/template"
 	"io"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/extrame/goblet/render"
 )
 
 var USERCOOKIENAME = "user"
@@ -130,6 +131,10 @@ func (c *Context) RespondReader(reader io.Reader) {
 	c.already_writed = true
 }
 
+//Respond 向用户返回内容，三种数据会进行特别处理：
+//error类型：标记状态为内部错误
+//[]byte类型：使用raw进行内容渲染，即原样输出，不进行json等格式转化
+//reader:使用raw进行内容渲染，即原样从输入中读取输出，不进行json等格式转化
 func (c *Context) Respond(data interface{}) {
 	switch td := data.(type) {
 	case error:
@@ -311,6 +316,17 @@ func (c *Context) PathToURL(path string) (*url.URL, error) {
 	}
 }
 
+//Version 返回用户配置的代码版本
 func (c *Context) Version() string {
 	return *c.Server.version
+}
+
+//ReqURL 返回用户请求的URL
+func (c *Context) ReqURL() *url.URL {
+	return c.request.URL
+}
+
+//ReqHeader 返回用户请求的Header
+func (c *Context) ReqHeader() http.Header {
+	return c.request.Header
 }
