@@ -17,6 +17,7 @@ import (
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
+	"github.com/extrame/goblet/lower"
 	"github.com/extrame/goblet/render"
 	"github.com/go-xorm/xorm"
 	"github.com/valyala/fasthttp"
@@ -164,42 +165,35 @@ func (s *Server) WwwRoot() string {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	lowerServer := lower.Server(s.lowerType, w, r)
-	defer func() {
-		if err := recover(); err != nil {
-			lowerServer.WrapError(w, err, true)
-		}
-	}()
-	if err := s.router.route(s, w, r); err == ge.NOSUCHROUTER {
-		var path string
-		if strings.HasSuffix(r.URL.Path, "/") {
-			path = r.URL.Path + "index.html"
-		} else {
-			path = r.URL.Path
-		}
+	ctx, _ := lower.Wrap(s.lowerType, wr, re)
+	s.internalHandle(re, wr, func(path string) {
 		http.ServeFile(w, r, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
-	} else if err != nil {
-		WrapError(w, err, false)
-	}
+	})
 }
 
 func (s *Server) HandleFastHTTP(ctx *fasthttp.RequestCtx) {
+	ctx, _ := lower.Wrap(s.lowerType, ctx, ctx)
+	s.internalHandle(re, wr, func(path string) {
+		fasthttp.ServeFile(ctx, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
+	})
+}
+
+func (s *Server) internalHandle(reader lower.Request, writer lower.Writer, fn func(string)) {
 	defer func() {
 		if err := recover(); err != nil {
-			lower.WrapError(ctx, err, true)
+			WrapError(w, err, true)
 		}
 	}()
-	if err := s.router.route(s, ctx); err == ge.NOSUCHROUTER {
-		orig_path := string(ctx.Path())
-		var path string
+	if err := s.router.route(s, w, r); err == ge.NOSUCHROUTER {
+		orig_path := r.URL().Path
 		if strings.HasSuffix(orig_path, "/") {
 			path = orig_path + "index.html"
 		} else {
 			path = orig_path
 		}
-		fasthttp.ServeFile(ctx, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
+		fn(path)
 	} else if err != nil {
-		WrapError(ctx, err, false)
+		WrapError(w, err, false)
 	}
 }
 

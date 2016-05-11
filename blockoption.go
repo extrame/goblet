@@ -64,11 +64,11 @@ func (h *HtmlBlockOption) MatchSuffix(suffix string) bool {
 
 func (h *HtmlBlockOption) Parse(c *Context) error {
 	c.method = h.htmlRenderFileOrDir
-	if c.request.Method == "GET" {
+	if c.lCtx.ReqMethod() == "GET" {
 		if get, ok := h.BasicBlockOption.block.(HtmlGetBlock); ok {
 			get.Get(c)
 		}
-	} else if c.request.Method == "POST" {
+	} else if c.lCtx.ReqMethod() == "POST" {
 		if post, ok := h.BasicBlockOption.block.(HtmlPostBlock); ok {
 			post.Post(c)
 		}
@@ -129,8 +129,8 @@ func (r *RestBlockOption) UpdateRender(obj string, ctx *Context) {
 
 func (r *RestBlockOption) Parse(c *Context) error {
 	var method string
-	if method = c.request.URL.Query().Get("method"); method == "" {
-		method = c.request.Method
+	if method = c.lCtx.QueryValue("method"); method == "" {
+		method = c.lCtx.ReqMethod()
 	}
 	method = strings.ToUpper(method)
 	if len(c.suffix) > 0 {
@@ -296,8 +296,8 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 			method = val.MethodByName(name)
 		}
 		if !method.IsValid() {
-			if name = ctx.request.URL.Query().Get("method"); name == "" {
-				name = ctx.request.Method
+			if name = ctx.lCtx.QueryValue("method"); name == "" {
+				name = ctx.lCtx.ReqMethod()
 			}
 			name = strings.ToLower(name)
 			switch name {
@@ -310,8 +310,8 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 	}
 
 	if !method.IsValid() {
-		if name = ctx.request.URL.Query().Get("method"); name == "" {
-			name = ctx.request.Method()
+		if name = ctx.lCtx.QueryValue("method"); name == "" {
+			name = ctx.lCtx.ReqMethod()
 		}
 		name = strings.ToLower(name)
 		switch name {

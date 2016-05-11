@@ -20,10 +20,10 @@ import (
 var USERCOOKIENAME = "user"
 
 type Context struct {
-	Server  *Server
-	request lower.Request
-	writer  http.ResponseWriter
-	option  BlockOption
+	Server *Server
+	lCtx   lower.Context
+	writer http.ResponseWriter
+	option BlockOption
 	//默认请求类型：HTML
 	suffix         string
 	format         string
@@ -51,7 +51,7 @@ func (c *Context) Writer() http.ResponseWriter {
 }
 
 func (c *Context) Callback() string {
-	return c.request.FormValue("callback")
+	return c.lCtx.FormValue("callback")
 }
 
 func (c *Context) Suffix() string {
@@ -63,13 +63,13 @@ func (c *Context) SetHeader(key, value string) {
 }
 
 func (c *Context) IntFormValue(key string) int64 {
-	str := c.request.FormValue(key)
+	str := c.lCtx.FormValue(key)
 	val, _ := strconv.ParseInt(str, 10, 64)
 	return val
 }
 
 func (c *Context) StrFormValue(key string) string {
-	return c.request.FormValue(key)
+	return c.lCtx.FormValue(key)
 }
 
 func (c *Context) EnableCache() {
@@ -284,7 +284,7 @@ func (r *RemoteAddr) Network() string {
 
 func (c *Context) RemoteAddr() net.Addr {
 	addr := new(RemoteAddr)
-	addr.str = c.request.RemoteAddr
+	addr.str = c.lCtx.RemoteAddr()
 	return addr
 }
 
@@ -328,6 +328,6 @@ func (c *Context) ReqURL() *url.URL {
 }
 
 //ReqHeader 返回用户请求的Header
-func (c *Context) ReqHeader() http.Header {
-	return c.request.Header
+func (c *Context) ReqHeader() lower.Context {
+	return c.lCtx.ReqHeader()
 }
