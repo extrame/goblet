@@ -253,8 +253,14 @@ func (c *Context) BlockOptionType() string {
 	return ""
 }
 
+//返回当前的Method
 func (c *Context) Method() string {
 	return c.method
+}
+
+//返回用户请求的Method
+func (c *Context) ReqMethod() string {
+	return c.request.Method
 }
 
 func (c *Context) Format() string {
