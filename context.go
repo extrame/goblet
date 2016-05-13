@@ -289,19 +289,19 @@ func (c *Context) RemoteAddr() net.Addr {
 }
 
 func (c *Context) FormValue(key string) string {
-	return c.request.FormValue(key)
+	return c.lCtx.FormValue(key)
 }
 
-func (c *Context) Body() io.ReadCloser {
-	return c.request.Body
+func (c *Context) Body() io.Reader {
+	return c.lCtx.Body()
 }
 
 func (c *Context) QueryString(key string) string {
-	return c.request.URL.Query().Get(key)
+	return c.lCtx.QueryValue(key)
 }
 
 func (c *Context) Referer() string {
-	return c.request.Referer()
+	return c.lCtx.ReqReferer()
 }
 
 func (c *Context) PathToURL(path string) (*url.URL, error) {
@@ -324,10 +324,10 @@ func (c *Context) Version() string {
 
 //ReqURL 返回用户请求的URL
 func (c *Context) ReqURL() *url.URL {
-	return c.request.URL
+	return c.lCtx.URL()
 }
 
 //ReqHeader 返回用户请求的Header
-func (c *Context) ReqHeader() lower.Context {
+func (c *Context) ReqHeader() lower.Header {
 	return c.lCtx.ReqHeader()
 }

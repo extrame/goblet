@@ -2,7 +2,9 @@ package lower
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/valyala/fasthttp"
 )
@@ -11,11 +13,17 @@ import (
 type Context interface {
 	ReqReferer() string
 	ReqMethod() string
+	ReqHeader() Header
 	FormValue(string) string
 	QueryValue(string) string
+	RemoteAddr() string
+	Body() io.Reader
+	URL() *url.URL
 }
 
 type Writer interface{}
+
+type Header interface{}
 
 func Wrap(base string, request interface{}, writer interface{}) (Context, error) {
 	switch base {

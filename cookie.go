@@ -77,7 +77,7 @@ func (c *Context) SignedCookie(name string) (*http.Cookie, error) {
 
 	valid, validErr := c.cookieIsValid(name)
 	if valid {
-		return c.request.Cookie(name)
+		return c.lCtx.Cookie(name)
 	} else if validErr != nil {
 		return nil, validErr
 	}

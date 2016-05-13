@@ -1,6 +1,12 @@
 package lower
 
-import "github.com/valyala/fasthttp"
+import (
+	"bytes"
+	"io"
+	"net/url"
+
+	"github.com/valyala/fasthttp"
+)
 
 type fasthttpCtx struct {
 	ctx *fasthttp.RequestCtx
@@ -24,4 +30,21 @@ func (f *fasthttpCtx) FormValue(key string) string {
 
 func (f *fasthttpCtx) QueryValue(key string) string {
 	return string(f.ctx.URI().QueryArgs().Peek(key))
+}
+
+func (f *fasthttpCtx) RemoteAddr() string {
+	return f.ctx.RemoteAddr().String()
+}
+
+func (f *fasthttpCtx) Body() io.Reader {
+	return bytes.NewBuffer(f.ctx.Request.Body())
+}
+
+func (f *fasthttpCtx) URL() *url.URL {
+	u, _ := url.Parse(string(f.ctx.RequestURI()))
+	return u
+}
+
+type fastURL struct {
+	*fasthttp.URI
 }
