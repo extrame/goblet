@@ -35,6 +35,7 @@ type Context struct {
 	layout         string
 	status_code    int
 	already_writed bool
+	fill_bts       []byte
 	bower_stack    map[string]bool
 }
 

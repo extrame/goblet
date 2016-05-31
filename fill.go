@@ -27,25 +27,28 @@ type RequestDecoder interface {
 type JsonRequestDecoder struct{}
 
 func (d *JsonRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) (err error) {
-	var request []byte
 	// read body
-	request, err = ioutil.ReadAll(cx.request.Body)
+	if cx.fill_bts == nil {
+		cx.fill_bts, err = ioutil.ReadAll(cx.request.Body)
+	}
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(request, v)
+	return json.Unmarshal(cx.fill_bts, v)
 }
 
 // an XML decoder for request body
 type XmlRequestDecoder struct{}
 
-func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
+func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) (err error) {
 	// read body
-	data, err := ioutil.ReadAll(cx.request.Body)
+	if cx.fill_bts == nil {
+		cx.fill_bts, err = ioutil.ReadAll(cx.request.Body)
+	}
 	if err != nil {
 		return err
 	}
-	return xml.Unmarshal(data, v)
+	return xml.Unmarshal(cx.fill_bts, v)
 }
 
 // a form-enc decoder for request body
@@ -241,7 +244,7 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 				}
 			}
 		} else {
-			log.Println("cannot set value in fill")
+			log.Printf("cannot set value of (%s,%s) in fill", rtype.Field(i).Name, rtype.Field(i).Type.Name())
 		}
 	}
 	if !success && err == nil {

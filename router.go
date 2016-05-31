@@ -1,11 +1,12 @@
 package goblet
 
 import (
-	"github.com/extrame/goblet/config"
-	"github.com/extrame/goblet/error"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/extrame/goblet/config"
+	"github.com/extrame/goblet/error"
 )
 
 type _Router struct {
@@ -46,7 +47,7 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 	if anch != nil {
 		w.Header().Add("Cache-Control", "no-store,no-cache,must-revalidate,post-check=0,pre-check=0")
 		w.Header().Add("Pragma", "no-cache")
-		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false, nil}
+		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false, nil, nil}
 		if err = anch.opt.Parse(context); err == nil {
 			context.checkResponse()
 			if err = context.prepareRender(); err == nil {

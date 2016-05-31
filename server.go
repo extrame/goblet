@@ -5,11 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	toml "github.com/extrame/go-toml-config"
-	"github.com/extrame/goblet/config"
-	"github.com/extrame/goblet/error"
-	"github.com/extrame/goblet/render"
-	"github.com/go-xorm/xorm"
 	"html/template"
 	"log"
 	"net/http"
@@ -18,6 +13,12 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	toml "github.com/extrame/go-toml-config"
+	"github.com/extrame/goblet/config"
+	"github.com/extrame/goblet/error"
+	"github.com/extrame/goblet/render"
+	"github.com/go-xorm/xorm"
 )
 
 var NotImplemented = fmt.Errorf("this method is not implemented")
@@ -73,14 +74,32 @@ type PageHandler interface {
 	Page() (int, interface{})
 }
 
-func (s *Server) Organize(name string, plugins []Plugin) {
+func (s *Server) Organize(name string, plugins []interface{}) {
 	var err error
+	var dbPwdPlugin DbPwdPlugin
+	var dbUserPlugin dbUserNamePlugin
 	s.name = name
-	s.plugins = plugins
+	for _, plugin := range plugins {
+		if tp, ok := plugin.(Plugin); ok {
+			s.plugins = append(s.plugins, tp)
+		}
+		if tp, ok := plugin.(DbPwdPlugin); ok {
+			dbPwdPlugin = tp
+		}
+		if tp, ok := plugin.(dbUserNamePlugin); ok {
+			dbUserPlugin = tp
+		}
+	}
 	s.pres = make(map[string]reflect.Value)
 	if err = s.parseConfig(); err == nil {
 		s.router.init()
 		s.funcs = make([]Fn, 0)
+		if dbPwdPlugin != nil {
+			*(s.dbPwd) = dbPwdPlugin.SetPwd(*s.dbPwd)
+		}
+		if dbUserPlugin != nil {
+			*(s.dbUser) = dbUserPlugin.SetName(*s.dbUser)
+		}
 		if err = s.connectDB(); err == nil {
 			if *s.env == config.DevelopEnv {
 				log.Println("connect DB success")
