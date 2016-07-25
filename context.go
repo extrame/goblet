@@ -18,6 +18,10 @@ import (
 
 var USERCOOKIENAME = "user"
 
+const (
+	defaultMaxMemory = 32 << 20 // 32 MB
+)
+
 type Context struct {
 	Server  *Server
 	request *http.Request
@@ -95,6 +99,9 @@ func (c *Context) render() (err error) {
 				}
 				return template.HTML(res), err
 			}
+			funcMap["version"] = func() string {
+				return *c.Server.version
+			}
 			for i := 0; i < len(c.Server.funcs); i++ {
 				var fn = c.Server.funcs[i].Fn
 				funcMap[c.Server.funcs[i].Name] = func() interface{} {
@@ -164,7 +171,7 @@ func (c *Context) UseRender(render string) {
 	c.forceFormat = render
 }
 
-//Allow some temporary render
+//AllowRender Allow some temporary render
 func (c *Context) AllowRender(renders ...string) {
 	c.tempRenders = renders
 }
@@ -294,6 +301,13 @@ func (c *Context) RemoteAddr() net.Addr {
 	return addr
 }
 
+func (c *Context) Form() url.Values {
+	if c.request.Form == nil {
+		c.request.ParseMultipartForm(defaultMaxMemory)
+	}
+	return c.request.Form
+}
+
 func (c *Context) FormValue(key string) string {
 	return c.request.FormValue(key)
 }
@@ -336,4 +350,9 @@ func (c *Context) ReqURL() *url.URL {
 //ReqHeader 返回用户请求的Header
 func (c *Context) ReqHeader() http.Header {
 	return c.request.Header
+}
+
+//UserAgent 返回用户Agent
+func (c *Context) UserAgent() string {
+	return c.request.UserAgent()
 }

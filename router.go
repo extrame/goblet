@@ -39,7 +39,10 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 			main = r.URL.Path
 		}
 		anch, suffix_url = rou.anchor.match(main, len(main))
-		log.Printf("routing matched %s\n", r.URL.Path)
+		log.Printf("routing %s", r.URL.Path)
+		if anch != nil {
+			log.Printf("(dynamic)")
+		}
 	} else {
 		suffix = "html"
 	}

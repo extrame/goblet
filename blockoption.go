@@ -2,9 +2,10 @@ package goblet
 
 import (
 	"fmt"
-	"github.com/extrame/goblet/error"
 	"reflect"
 	"strings"
+
+	"github.com/extrame/goblet/error"
 )
 
 type Route byte
@@ -65,11 +66,15 @@ func (h *HtmlBlockOption) Parse(c *Context) error {
 	c.method = h.htmlRenderFileOrDir
 	if c.request.Method == "GET" {
 		if get, ok := h.BasicBlockOption.block.(HtmlGetBlock); ok {
-			get.Get(c)
+			if h.tryPre("Get", c) {
+				get.Get(c)
+			}
 		}
 	} else if c.request.Method == "POST" {
 		if post, ok := h.BasicBlockOption.block.(HtmlPostBlock); ok {
-			post.Post(c)
+			if h.tryPre("Get", c) {
+				post.Post(c)
+			}
 		}
 	}
 	return nil
@@ -162,7 +167,7 @@ func (r *RestBlockOption) Parse(c *Context) error {
 	return nil
 }
 
-func (r *RestBlockOption) tryPre(m string, ctx *Context) bool {
+func (r *BasicBlockOption) tryPre(m string, ctx *Context) bool {
 	arg := reflect.ValueOf(ctx)
 	key := r.name + "-" + m
 	key = strings.ToLower(key)

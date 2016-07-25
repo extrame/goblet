@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet/config"
@@ -54,6 +55,8 @@ type Server struct {
 	enDbCache     *bool
 	cacheAmout    *int
 	logFile       *string
+	readTimeOut   *int
+	writeTimeOut  *int
 	name          string
 	plugins       []Plugin
 	funcs         []Fn
@@ -182,7 +185,7 @@ func (s *Server) WwwRoot() string {
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
-			WrapError(w, err, true)
+			s.wrapError(w, err, true)
 		}
 	}()
 	if err := s.router.route(s, w, r); err == ge.NOSUCHROUTER {
@@ -194,7 +197,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		http.ServeFile(w, r, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
 	} else if err != nil {
-		WrapError(w, err, false)
+		s.wrapError(w, err, false)
 	}
 }
 
@@ -205,6 +208,8 @@ func (s *Server) parseConfig() (err error) {
 	}
 	s.wwwRoot = toml.String("basic.www_root", "./www")
 	s.ListenPort = toml.Int("basic.port", 8080)
+	s.readTimeOut = toml.Int("basic.read_timeout", 30)
+	s.writeTimeOut = toml.Int("basic.write_timeout", 30)
 	s.publicDir = toml.String("basic.public_dir", "public")
 	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")
 	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
@@ -250,7 +255,7 @@ func (s *Server) enableDbCache() {
 	}
 }
 
-func (s *Server) Run() {
+func (s *Server) Run() error {
 	s.Renders = make(map[string]render.Render)
 	s.Renders["html"] = new(render.HtmlRender)
 	var tempFuncMap = make(template.FuncMap)
@@ -267,5 +272,12 @@ func (s *Server) Run() {
 	s.Renders["json"] = new(render.JsonRender)
 	s.Renders["raw"] = new(render.RawRender)
 	log.Println("Listen at ", fmt.Sprintf(":%d", *s.ListenPort))
-	http.ListenAndServe(fmt.Sprintf(":%d", *s.ListenPort), s)
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", *s.ListenPort),
+		Handler:      s,
+		WriteTimeout: time.Second * time.Duration(*s.writeTimeOut),
+		ReadTimeout:  time.Second * time.Duration(*s.readTimeOut),
+	}
+	err := srv.ListenAndServe()
+	return err
 }
