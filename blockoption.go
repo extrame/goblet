@@ -67,15 +67,20 @@ func (h *HtmlBlockOption) MatchSuffix(suffix string) bool {
 
 func (h *HtmlBlockOption) Parse(c *Context) error {
 	c.method = h.htmlRenderFileOrDir
-	if c.request.Method == "GET" {
+	var method string
+	if method = c.request.URL.Query().Get("method"); method == "" {
+		method = c.request.Method
+	}
+	method = strings.ToLower(method)
+	if method == "get" {
 		if get, ok := h.BasicBlockOption.block.(HtmlGetBlock); ok {
 			if h.tryPre("Get", c) {
 				get.Get(c)
 			}
 		}
-	} else if c.request.Method == "POST" {
+	} else if method == "post" {
 		if post, ok := h.BasicBlockOption.block.(HtmlPostBlock); ok {
-			if h.tryPre("Get", c) {
+			if h.tryPre("Post", c) {
 				post.Post(c)
 			}
 		}
