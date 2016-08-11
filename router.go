@@ -101,7 +101,6 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 					branch = &Anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, a.opt}
 					a.branches = []*Anchor{branch}
 				} else {
-					log.Println(":", path[a.loc-len(a.prefix):], full_stored_path)
 					if path[a.loc-len(a.prefix):] == full_stored_path {
 						a.opt = opt
 						return true
@@ -123,9 +122,6 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 		len_part_path := len(path) - loc_begin_prefix
 		for i := loc_begin_prefix + len_part_path - 1; i > loc_begin_prefix; i-- {
 			if path[loc_begin_prefix:i] == a.prefix[:i-loc_begin_prefix] {
-
-				log.Println(i, loc_begin_prefix, a.prefix[i-loc_begin_prefix+1:])
-				log.Println(path[loc_begin_prefix:i], a.prefix[:i-loc_begin_prefix-1], a.prefix[i-loc_begin_prefix-1:i-loc_begin_prefix])
 
 				//new branch for old
 				branch := &Anchor{a.loc, a.char, a.prefix[i-loc_begin_prefix+1:], a.branches, a.opt}

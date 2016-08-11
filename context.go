@@ -41,10 +41,18 @@ type Context struct {
 	already_writed bool
 	fill_bts       []byte
 	bower_stack    map[string]bool
+	infos          map[string]interface{}
 }
 
 func (c *Context) handleData() {
 
+}
+
+func (c *Context) AddInfos(key string, value interface{}) {
+	if c.infos == nil {
+		c.infos = make(map[string]interface{})
+	}
+	c.infos[key] = value
 }
 
 func (c *Context) Writer() http.ResponseWriter {
@@ -101,6 +109,9 @@ func (c *Context) render() (err error) {
 			}
 			funcMap["version"] = func() string {
 				return *c.Server.version
+			}
+			funcMap["extra_info"] = func(key string) interface{} {
+				return *c.Infos[key]
 			}
 			for i := 0; i < len(c.Server.funcs); i++ {
 				var fn = c.Server.funcs[i].Fn
