@@ -48,6 +48,10 @@ func (c *Context) handleData() {
 
 }
 
+func (c *Context) UseStandErrPage() bool {
+	return c.option.ErrorRender() != "self"
+}
+
 func (c *Context) AddInfo(key string, value interface{}) {
 	if c.infos == nil {
 		c.infos = make(map[string]interface{})

@@ -14,6 +14,7 @@ type Layout byte
 type SingleController byte
 type RestController byte
 type GroupController byte
+type ErrorRender byte
 
 const (
 	REST_READ       = "read"
@@ -42,6 +43,7 @@ type BlockOption interface {
 	Parse(*Context) error
 	Layout() string
 	TemplatePath() string
+	ErrorRender() string
 }
 
 type BasicBlockOption struct {
@@ -52,6 +54,7 @@ type BasicBlockOption struct {
 	typ                 string
 	block               interface{}
 	name                string
+	errRender           string
 }
 
 type HtmlBlockOption struct {
@@ -98,6 +101,10 @@ func (h *BasicBlockOption) SetRender(renders []string) {
 
 func (b *BasicBlockOption) GetRouting() []string {
 	return b.routing
+}
+
+func (b *BasicBlockOption) ErrorRender() string {
+	return b.errRender
 }
 
 func (b *BasicBlockOption) GetRender(cx *Context) (render string, err error) {
@@ -418,6 +425,10 @@ func PrepareOption(block interface{}) BlockOption {
 
 			if t.Type.Name() == "Route" && t.Type.PkgPath() == "github.com/extrame/goblet" {
 				basic.routing = tags
+				continue
+			}
+			if t.Type.Name() == "ErrorRender" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+				basic.errRender = string(t.Tag)
 				continue
 			}
 			if t.Type.Name() == "Render" && t.Type.PkgPath() == "github.com/extrame/goblet" {

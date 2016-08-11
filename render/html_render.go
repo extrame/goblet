@@ -84,7 +84,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 	}
 
-	if status_code >= 300 {
+	if status_code >= 300 && ctx.UseStandErrPage() {
 		layout, err = h.getTemplate(root, "layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
 		if err != nil {
 			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
@@ -107,7 +107,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.root = template.New("REST_HTTP_ROOT")
-	origin_funcs := template.FuncMap{"version": RawHtml, "bower": RawHtml, "noescape": Noescape, "js": RawHtml, "css": RawHtml, "raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
+	origin_funcs := template.FuncMap{"extra_info": RawHtml, "version": RawHtml, "bower": RawHtml, "noescape": Noescape, "js": RawHtml, "css": RawHtml, "raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
 	for k, v := range funcs {
 		origin_funcs[k] = v
 	}

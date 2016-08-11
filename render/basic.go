@@ -16,6 +16,7 @@ type RenderContext interface {
 	Format() string
 	EnableCache()
 	Version() string
+	UseStandErrPage() bool
 }
 
 type RenderServer interface {
