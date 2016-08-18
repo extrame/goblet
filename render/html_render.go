@@ -1,6 +1,7 @@
 package render
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
+	"github.com/mvader/detect"
 )
 
 type HtmlRender struct {
@@ -44,50 +46,74 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 	path := ctx.TemplatePath() + "/" + ctx.Method()
 
 	h.initModelTemplate(root, ctx.TemplatePath())
+
+	isMobile := detect.IsMobile(ctx.UserAgent())
+
 	switch ctx.BlockOptionType() {
 
 	case "Html":
-		layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
+		if isMobile {
+			layout, err = h.getTemplates(root,
+				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
+				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
+			)
+		} else {
+			layout, err = h.getTemplates(root,
+				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
+			)
+		}
 		path = ctx.Method()
-		if err == nil {
-			yield, err = h.getTemplate(root, path+h.suffix)
-		}
-	case "Rest":
-		if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
-			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
-		}
-		if err == nil {
-			yield, err = h.getTemplate(root, path+h.suffix)
-		}
-	case "Group":
-		if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
-			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
-		}
-		if err == nil {
-			yield, err = h.getTemplate(root, path+h.suffix)
-		}
 	case "Static":
 		ctx.EnableCache()
-		if layout, err = h.getTemplate(root, "module_layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix)); err != nil {
-			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
-		}
 		path = ctx.Method()
-		if err == nil {
-			yield, err = h.getTemplate(root, path+h.suffix)
+		fallthrough
+	case "Rest", "Group":
+		if isMobile {
+			layout, err = h.getTemplates(root,
+				ctx.TemplatePath()+"/layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+".mobile"+h.suffix),
+				ctx.TemplatePath()+"/layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix),
+				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
+				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
+			)
+		} else {
+			layout, err = h.getTemplates(root,
+				ctx.TemplatePath()+"/layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix),
+				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
+			)
 		}
-		//for static file
-		if err == ge.NOSUCHROUTER {
-			file := filepath.Join(h.dir, h.public, fmt.Sprintf("%s.%s", path, ctx.Format()))
-			if _, err := os.Stat(file); os.IsNotExist(err) {
-				status_code = 404
-			}
+	}
+
+	//for static file
+	if err == ge.NOSUCHROUTER && ctx.BlockOptionType() == "Static" {
+		file := filepath.Join(h.dir, h.public, fmt.Sprintf("%s.%s", path, ctx.Format()))
+		if _, err := os.Stat(file); os.IsNotExist(err) {
+			status_code = 404
+		}
+	}
+
+	if err == nil {
+		if isMobile {
+			yield, err = h.getTemplates(root,
+				path+".mobile"+h.suffix, path+".mobile"+h.suffix,
+				path+h.suffix, path+h.suffix)
+		} else {
+			yield, err = h.getTemplates(root, path+h.suffix, path+h.suffix)
 		}
 	}
 
 	if status_code >= 300 && ctx.UseStandErrPage() {
-		layout, err = h.getTemplate(root, "layout/"+"error"+h.suffix, filepath.Join("layout", "error"+h.suffix))
-		if err != nil {
-			layout, err = h.getTemplate(root, "layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix))
+		if isMobile {
+			layout, err = h.getTemplates(root,
+				"layout/error.mobile."+h.suffix, filepath.Join("layout", "error.mobile."+h.suffix),
+				"layout/error"+h.suffix, filepath.Join("layout", "error"+h.suffix),
+				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
+				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
+			)
+		} else {
+			layout, err = h.getTemplates(root,
+				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
+				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
+			)
 		}
 		yield, err = h.getTemplate(root, strconv.Itoa(status_code)+h.suffix, filepath.Join(strconv.Itoa(status_code)+h.suffix))
 		if err != nil {
@@ -149,6 +175,20 @@ func (h *HtmlRender) initModelTemplate(parent *template.Template, dir string) {
 	if dir != "" || dir != "." {
 		h.initTemplate(parent, dir, "model")
 	}
+}
+
+func (h *HtmlRender) getTemplates(root *template.Template, args ...string) (temp *template.Template, err error) {
+	if len(args)%2 == 0 {
+		for index := 0; index < len(args)/2; index++ {
+			name := args[index*2]
+			file := args[index*2+1]
+			if temp, err = h.getTemplate(root, name, file); err == nil {
+				return
+			}
+		}
+		return
+	}
+	return nil, errors.New("Input length of args is odd")
 }
 
 func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*template.Template, error) {
