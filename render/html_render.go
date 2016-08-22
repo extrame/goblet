@@ -122,10 +122,15 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 	}
 
 	if err == nil {
+		suffix := ""
 		if v := ctx.Version(); v != "" {
-			return &HttpRenderInstance{layout, yield, "/css/" + path + ".css" + "?" + v, "/js/" + path + ".js" + "?" + v}, nil
+			suffix = "?" + v
 		}
-		return &HttpRenderInstance{layout, yield, "/css/" + path + ".css", "/js/" + path + ".js"}, nil
+		mobile := ""
+		if isMobile {
+			mobile = ".mobile"
+		}
+		return &HttpRenderInstance{layout, yield, "/css/" + path + mobile + ".css" + suffix, "/js/" + path + mobile + ".js" + suffix}, nil
 	}
 
 	return

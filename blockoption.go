@@ -15,6 +15,7 @@ type SingleController byte
 type RestController byte
 type GroupController byte
 type ErrorRender byte
+type NoHidden byte
 
 const (
 	REST_READ       = "read"
@@ -35,7 +36,7 @@ type BlockOption interface {
 	GetRouting() []string
 	MatchSuffix(string) bool
 	//Get the render by user require, if required render is not allow, pass RenderNotAllowed
-	GetRender(*Context) (render string, err error)
+	GetRender() (render []string)
 	//Reset the allowed renders
 	SetRender([]string)
 	//Call the function in object and Parse data, this function used before
@@ -44,6 +45,7 @@ type BlockOption interface {
 	Layout() string
 	TemplatePath() string
 	ErrorRender() string
+	AutoHidden() bool
 }
 
 type BasicBlockOption struct {
@@ -55,6 +57,7 @@ type BasicBlockOption struct {
 	block               interface{}
 	name                string
 	errRender           string
+	noHidden            bool
 }
 
 type HtmlBlockOption struct {
@@ -104,35 +107,20 @@ func (h *BasicBlockOption) SetRender(renders []string) {
 	h.render = renders
 }
 
+func (h *BasicBlockOption) AutoHidden() bool {
+	return !h.noHidden
+}
+
+func (h *BasicBlockOption) GetRender() []string {
+	return h.render
+}
+
 func (b *BasicBlockOption) GetRouting() []string {
 	return b.routing
 }
 
 func (b *BasicBlockOption) ErrorRender() string {
 	return b.errRender
-}
-
-func (b *BasicBlockOption) GetRender(cx *Context) (render string, err error) {
-	if cx.forceFormat != "" {
-		return cx.forceFormat, nil
-	}
-	if cx.format == "" {
-		return b.render[0], nil
-	} else {
-		for _, v := range b.render {
-			if v == cx.format {
-				return v, nil
-			}
-		}
-		if cx.tempRenders != nil {
-			for _, v := range cx.tempRenders {
-				if v == cx.format {
-					return v, nil
-				}
-			}
-		}
-	}
-	return "", RenderNotAllowd
 }
 
 type RestBlockOption struct {
@@ -430,6 +418,10 @@ func PrepareOption(block interface{}) BlockOption {
 
 			if t.Type.Name() == "Route" && t.Type.PkgPath() == "github.com/extrame/goblet" {
 				basic.routing = tags
+				continue
+			}
+			if t.Type.Name() == "NoHidden" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+				basic.noHidden = true
 				continue
 			}
 			if t.Type.Name() == "ErrorRender" && t.Type.PkgPath() == "github.com/extrame/goblet" {

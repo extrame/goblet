@@ -48,6 +48,30 @@ func (c *Context) handleData() {
 
 }
 
+func (cx *Context) GetRender() (render string, err error) {
+	renders := cx.option.GetRender()
+	if cx.forceFormat != "" {
+		return cx.forceFormat, nil
+	}
+	if cx.format == "" {
+		return renders[0], nil
+	} else {
+		for _, v := range renders {
+			if v == cx.format {
+				return v, nil
+			}
+		}
+		if cx.tempRenders != nil {
+			for _, v := range cx.tempRenders {
+				if v == cx.format {
+					return v, nil
+				}
+			}
+		}
+	}
+	return "", RenderNotAllowd
+}
+
 func (c *Context) UseStandErrPage() bool {
 	return c.option.ErrorRender() != "self"
 }
@@ -143,8 +167,12 @@ func (c *Context) AddRespond(datas ...interface{}) {
 		}
 		for i := 0; i < len(datas)/2; i++ {
 			k := fmt.Sprintf("%s", datas[i])
-			v := autoHide(datas[i+1])
-			c.responseMap[k] = v
+			if c.option.AutoHidden() {
+				v := autoHide(datas[i+1])
+				c.responseMap[k] = v
+			} else {
+				c.responseMap[k] = datas[i+1]
+			}
 		}
 	}
 }
@@ -196,12 +224,20 @@ func (c *Context) RespondStatus(status int) {
 }
 
 func (c *Context) RespondWithStatus(data interface{}, status int) {
-	c.response = autoHide(data)
+	if c.option.AutoHidden() {
+		c.response = autoHide(data)
+	} else {
+		c.response = data
+	}
 	c.status_code = status
 }
 
 func (c *Context) RespondWithRender(data interface{}, render string) {
-	c.response = autoHide(data)
+	if c.option.AutoHidden() {
+		c.response = autoHide(data)
+	} else {
+		c.response = data
+	}
 	c.method = render
 }
 
@@ -209,7 +245,7 @@ func (c *Context) prepareRender() (err error) {
 	if !c.already_writed {
 		//test required format in allow list or not
 		var format string
-		if format, err = c.option.GetRender(c); err == nil {
+		if format, err = c.GetRender(); err == nil {
 			re := c.Server.Renders[format]
 			if re != nil {
 				c.renderInstance, err = re.PrepareInstance(c)
