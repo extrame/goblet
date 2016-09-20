@@ -174,7 +174,9 @@ func (r *BasicBlockOption) tryPre(m string, ctx *Context) bool {
 	if pc, ok := ctx.Server.pres[key]; ok {
 		results := pc.Call([]reflect.Value{arg})
 		if err, ok := results[0].Interface().(error); ok && err != nil {
-			ctx.RespondError(err)
+			if err != Interrupted {
+				ctx.RespondError(err)
+			}
 			return false
 		}
 	}
@@ -334,7 +336,9 @@ func (g *GroupBlockOption) Parse(ctx *Context) error {
 		if pc, ok := ctx.Server.pres[key]; ok {
 			results := pc.Call([]reflect.Value{arg})
 			if err, ok := results[0].Interface().(error); ok && err != nil {
-				ctx.RespondError(err)
+				if err != Interrupted {
+					ctx.RespondError(err)
+				}
 				return nil
 			}
 		} else {

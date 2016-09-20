@@ -1,14 +1,15 @@
 package goblet
 
 import (
-	"github.com/extrame/goblet/config"
-	"github.com/minktech/go-bower/bower"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/extrame/goblet/config"
+	"github.com/minktech/go-bower/bower"
 )
 
 var bower_cache = make(map[string][][2]string)
@@ -42,11 +43,12 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 
 	res = make([][2]string, 0)
 
-	if bts, e := ioutil.ReadFile(filepath.Join(root, "bower.json")); e == nil {
-		b, _ := bower.ParseBowerJSON(bts)
-		appendHtml(s, b, name, &res)
-	} else {
-		err = e
+	var bts []byte
+	if bts, err = ioutil.ReadFile(filepath.Join(root, "bower.json")); err == nil {
+		var b *bower.Component
+		if b, err = bower.ParseBowerJSON(bts); err == nil {
+			appendHTML(s, b, name, &res)
+		}
 	}
 
 	if *s.env == config.ProductEnv {
@@ -58,18 +60,21 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 	return
 }
 
-func appendHtml(s *Server, b *bower.Component, name string, maps *[][2]string) {
+func appendHTML(s *Server, b *bower.Component, name string, maps *[][2]string) {
 
 	root := filepath.Join(*s.wwwRoot, "public", "plugins")
-	for k, _ := range b.Dependencies {
-		if bts, e := ioutil.ReadFile(filepath.Join(root, k, "bower.json")); e == nil {
-			if b1, err := bower.ParseBowerJSON(bts); err == nil {
-				appendHtml(s, b1, b1.Name, maps)
-			} else {
-				log.Println(err)
+	if b.Dependencies != nil {
+		for k := range b.Dependencies {
+			if bts, e := ioutil.ReadFile(filepath.Join(root, k, "bower.json")); e == nil {
+				if b1, err := bower.ParseBowerJSON(bts); err == nil {
+					appendHTML(s, b1, b1.Name, maps)
+				} else {
+					log.Println(err)
+				}
 			}
 		}
 	}
+
 	res := ""
 	switch bs := b.Main.(type) {
 	case []interface{}:
