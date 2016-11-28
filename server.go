@@ -42,6 +42,9 @@ type Server struct {
 	router        _Router
 	env           *string
 	Renders       map[string]render.Render
+	HttpsEnable   *bool
+	HttpsCertFile *string
+	HttpsKey      *string
 	HashSecret    *string
 	dbEngine      *string
 	dbUser        *string
@@ -210,6 +213,7 @@ func (s *Server) parseConfig() (err error) {
 	s.ListenPort = toml.Int("basic.port", 8080)
 	s.readTimeOut = toml.Int("basic.read_timeout", 30)
 	s.writeTimeOut = toml.Int("basic.write_timeout", 30)
+
 	s.publicDir = toml.String("basic.public_dir", "public")
 	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")
 	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
@@ -220,6 +224,10 @@ func (s *Server) parseConfig() (err error) {
 	s.cacheAmout = toml.Int("cache.amount", 1000)
 	s.logFile = toml.String("log.file", "")
 	s.version = toml.String("basic.version", "")
+	s.HttpsEnable = toml.Bool("basic.https", false)
+	s.HttpsCertFile = toml.String("basic.https_certfile", "")
+	s.HttpsKey = toml.String("basic.https_key", "")
+
 	flag.Parse()
 	*path = filepath.FromSlash(*path)
 	err = toml.Parse(*path)
@@ -278,6 +286,12 @@ func (s *Server) Run() error {
 		WriteTimeout: time.Second * time.Duration(*s.writeTimeOut),
 		ReadTimeout:  time.Second * time.Duration(*s.readTimeOut),
 	}
-	err := srv.ListenAndServe()
+	var err error
+	if !*s.HttpsEnable {
+		err = srv.ListenAndServe()
+	} else {
+		err = srv.ListenAndServeTLS(*s.HttpsCertFile, *s.HttpsKey)
+	}
+	log.Println(err)
 	return err
 }
