@@ -63,14 +63,7 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 		w.Header().Add("Cache-Control", "no-store,no-cache,must-revalidate,post-check=0,pre-check=0")
 		w.Header().Add("Pragma", "no-cache")
 
-		if context == nil {
-			context = &Context{
-				s, r, w,
-				anch.opt, suffix_url, suffix,
-				"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
-				nil,
-			}
-		}
+		context.option = anch.opt
 
 		if err = anch.opt.Parse(context); err == nil {
 			context.checkResponse()
