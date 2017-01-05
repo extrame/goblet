@@ -21,7 +21,7 @@ import (
 	"github.com/mvader/detect"
 )
 
-var lock sync.Mutex
+var renderLock sync.Mutex
 
 type HtmlRender struct {
 	root     *template.Template
@@ -311,9 +311,9 @@ func parseFileWithName(parent *template.Template, name string, filepath string) 
 	} else {
 		tmpl = parent.New(name)
 	}
-	lock.Lock()
+	renderLock.Lock()
 	_, err = tmpl.Parse(s)
-	lock.Unlock()
+	renderLock.Unlock()
 	if err != nil {
 		return err
 	}
