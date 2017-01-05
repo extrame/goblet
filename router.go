@@ -30,15 +30,15 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 		log.Printf("routing /index\n", r.URL.Path)
 	}
 
-	var context *Context
+	context := &Context{
+		s, r, w,
+		nil, suffix_url, suffix,
+		"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
+		nil,
+	}
 
 	if s.nrPlugin != nil {
-		context = &Context{
-			s, r, w,
-			nil, suffix_url, suffix,
-			"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
-			nil,
-		}
+
 		s.nrPlugin.OnNewRequest(context)
 	}
 
