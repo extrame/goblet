@@ -58,10 +58,11 @@ type Server struct {
 	readTimeOut   *int
 	writeTimeOut  *int
 	name          string
-	plugins       []Plugin
+	plugins       map[string]Plugin
 	funcs         []Fn
 	initCtrl      []ControllerNeedInit
 	pres          map[string]reflect.Value
+	nrPlugin      onNewRequestPlugin
 }
 
 type Handler interface {
@@ -84,13 +85,24 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	s.name = name
 	for _, plugin := range plugins {
 		if tp, ok := plugin.(Plugin); ok {
-			s.plugins = append(s.plugins, tp)
+			typ := reflect.ValueOf(plugin).Type()
+			if typ.Kind() == reflect.Ptr {
+				typ = typ.Elem()
+			}
+			key := strings.ToLower(typ.Name())
+			if s.plugins == nil {
+				s.plugins = make(map[string]Plugin)
+			}
+			s.plugins[key] = tp
 		}
 		if tp, ok := plugin.(DbPwdPlugin); ok {
 			dbPwdPlugin = tp
 		}
 		if tp, ok := plugin.(dbUserNamePlugin); ok {
 			dbUserPlugin = tp
+		}
+		if tp, ok := plugin.(onNewRequestPlugin); ok {
+			s.nrPlugin = tp
 		}
 	}
 	s.pres = make(map[string]reflect.Value)
@@ -201,10 +213,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) GetPlugin(key string) Plugin {
+	return s.plugins[key]
+}
+
 func (s *Server) parseConfig() (err error) {
 	path := flag.String("config", "./"+s.name+".conf", "设置配置文件的路径")
-	for _, plugin := range s.plugins {
-		plugin.ParseConfig()
+	for key, plugin := range s.plugins {
+		plugin.ParseConfig(key)
 	}
 	s.wwwRoot = toml.String("basic.www_root", "./www")
 	s.ListenPort = toml.Int("basic.port", 8080)

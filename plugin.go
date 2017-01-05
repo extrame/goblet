@@ -1,7 +1,7 @@
 package goblet
 
 type Plugin interface {
-	ParseConfig() error
+	ParseConfig(prefix string) error
 	Init() error
 }
 
@@ -13,4 +13,9 @@ type DbPwdPlugin interface {
 //DbPwdPlugin Change the db connection name
 type dbUserNamePlugin interface {
 	SetName(origin string) string
+}
+
+//RequestPlugin Called on the request built
+type onNewRequestPlugin interface {
+	OnNewRequest(*Context) error
 }

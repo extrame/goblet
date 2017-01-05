@@ -29,6 +29,8 @@ func newDB(engine, user, pwd, host, name string, port int, con_to int, ka_intv i
 			}
 		}
 		q = host + ".db"
+	} else if engine == "none" {
+		return
 	}
 	DB, err = xorm.NewEngine(engine, q)
 	return

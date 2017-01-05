@@ -52,8 +52,8 @@ func (c *Context) AddSignedCookie(cookie *http.Cookie) (*http.Cookie, error) {
 	signedCookie.Value = c.Server.Hash(cookie.Value)
 
 	// add the cookies
-	http.SetCookie(c.writer, cookie)
-	http.SetCookie(c.writer, signedCookie)
+	c.AddCookie(cookie)
+	c.AddCookie(signedCookie)
 
 	// return the new signed cookie (and no error)
 	return signedCookie, nil
@@ -63,7 +63,11 @@ func (c *Context) AddSignedCookie(cookie *http.Cookie) (*http.Cookie, error) {
 func (c *Context) AddCookie(cookie *http.Cookie) error {
 
 	// add the cookies
-	http.SetCookie(c.writer, cookie)
+	// http.SetCookie(c.writer, cookie)
+	if c.cookiesForWrite == nil {
+		c.cookiesForWrite = make(map[string]*http.Cookie)
+	}
+	c.cookiesForWrite[cookie.Name] = cookie
 
 	// return the new signed cookie (and no error)
 	return nil
@@ -77,7 +81,7 @@ func (c *Context) SignedCookie(name string) (*http.Cookie, error) {
 
 	valid, validErr := c.cookieIsValid(name)
 	if valid {
-		return c.request.Cookie(name)
+		return c.GetCookie(name)
 	} else if validErr != nil {
 		return nil, validErr
 	}
@@ -116,10 +120,13 @@ func (c *Context) cookieIsValid(name string) (bool, error) {
 	return true, nil
 }
 
-func (c *Context) GetCookie(name string) (string, error) {
+func (c *Context) GetCookie(name string) (*http.Cookie, error) {
 	if cookie, err := c.request.Cookie(name); err == nil {
-		return cookie.Value, err
+		return cookie, err
 	} else {
-		return "", err
+		if c, ok := c.cookiesForWrite[name]; ok {
+			return c, nil
+		}
+		return nil, err
 	}
 }

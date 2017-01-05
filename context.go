@@ -28,20 +28,21 @@ type Context struct {
 	writer  http.ResponseWriter
 	option  BlockOption
 	//默认请求类型：HTML
-	suffix         string
-	format         string
-	forceFormat    string
-	tempRenders    []string
-	method         string
-	renderInstance render.RenderInstance
-	response       interface{}
-	responseMap    map[string]interface{}
-	layout         string
-	status_code    int
-	already_writed bool
-	fill_bts       []byte
-	bower_stack    map[string]bool
-	infos          map[string]interface{}
+	suffix          string
+	format          string
+	forceFormat     string
+	tempRenders     []string
+	method          string
+	renderInstance  render.RenderInstance
+	response        interface{}
+	responseMap     map[string]interface{}
+	layout          string
+	status_code     int
+	already_writed  bool
+	fill_bts        []byte
+	bower_stack     map[string]bool
+	infos           map[string]interface{}
+	cookiesForWrite map[string]*http.Cookie
 }
 
 func (c *Context) handleData() {
@@ -118,6 +119,9 @@ func (c *Context) EnableCache() {
 }
 
 func (c *Context) render() (err error) {
+	for _, cookie := range c.cookiesForWrite {
+		http.SetCookie(c.writer, cookie)
+	}
 	if !c.already_writed {
 		if c.renderInstance != nil {
 			funcMap := make(template.FuncMap)

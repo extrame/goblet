@@ -30,6 +30,18 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 		log.Printf("routing /index\n", r.URL.Path)
 	}
 
+	var context *Context
+
+	if s.nrPlugin != nil {
+		context = &Context{
+			s, r, w,
+			anch.opt, suffix_url, suffix,
+			"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
+			nil,
+		}
+		s.nrPlugin.OnNewRequest(context)
+	}
+
 	if anch == nil {
 		suff := strings.LastIndex(r.URL.Path, ".")
 		if suff > 0 && suff < len(r.URL.Path) {
@@ -50,7 +62,16 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 	if anch != nil {
 		w.Header().Add("Cache-Control", "no-store,no-cache,must-revalidate,post-check=0,pre-check=0")
 		w.Header().Add("Pragma", "no-cache")
-		context := &Context{s, r, w, anch.opt, suffix_url, suffix, "", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil}
+
+		if context == nil {
+			context = &Context{
+				s, r, w,
+				anch.opt, suffix_url, suffix,
+				"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
+				nil,
+			}
+		}
+
 		if err = anch.opt.Parse(context); err == nil {
 			context.checkResponse()
 			if err = context.prepareRender(); err == nil {
