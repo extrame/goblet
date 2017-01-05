@@ -35,7 +35,7 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 	if s.nrPlugin != nil {
 		context = &Context{
 			s, r, w,
-			anch.opt, suffix_url, suffix,
+			nil, suffix_url, suffix,
 			"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
 			nil,
 		}
