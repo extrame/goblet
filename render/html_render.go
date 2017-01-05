@@ -14,11 +14,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
 	"github.com/mvader/detect"
 )
+
+var lock sync.Mutex
 
 type HtmlRender struct {
 	root     *template.Template
@@ -210,7 +213,6 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 	}
 	file = filepath.FromSlash(file)
 	t := h.models[name]
-
 	if t == nil {
 		cloned_rest_model, err := root.Clone()
 
@@ -309,7 +311,9 @@ func parseFileWithName(parent *template.Template, name string, filepath string) 
 	} else {
 		tmpl = parent.New(name)
 	}
+	lock.Lock()
 	_, err = tmpl.Parse(s)
+	lock.Unlock()
 	if err != nil {
 		return err
 	}
