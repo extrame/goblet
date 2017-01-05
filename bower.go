@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/extrame/goblet/config"
-	"github.com/minktech/go-bower/bower"
+	"github.com/extrame/go-bower/bower"
 )
 
 var bower_cache = make(map[string][][2]string)
