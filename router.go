@@ -23,7 +23,7 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 	}()
 	var anch *Anchor
 	var suffix_url string
-	var main, suffix string
+	var main, format string
 
 	if r.URL.Path == "/" {
 		anch, suffix_url = rou.anchor.match("/index", 6)
@@ -32,20 +32,19 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 
 	context := &Context{
 		s, r, w,
-		nil, suffix_url, suffix,
+		nil, suffix_url, format,
 		"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
 		nil,
 	}
 
 	if s.nrPlugin != nil {
-
 		s.nrPlugin.OnNewRequest(context)
 	}
 
 	if anch == nil {
 		suff := strings.LastIndex(r.URL.Path, ".")
 		if suff > 0 && suff < len(r.URL.Path) {
-			suffix = r.URL.Path[suff+1:]
+			format = r.URL.Path[suff+1:]
 			main = r.URL.Path[:suff]
 		} else {
 			main = r.URL.Path
@@ -56,7 +55,7 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 			log.Printf("(dynamic)")
 		}
 	} else {
-		suffix = "html"
+		format = "html"
 	}
 
 	if anch != nil {
@@ -64,6 +63,8 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 		w.Header().Add("Pragma", "no-cache")
 
 		context.option = anch.opt
+		context.suffix = suffix_url
+		context.format = format
 
 		if err = anch.opt.Parse(context); err == nil {
 			context.checkResponse()
