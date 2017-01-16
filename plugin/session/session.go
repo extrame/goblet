@@ -26,7 +26,7 @@ func (s *Session) Init() (err error) {
 }
 
 func (s *Session) ParseConfig(prefix string) (err error) {
-	store := toml.String(prefix+".store", "redis")
+	store := toml.String(prefix+".store", "local")
 	switch *store {
 	case "local":
 		s.store = &localStore{}
