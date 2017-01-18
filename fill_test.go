@@ -2,6 +2,8 @@ package goblet
 
 import (
 	"fmt"
+	"log"
+	"reflect"
 	"regexp"
 	"testing"
 	"time"
@@ -46,7 +48,7 @@ func TestAlias(t *testing.T) {
 	UnmarshalForm(func(tag string) []string {
 		form := map[string][]string{"item": []string{"value"}}
 		return form[tag]
-	}, b, true)
+	}, nil, b, true)
 	fmt.Println(b)
 }
 
@@ -54,7 +56,7 @@ func TestDefault(t *testing.T) {
 	b := new(A)
 	UnmarshalForm(func(tag string) []string {
 		return []string{}
-	}, b, true)
+	}, nil, b, true)
 	fmt.Println(b)
 }
 
@@ -68,7 +70,7 @@ func TestEmptyTag(t *testing.T) {
 		fmt.Println(tag)
 		form := map[string][]string{"Item": []string{"value"}}
 		return form[tag]
-	}, b, true)
+	}, nil, b, true)
 	fmt.Println(b)
 }
 
@@ -82,6 +84,13 @@ func TestTimeFormat(t *testing.T) {
 		fmt.Println(tag)
 		form := map[string][]string{"ExpectAt": []string{"2015年11月2日"}}
 		return form[tag]
-	}, b, true)
+	}, nil, b, true)
 	fmt.Println(b)
+}
+
+func TestPkg(t *testing.T) {
+	var file File
+	r := reflect.ValueOf(file)
+	ty := r.Type()
+	log.Println(ty.PkgPath(), ty.Name())
 }
