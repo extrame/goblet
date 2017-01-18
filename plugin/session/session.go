@@ -40,7 +40,7 @@ func (s *Session) ParseConfig(prefix string) (err error) {
 func (s *Session) addSession(ctx *goblet.Context) {
 	cookie := new(http.Cookie)
 	cookie.Name = sessionName
-	cookie.Value = gorandom.RandomAscii(32)
+	cookie.Value = gorandom.RandomAlphabetic(32)
 	cookie.Path = "/"
 	ctx.AddSignedCookie(cookie)
 }
