@@ -347,14 +347,19 @@ func fill_struct(typ reflect.Type,
 		}
 	} else if typ.PkgPath() == "github.com/extrame/goblet" && typ.Name() == "File" {
 		var file File
-		if f, h, err := file_getter(id); err == nil {
-			file.Name = h.Filename
-			file.rc = f
-			val.Set(reflect.ValueOf(file))
+		if file_getter != nil {
+			if f, h, err := file_getter(id); err == nil {
+				file.Name = h.Filename
+				file.rc = f
+				val.Set(reflect.ValueOf(file))
+			} else {
+				log.Println(err)
+				return err
+			}
 		} else {
-			log.Println(err)
-			return err
+			return errors.New("file fill need MultipartForm request")
 		}
+
 	} else {
 		unmarshalStructInForm(id, values_getter, file_getter, val, 0, autofill, false, parents)
 	}
