@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net"
 	"reflect"
 	"regexp"
@@ -54,6 +55,8 @@ func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool)
 // a form-enc decoder for request body
 type FormRequestDecoder struct{}
 
+type FileGetter func(string) (multipart.File, *multipart.FileHeader, error)
+
 func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
 	if cx.request.Form == nil {
 		cx.request.ParseForm()
@@ -65,7 +68,7 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 			return (*values)[tag]
 		}
 		return []string{}
-	}, v, autofill)
+	}, nil, v, autofill)
 }
 
 // a form-enc decoder for request body
@@ -79,6 +82,8 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 	}
 	return UnmarshalForm(func(tag string) []string {
 		return values[tag]
+	}, func(tag string) (multipart.File, *multipart.FileHeader, error) {
+		return cx.request.FormFile(tag)
 	}, v, autofill)
 }
 
@@ -132,7 +137,9 @@ func (cx *Context) FillAs(v interface{}, autofill bool, ct string) error {
 }
 
 // Fill a struct `v` from the values in `goblet`
-func UnmarshalForm(value_getter func(string) []string, v interface{}, autofill bool) error {
+func UnmarshalForm(value_getter func(string) []string,
+	file_getter FileGetter,
+	v interface{}, autofill bool) error {
 	// check v is valid
 	rv := reflect.ValueOf(v).Elem()
 	// dereference pointer
@@ -142,14 +149,21 @@ func UnmarshalForm(value_getter func(string) []string, v interface{}, autofill b
 
 	if rv.Kind() == reflect.Struct {
 		// for each struct field on v
-		unmarshalStructInForm("", value_getter, rv, 0, autofill, false, make(map[string]bool))
+		unmarshalStructInForm("", value_getter, file_getter, rv, 0, autofill, false, make(map[string]bool))
 	} else {
 		return fmt.Errorf("v must point to a struct type")
 	}
 	return nil
 }
 
-func unmarshalStructInForm(context string, values_getter func(string) []string, rvalue reflect.Value, offset int, autofill bool, inarray bool, parents map[string]bool) (err error) {
+func unmarshalStructInForm(context string,
+	values_getter func(string) []string,
+	file_getter FileGetter,
+	rvalue reflect.Value,
+	offset int,
+	autofill bool,
+	inarray bool,
+	parents map[string]bool) (err error) {
 
 	if rvalue.Type().Kind() == reflect.Ptr {
 
@@ -176,13 +190,13 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 				if val.IsNil() {
 					val.Set(reflect.New(typ))
 				}
-				if err = fill_struct(typ, values_getter, val.Elem(), id, form_values, tag, used_offset, autofill, parents); err != nil {
+				if err = fill_struct(typ, values_getter, file_getter, val.Elem(), id, form_values, tag, used_offset, autofill, parents); err != nil {
 					return err
 				} else {
 					break
 				}
 			case reflect.Struct:
-				if err = fill_struct(rtype.Field(i).Type, values_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill, parents); err != nil {
+				if err = fill_struct(rtype.Field(i).Type, values_getter, file_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill, parents); err != nil {
 					fmt.Println(err)
 					return err
 				} else {
@@ -195,7 +209,7 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 					res := values[0].Interface()
 					resValue := reflect.ValueOf(res)
 					resType := reflect.TypeOf(res)
-					if err = fill_struct(resType, values_getter, resValue, id, form_values, tag, used_offset, autofill, parents); err != nil {
+					if err = fill_struct(resType, values_getter, file_getter, resValue, id, form_values, tag, used_offset, autofill, parents); err != nil {
 						rvalue.Field(i).Set(resValue)
 						return err
 					} else {
@@ -216,7 +230,7 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 						subRValue := reflect.New(subRType)
 						offset := 0
 						for {
-							err = unmarshalStructInForm(id, values_getter, subRValue, offset, autofill, true, parents)
+							err = unmarshalStructInForm(id, values_getter, file_getter, subRValue, offset, autofill, true, parents)
 							if err != nil {
 								break
 							}
@@ -253,8 +267,7 @@ func unmarshalStructInForm(context string, values_getter func(string) []string, 
 	return
 }
 
-func getFormField(prefix string, values_getter func(string) []string, t reflect.StructField, offset int, inarray bool) (string, []string, []string) {
-
+func getTag(prefix string, t reflect.StructField, offset int, inarray bool) (string, []string) {
 	tags := []string{""}
 	tag := t.Tag.Get("goblet")
 	if tag != "" {
@@ -278,13 +291,22 @@ func getFormField(prefix string, values_getter func(string) []string, t reflect.
 			tag = prefix + "[" + tag + "]"
 		}
 	}
+	return tag, tags
+}
+
+func getFormField(prefix string, values_getter func(string) []string, t reflect.StructField, offset int, inarray bool) (string, []string, []string) {
+
+	tag, tags := getTag(prefix, t, offset, inarray)
 
 	values := values_getter(tag)
 
 	return tag, values, tags[1:]
 }
 
-func fill_struct(typ reflect.Type, values_getter func(string) []string, val reflect.Value, id string, form_values []string, tag []string, used_offset int, autofill bool, parents map[string]bool) error {
+func fill_struct(typ reflect.Type,
+	values_getter func(string) []string,
+	file_getter FileGetter,
+	val reflect.Value, id string, form_values []string, tag []string, used_offset int, autofill bool, parents map[string]bool) error {
 	if typ.PkgPath() == "time" && typ.Name() == "Time" {
 		var fillby string
 		var fillby_valid = regexp.MustCompile(`^\s*fillby\((.*)\)\s*$`)
@@ -323,8 +345,18 @@ func fill_struct(typ reflect.Type, values_getter func(string) []string, val refl
 				}
 			}
 		}
+	} else if typ.PkgPath() == "github.com/extrame/goblet" && typ.Name() == "File" {
+		var file File
+		if f, h, err := file_getter(id); err == nil {
+			file.Name = h.Filename
+			file.rc = f
+			val.Set(reflect.ValueOf(file))
+		} else {
+			log.Println(err)
+			return err
+		}
 	} else {
-		unmarshalStructInForm(id, values_getter, val, 0, autofill, false, parents)
+		unmarshalStructInForm(id, values_getter, file_getter, val, 0, autofill, false, parents)
 	}
 	return nil
 }
