@@ -14,5 +14,5 @@ func (s *Server) AddConfig(name string, obj interface{}) {
 			return []string{}
 		}
 
-	}, obj, true)
+	}, nil, obj, true)
 }
