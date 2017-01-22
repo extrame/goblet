@@ -21,10 +21,18 @@ type sessionStore interface {
 	getBool(userKey, itemKey string) (bool, bool)
 	getBytes(userKey, itemKey string) ([]byte, bool)
 	init() error
+
+	removeItem(userKey, itemKey string)
 }
 
 type localStore struct {
 	store map[string]map[string]interface{}
+}
+
+func (l *localStore) removeItem(userKey, itemKey string) {
+	if _, ok := l.store[userKey]; ok {
+		delete(l.store[userKey], itemKey)
+	}
 }
 
 func (l *localStore) parseConfig(prefix string) {

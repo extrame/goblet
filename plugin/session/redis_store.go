@@ -217,3 +217,9 @@ func (r *redisStore) getUint64(userKey, itemKey string) (uint64, bool) {
 		return n, true
 	}
 }
+
+func (r *redisStore) removeItem(userKey, itemKey string) {
+	c := redisPool.Get()
+	defer c.Close()
+	c.Do("HDEL", userKey, itemKey)
+}

@@ -172,3 +172,12 @@ func Store(ctx *goblet.Context, key string, val interface{}) {
 		s.store.storeForUser(c.Value, key, val)
 	}
 }
+
+func RemoveItem(ctx *goblet.Context, key string) {
+	s := ctx.Server.GetPlugin("session").(*Session)
+	if c, err := ctx.GetCookie(sessionName); err != nil {
+		log.Fatal("session plugin is not inited currect!")
+	} else {
+		s.store.removeItem(c.Value, key)
+	}
+}
