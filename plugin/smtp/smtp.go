@@ -5,13 +5,15 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	toml "github.com/extrame/go-toml-config"
-	"github.com/extrame/smtpoverttl"
 	"io"
 	"net/mail"
 	"net/smtp"
 	"path/filepath"
 	"text/template"
+
+	toml "github.com/extrame/go-toml-config"
+	"github.com/extrame/goblet"
+	"github.com/extrame/smtpoverttl"
 )
 
 var Daemon = new(_SmtpSender)
@@ -36,7 +38,7 @@ type _SmtpSender struct {
 	Templates map[string]*template.Template
 }
 
-func (s *_SmtpSender) Init() error {
+func (s *_SmtpSender) Init(server *goblet.Server) error {
 	s.Templates = make(map[string]*template.Template)
 	return nil
 }

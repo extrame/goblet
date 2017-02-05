@@ -147,8 +147,17 @@ func (c *Context) render() (err error) {
 			}
 			for i := 0; i < len(c.Server.funcs); i++ {
 				var fn = c.Server.funcs[i].Fn
-				funcMap[c.Server.funcs[i].Name] = func() interface{} {
-					return fn(c)
+				switch f := fn.(type) {
+				case func(*Context) error:
+					funcMap[c.Server.funcs[i].Name] = func() interface{} {
+						return f(c)
+					}
+				case func(*Context) interface{}:
+					funcMap[c.Server.funcs[i].Name] = func() interface{} {
+						return f(c)
+					}
+				default:
+					funcMap[c.Server.funcs[i].Name] = f
 				}
 			}
 			return c.renderInstance.Render(c.writer, c.response, c.status_code, funcMap)

@@ -26,7 +26,7 @@ var NotImplemented = fmt.Errorf("this method is not implemented")
 
 type Fn struct {
 	Name string
-	Fn   func(*Context) interface{}
+	Fn   interface{}
 }
 
 type ControllerNeedInit interface {
@@ -60,7 +60,7 @@ type Server struct {
 	logFile       *string
 	readTimeOut   *int
 	writeTimeOut  *int
-	name          string
+	Name          string
 	plugins       map[string]Plugin
 	funcs         []Fn
 	initCtrl      []ControllerNeedInit
@@ -85,7 +85,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	var err error
 	var dbPwdPlugin DbPwdPlugin
 	var dbUserPlugin dbUserNamePlugin
-	s.name = name
+	s.Name = name
 	for _, plugin := range plugins {
 		if tp, ok := plugin.(Plugin); ok {
 			typ := reflect.ValueOf(plugin).Type()
@@ -98,6 +98,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 			}
 			s.plugins[key] = tp
 		}
+		//bind the specials plugins
 		if tp, ok := plugin.(DbPwdPlugin); ok {
 			dbPwdPlugin = tp
 		}
@@ -131,7 +132,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	}
 	s.enableDbCache()
 	for _, plugin := range s.plugins {
-		plugin.Init()
+		plugin.Init(s)
 	}
 }
 
@@ -221,7 +222,7 @@ func (s *Server) GetPlugin(key string) Plugin {
 }
 
 func (s *Server) parseConfig() (err error) {
-	path := flag.String("config", "./"+s.name+".conf", "设置配置文件的路径")
+	path := flag.String("config", "./"+s.Name+".conf", "设置配置文件的路径")
 	for key, plugin := range s.plugins {
 		plugin.ParseConfig(key)
 	}
@@ -249,7 +250,7 @@ func (s *Server) parseConfig() (err error) {
 	err = toml.Parse(*path)
 	if err == nil {
 		s.initLog()
-		s.dbHost = toml.String(*s.dbEngine+".host", s.name)
+		s.dbHost = toml.String(*s.dbEngine+".host", s.Name)
 		s.dbUser = toml.String(*s.dbEngine+".user", "")
 		s.dbPwd = toml.String(*s.dbEngine+".password", "")
 		s.dbName = toml.String(*s.dbEngine+".name", "")

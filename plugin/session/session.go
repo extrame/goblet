@@ -23,7 +23,7 @@ func (s *Session) OnNewRequest(ctx *goblet.Context) error {
 	return nil
 }
 
-func (s *Session) Init() (err error) {
+func (s *Session) Init(server *goblet.Server) (err error) {
 	return s.store.init()
 }
 

@@ -2,7 +2,7 @@ package goblet
 
 type Plugin interface {
 	ParseConfig(prefix string) error
-	Init() error
+	Init(server *Server) error
 }
 
 //DbPwdPlugin Change the db connection password
