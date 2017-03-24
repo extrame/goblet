@@ -190,6 +190,12 @@ func (s *Server) Env() string {
 	return *s.env
 }
 
+func (s *Server) Debug(fn func()) {
+	if s.Env() == config.DevelopEnv {
+		fn()
+	}
+}
+
 func (s *Server) WwwRoot() string {
 	if abs, err := filepath.Abs(*s.wwwRoot); err == nil {
 		return abs
