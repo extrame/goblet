@@ -66,6 +66,7 @@ type Server struct {
 	initCtrl      []ControllerNeedInit
 	pres          map[string]reflect.Value
 	nrPlugin      onNewRequestPlugin
+	saver         Saver
 }
 
 type Handler interface {
@@ -108,6 +109,12 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		if tp, ok := plugin.(onNewRequestPlugin); ok {
 			s.nrPlugin = tp
 		}
+		if tp, ok := plugin.(Saver); ok {
+			s.saver = tp
+		}
+	}
+	if s.saver == nil {
+		s.saver = new(LocalSaver)
 	}
 	s.pres = make(map[string]reflect.Value)
 	if err = s.parseConfig(); err == nil {
