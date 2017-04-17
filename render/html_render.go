@@ -18,6 +18,7 @@ import (
 
 	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
+	"github.com/golang/glog"
 	"github.com/mvader/detect"
 )
 
@@ -120,7 +121,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 		yield, err = h.getTemplate(root, strconv.Itoa(status_code)+h.suffix, filepath.Join(strconv.Itoa(status_code)+h.suffix))
 		if err != nil {
-			log.Println("Find Err Code Fail, ", err)
+			glog.Infoln("Find Err Code Fail, ", err)
 		}
 	}
 
@@ -134,6 +135,8 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 			mobile = ".mobile"
 		}
 		return &HttpRenderInstance{layout, yield, "/css/" + path + mobile + ".css" + suffix, "/js/" + path + mobile + ".js" + suffix}, nil
+	} else {
+		glog.Errorf("parse Template error for %v", ctx)
 	}
 
 	return
@@ -159,13 +162,13 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 func (h *HtmlRender) initTemplate(parent *template.Template, dir string, typ string) {
 	parent.New("")
 	if !h.saveTemp { //for debug
-		log.Println("init template in ", h.dir, dir, "helper")
+		glog.Infoln("init template in ", h.dir, dir, "helper")
 	}
 	//scan for the helpers
 	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
 			name := strings.TrimSuffix(info.Name(), h.suffix)
-			log.Printf("Parse helper:%s(%s)", typ+"/"+name, path)
+			glog.Infof("Parse helper:%s(%s)", typ+"/"+name, path)
 			e := parseFileWithName(parent, typ+"/"+name, path)
 			if e != nil {
 				fmt.Printf("ERROR template.ParseFile: %v", e)
@@ -201,6 +204,7 @@ func (h *HtmlRender) getTemplates(root *template.Template, args ...string) (temp
 
 func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*template.Template, error) {
 	var name, file string
+	var err error
 	if len(args) == 1 {
 		name = args[0]
 		file = args[0]
@@ -209,12 +213,16 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		file = args[1]
 	}
 	if !h.saveTemp { //for debug
-		log.Println("get template of ", name, file)
+		// if name == ".html" {
+		// 	err = errors.New("name for template is empty")
+		// }
+		glog.Infoln("get template of", name, file)
 	}
 	file = filepath.FromSlash(file)
 	t := h.models[name]
 	if t == nil {
-		cloned_rest_model, err := root.Clone()
+		var cloned_rest_model *template.Template
+		cloned_rest_model, err = root.Clone()
 
 		if err == nil {
 
@@ -226,7 +234,7 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 				}
 			} else {
 				if os.IsNotExist(err) {
-					log.Printf("template for (%s) is missing", file)
+					glog.Errorf("template for (%s) is missing", file)
 					return nil, ge.NOSUCHROUTER
 				} else {
 					return nil, err

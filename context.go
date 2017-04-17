@@ -314,7 +314,7 @@ func (c *Context) BlockOptionType() string {
 	switch c.option.(type) {
 	case *RestBlockOption:
 		return "Rest"
-	case *GroupBlockOption:
+	case *groupBlockOption:
 		return "Group"
 	case *_staticBlockOption:
 		return "Static"
@@ -345,6 +345,10 @@ func (c *Context) StatusCode() int {
 
 func (c *Context) TemplatePath() string {
 	return c.option.TemplatePath()
+}
+
+func (c *Context) String() string {
+	return fmt.Sprintf("Context:{Type:%s,Method:%s}", c.BlockOptionType(), c.Method())
 }
 
 type RemoteAddr struct {

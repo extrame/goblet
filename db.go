@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"errors"
 	"fmt"
 
 	_ "github.com/denisenkom/go-mssqldb"
@@ -8,11 +9,12 @@ import (
 	"github.com/go-xorm/xorm"
 	// _ "github.com/mattn/go-oci8"
 	"os"
-
-	_ "github.com/mattn/go-sqlite3"
+	// _ "github.com/mattn/go-sqlite3"
 )
 
 var DB *xorm.Engine
+
+var noneDbDriver = errors.New("no db driver for this server")
 
 func newDB(engine, user, pwd, host, name string, port int, con_to int, ka_intv int) (err error) {
 	var q string
@@ -30,7 +32,7 @@ func newDB(engine, user, pwd, host, name string, port int, con_to int, ka_intv i
 		}
 		q = host + ".db"
 	} else if engine == "none" {
-		return
+		return noneDbDriver
 	}
 	DB, err = xorm.NewEngine(engine, q)
 	return
