@@ -105,19 +105,6 @@ func getRegionId(ctx *goblet.Context) (result string, err error) {
 	return result, err
 }
 
-func Update(cx *goblet.Context, key string, item interface{}) (err error) {
-	hashkey, err := getRegionId(cx)
-	if err != nil {
-		return false, err
-	}
-	c := redisPool.Get()
-	defer c.Close()
-
-	if _, err = c.Do("HSET", hashkey, key, item); err != nil {
-		log.Println(err.Error())
-	}
-}
-
 func Store(cx *goblet.Context, key string, item interface{}) (err error) {
 	hashkey, _ := getRegionId(cx)
 
