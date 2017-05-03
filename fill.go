@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/golang/glog"
 )
 
 // types that impliment RequestDecoder can unmarshal
@@ -202,7 +204,7 @@ func unmarshalStructInForm(context string,
 				}
 			case reflect.Struct:
 				if err = fill_struct(rtype.Field(i).Type, values_getter, file_getter, rvalue.Field(i), id, form_values, tag, used_offset, autofill, parents); err != nil {
-					fmt.Println(err)
+					glog.Errorln(err)
 					return err
 				} else {
 					break
@@ -263,7 +265,7 @@ func unmarshalStructInForm(context string,
 				}
 			}
 		} else {
-			log.Printf("cannot set value of (%s,%s) in fill", rtype.Field(i).Name, rtype.Field(i).Type.Name())
+			glog.Errorf("cannot set value of (%s,%s) in fill", rtype.Field(i).Name, rtype.Field(i).Type.Name())
 		}
 	}
 	if !success && err == nil {

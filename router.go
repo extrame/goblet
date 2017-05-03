@@ -1,12 +1,12 @@
 package goblet
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
+	"github.com/golang/glog"
 )
 
 type _Router struct {
@@ -27,7 +27,7 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 
 	if r.URL.Path == "/" {
 		anch, suffix_url = rou.anchor.match("/index", 6)
-		log.Printf("routing /index\n", r.URL.Path)
+		glog.Infof("routing /index\n", r.URL.Path)
 	}
 
 	context := &Context{
@@ -50,9 +50,9 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 			main = r.URL.Path
 		}
 		anch, suffix_url = rou.anchor.match(main, len(main))
-		log.Printf("routing %s", r.URL.Path)
+		glog.Infof("routing %s", r.URL.Path)
 		if anch != nil {
-			log.Printf("(dynamic)")
+			glog.Infof("(dynamic)")
 		}
 	} else {
 		format = "html"
@@ -72,8 +72,8 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 				err = context.render()
 			}
 		}
-		if *s.env == config.DevelopEnv {
-			log.Println("Err in Dynamic :", err)
+		if *s.env == config.DevelopEnv && err != nil {
+			glog.Infoln("Err in Dynamic :", err)
 		}
 		return
 	}

@@ -126,12 +126,13 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		if dbUserPlugin != nil {
 			*(s.dbUser) = dbUserPlugin.SetName(*s.dbUser)
 		}
-		if err = s.connectDB(); err == nil {
+		err = s.connectDB()
+		if err == nil {
 			if *s.env == config.DevelopEnv {
 				log.Println("connect DB success")
 				DB.ShowSQL(true)
 			}
-		} else {
+		} else if err != noneDbDriver {
 			log.Fatalln("connect error:", err)
 		}
 	} else {
