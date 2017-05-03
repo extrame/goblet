@@ -65,7 +65,12 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 	return UnmarshalForm(func(tag string) []string {
 		values := (*map[string][]string)(&cx.request.Form)
 		if values != nil {
-			return (*values)[tag]
+			if results, ok := (*values)[tag]; !ok {
+				//get the value of [Tag] from [tag](lower case), it maybe a problem TODO
+				return (*values)[strings.ToLower(tag)]
+			} else {
+				return results
+			}
 		}
 		return []string{}
 	}, nil, v, autofill)
