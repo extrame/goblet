@@ -26,6 +26,7 @@ var tokenName string
 var PoolMaxIdle = 10
 
 func (r *Redis) ParseConfig(prefix string) error {
+	log.Println("++++++++++++=", prefix)
 	r.address = toml.String(prefix+".address", "localhost:6379")
 	r.pwd = toml.String(prefix+".password", "")
 	r.db = toml.Int64(prefix+".db", 0)
@@ -78,13 +79,16 @@ func (r *Redis) Init(server *goblet.Server) error {
 }
 
 func getRegionId(ctx *goblet.Context) (result string, err error) {
-	if cookietype == "cookie" {
+	switch cookietype {
+	case "cookie":
 		tmp := new(http.Cookie)
 		tmp, err = ctx.GetCookie(tokenName)
 		result = tmp.Value
-	} else if cookietype == "form" {
+	case "form":
 		result = ctx.FormValue(tokenName)
-	} else {
+	case "header":
+		result = ctx.ReqHeader().Get(tokenName)
+	default:
 		err = errors.New("Type must be cookie or form.Current is " + cookietype)
 	}
 	if result == "" {
