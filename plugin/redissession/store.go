@@ -105,8 +105,28 @@ func getRegionId(ctx *goblet.Context) (result string, err error) {
 	return result, err
 }
 
+func Update(cx *goblet.Context, key string, item interface{}) (err error) {
+	hashkey, err := getRegionId(cx)
+	if err != nil {
+		return false, err
+	}
+	c := redisPool.Get()
+	defer c.Close()
+
+	if _, err = c.Do("HSET", hashkey, key, item); err != nil {
+		log.Println(err.Error())
+	}
+}
+
 func Store(cx *goblet.Context, key string, item interface{}) (err error) {
-	hashkey := gorandom.RandomAlphabetic(32)
+	hashkey, _ := getRegionId(cx)
+
+	flag := false
+	if hashkey == "" {
+		flag = true
+		hashkey = gorandom.RandomAlphabetic(32)
+	}
+
 	c := redisPool.Get()
 	defer c.Close()
 
@@ -114,13 +134,15 @@ func Store(cx *goblet.Context, key string, item interface{}) (err error) {
 		log.Println(err.Error())
 	}
 
-	switch cookietype {
-	case "cookie":
-		addSessionWithValue(cx, hashkey)
-	case "form":
-		cx.AddRespond(tokenName, hashkey)
-	case "header":
-		cx.SetHeader(tokenName, hashkey)
+	if flag {
+		switch cookietype {
+		case "cookie":
+			addSessionWithValue(cx, hashkey)
+		case "form":
+			cx.AddRespond(tokenName, hashkey)
+		case "header":
+			cx.SetHeader(tokenName, hashkey)
+		}
 	}
 	return err
 }
