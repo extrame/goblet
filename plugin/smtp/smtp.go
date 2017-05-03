@@ -50,14 +50,14 @@ type client interface {
 	Data() (io.WriteCloser, error)
 }
 
-func (s *_SmtpSender) ParseConfig() (err error) {
-	s.Root = toml.String("mail.root", "./mail")
-	s.Server = toml.String("mail.server", "")
-	s.User = toml.String("mail.user", "")
-	s.UserName = toml.String("mail.user_name", "Sender")
-	s.Pwd = toml.String("mail.password", "")
-	s.Ttl = toml.Bool("mail.ttl", false)
-	s.Port = toml.Int("mail.port", 25)
+func (s *_SmtpSender) ParseConfig(prefix string) (err error) {
+	s.Root = toml.String(prefix+".root", "mail/")
+	s.Server = toml.String(prefix+".server", "")
+	s.User = toml.String(prefix+".user", "")
+	s.UserName = toml.String(prefix+".user_name", "Sender")
+	s.Pwd = toml.String(prefix+".password", "")
+	s.Ttl = toml.Bool(prefix+".ttl", false)
+	s.Port = toml.Int(prefix+".port", 25)
 	*s.Root = filepath.FromSlash(*s.Root)
 	return
 }

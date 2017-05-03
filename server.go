@@ -261,6 +261,9 @@ func (s *Server) parseConfig() (err error) {
 	flag.Parse()
 	*path = filepath.FromSlash(*path)
 	err = toml.Parse(*path)
+	for _, plugin := range s.plugins {
+		plugin.Init(s)
+	}
 	if err == nil {
 		s.initLog()
 		s.dbHost = toml.String(*s.dbEngine+".host", s.Name)

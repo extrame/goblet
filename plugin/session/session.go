@@ -1,17 +1,19 @@
 package session
 
 import (
+	"log"
+	"net/http"
+
 	"github.com/extrame/go-random"
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet"
-	"log"
-	"net/http"
 )
 
 const sessionName = "goblet-session-id"
 
 type Session struct {
-	store sessionStore
+	storeType *string
+	store     sessionStore
 }
 
 func (s *Session) OnNewRequest(ctx *goblet.Context) error {
@@ -22,18 +24,18 @@ func (s *Session) OnNewRequest(ctx *goblet.Context) error {
 }
 
 func (s *Session) Init(server *goblet.Server) (err error) {
-	return s.store.init()
-}
-
-func (s *Session) ParseConfig(prefix string) (err error) {
-	store := toml.String(prefix+".store", "local")
-	switch *store {
+	switch s.storeType {
 	case "local":
 		s.store = &localStore{}
 	case "redis":
 		s.store = &redisStore{}
 	}
 	s.store.parseConfig(prefix)
+	return s.store.init()
+}
+
+func (s *Session) ParseConfig(prefix string) (err error) {
+	s.storeType = toml.String(prefix+".store", "local")
 	return
 }
 
