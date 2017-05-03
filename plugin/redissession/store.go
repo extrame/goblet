@@ -52,6 +52,14 @@ func (s *Redis) addSession(ctx *goblet.Context) {
 	ctx.AddSignedCookie(cookie)
 }
 
+func addSessionWithValue(ctx *goblet.Context, value string) {
+	cookie := new(http.Cookie)
+	cookie.Name = tokenName
+	cookie.Value = value
+	cookie.Path = "/"
+	ctx.AddSignedCookie(cookie)
+}
+
 func (r *Redis) Init(server *goblet.Server) error {
 	cookietype = *r.sessionType
 	tokenName = *r.tokenName
@@ -98,17 +106,21 @@ func getRegionId(ctx *goblet.Context) (result string, err error) {
 }
 
 func Store(cx *goblet.Context, key string, item interface{}) (err error) {
-	hashkey := ""
-	hashkey, err = getRegionId(cx)
-	if err != nil {
-		return err
-	}
-
+	hashkey := gorandom.RandomAlphabetic(32)
 	c := redisPool.Get()
 	defer c.Close()
 
 	if _, err = c.Do("HSET", hashkey, key, item); err != nil {
 		log.Println(err.Error())
+	}
+
+	switch cookietype {
+	case "cookie":
+		addSessionWithValue(cx, hashkey)
+	case "form":
+		cx.AddRespond(tokenName, hashkey)
+	case "header":
+		cx.SetHeader(tokenName, hashkey)
 	}
 	return err
 }
