@@ -38,7 +38,7 @@ func (l *localStore) removeItem(userKey, itemKey string) {
 func (l *localStore) parseConfig(prefix string) {
 }
 
-func (l *localStore) init() error {
+func (l *localStore) Init() error {
 	l.store = make(map[string]map[string]interface{})
 	return nil
 }
