@@ -6,40 +6,42 @@ import (
 	"log"
 )
 
-//TODO
-
-type redisStore struct{}
+type redisStore struct {
+	address *string
+	pwd     *string
+	db      *int64
+}
 
 var redisPool *redis.Pool
 var PoolMaxIdle = 10
 
 func (r *redisStore) parseConfig(prefix string) {
-	address := toml.String(prefix+".redis.address", "localhost:6379")
-	pwd := toml.String(prefix+".redis.password", "")
-	db := toml.Int64(prefix+".redis.db", 0)
+	r.address = toml.String("redis.address", "localhost:6379")
+	r.pwd = toml.String("redis.password", "")
+	r.db = toml.Int64("redis.db", 0)
+}
+
+func (r *redisStore) Init() error {
 	redisPool = redis.NewPool(func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", *address)
+		c, err := redis.Dial("tcp", *r.address)
 		if err != nil {
 			log.Println("--Redis--Connect redis fail:" + err.Error())
 			return nil, err
 		}
-		if len(*pwd) > 0 {
-			if _, err := c.Do("AUTH", *pwd); err != nil {
+		if len(*r.Pwd) > 0 {
+			if _, err := c.Do("AUTH", *r.Pwd); err != nil {
 				c.Close()
 				log.Println("--Redis--Auth redis fail:" + err.Error())
 				return nil, err
 			}
 		}
-		if _, err := c.Do("SELECT", *db); err != nil {
+		if _, err := c.Do("SELECT", *r.Db); err != nil {
 			c.Close()
 			log.Println("--Redis--Select redis db fail:" + err.Error())
 			return nil, err
 		}
 		return c, nil
 	}, PoolMaxIdle)
-}
-
-func (r *redisStore) init() error {
 	return nil
 }
 

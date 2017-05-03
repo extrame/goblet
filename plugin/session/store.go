@@ -20,7 +20,7 @@ type sessionStore interface {
 
 	getBool(userKey, itemKey string) (bool, bool)
 	getBytes(userKey, itemKey string) ([]byte, bool)
-	init() error
+	Init() error
 
 	removeItem(userKey, itemKey string)
 }
