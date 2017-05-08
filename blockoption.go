@@ -139,11 +139,12 @@ func (r *RestBlockOption) Parse(c *Context) error {
 	if len(c.suffix) > 0 {
 		id := c.suffix[1:]
 		if id == "new" {
+			c.method = REST_NEW
 			r.BasicBlockOption.callMethodForBlock("New", c)
 		} else if method == "GET" {
 			if nid := strings.TrimSuffix(id, ";edit"); nid != id {
-				c.method = REST_NEW
-				r.BasicBlockOption.callMethodForBlock("New", c, nid)
+				c.method = REST_EDIT
+				r.BasicBlockOption.callMethodForBlock("Edit", c, nid)
 			} else {
 				c.method = REST_READ
 				r.BasicBlockOption.callMethodForBlock("Read", c, id)
