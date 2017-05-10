@@ -331,13 +331,17 @@ func (c *_staticBlockOption) Parse(ctx *Context) error {
 	return nil
 }
 
-func PrepareOption(block interface{}) BlockOption {
+func (s *Server) prepareOption(block interface{}) BlockOption {
 
 	var basic BasicBlockOption
 	basic.block = reflect.ValueOf(block)
 	initMethod := basic.block.MethodByName("Init")
 	if initMethod.IsValid() {
-		initMethod.Call(nil)
+		if initMethod.Type().NumIn() == 0 {
+			initMethod.Call(nil)
+		} else {
+			initMethod.Call([]reflect.Value{reflect.ValueOf(s)})
+		}
 	}
 
 	var val reflect.Value

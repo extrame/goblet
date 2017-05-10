@@ -149,7 +149,7 @@ func (s *Server) connectDB() error {
 }
 
 func (s *Server) ControlBy(block interface{}) {
-	cfg := PrepareOption(block)
+	cfg := s.prepareOption(block)
 	if bc, ok := block.(ControllerNeedInit); ok {
 		s.initCtrl = append(s.initCtrl, bc)
 	}
