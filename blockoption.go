@@ -136,8 +136,11 @@ func (r *RestBlockOption) Parse(c *Context) error {
 		method = c.request.Method
 	}
 	method = strings.ToUpper(method)
+	var id string
 	if len(c.suffix) > 0 {
-		id := c.suffix[1:]
+		id = c.suffix[1:]
+	}
+	if id != "" {
 		if id == "new" {
 			c.method = REST_NEW
 			r.BasicBlockOption.callMethodForBlock("New", c)
