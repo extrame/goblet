@@ -66,7 +66,7 @@ type HtmlBlockOption struct {
 }
 
 func (h *HtmlBlockOption) MatchSuffix(suffix string) bool {
-	return len(suffix) == 0
+	return len(suffix) == 0 || len(suffix) == 1 && suffix[0:1] == "/"
 }
 
 func (h *HtmlBlockOption) Parse(c *Context) error {
