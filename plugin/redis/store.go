@@ -5,6 +5,7 @@ import (
 	"github.com/extrame/goblet"
 	"github.com/garyburd/redigo/redis"
 	"log"
+	"time"
 )
 
 //TODO
@@ -54,6 +55,15 @@ func Store(key, itemKey string, item interface{}) {
 	defer c.Close()
 
 	if _, err := c.Do("HSET", key, itemKey, item); err != nil {
+		log.Println(err.Error())
+	}
+}
+
+func Expire(key string, seconds int) {
+	c := redisPool.Get()
+	defer c.Close()
+
+	if _, err := c.Do("EXPIRE", key, seconds); err != nil {
 		log.Println(err.Error())
 	}
 }
