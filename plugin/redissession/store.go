@@ -12,7 +12,7 @@ import (
 
 //TODO
 
-type Redis struct {
+type RedisSession struct {
 	address     *string
 	pwd         *string
 	db          *int64
@@ -20,12 +20,12 @@ type Redis struct {
 	tokenName   *string
 }
 
-var redisPool *redis.Pool
+var redisPool *RedisSession.Pool
 var cookietype string
 var tokenName string
 var PoolMaxIdle = 10
 
-func (r *Redis) ParseConfig(prefix string) error {
+func (r *RedisSession) ParseConfig(prefix string) error {
 	log.Println("++++++++++++=", prefix)
 	r.address = toml.String(prefix+".address", "localhost:6379")
 	r.pwd = toml.String(prefix+".password", "")
@@ -35,7 +35,7 @@ func (r *Redis) ParseConfig(prefix string) error {
 	return nil
 }
 
-func (s *Redis) OnNewRequest(ctx *goblet.Context) error {
+func (s *RedisSession) OnNewRequest(ctx *goblet.Context) error {
 	if cookietype == "cookie" {
 		if _, err := ctx.SignedCookie(tokenName); err != nil {
 			s.addSession(ctx)
@@ -44,7 +44,7 @@ func (s *Redis) OnNewRequest(ctx *goblet.Context) error {
 	return nil
 }
 
-func (s *Redis) addSession(ctx *goblet.Context) {
+func (s *RedisSession) addSession(ctx *goblet.Context) {
 	cookie := new(http.Cookie)
 	cookie.Name = tokenName
 	cookie.Value = gorandom.RandomAlphabetic(32)
@@ -60,7 +60,7 @@ func addSessionWithValue(ctx *goblet.Context, value string) {
 	ctx.AddSignedCookie(cookie)
 }
 
-func (r *Redis) Init(server *goblet.Server) error {
+func (r *RedisSession) Init(server *goblet.Server) error {
 	cookietype = *r.sessionType
 	tokenName = *r.tokenName
 	redisPool = redis.NewPool(func() (redis.Conn, error) {
