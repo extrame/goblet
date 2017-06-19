@@ -20,7 +20,7 @@ type RedisSession struct {
 	tokenName   *string
 }
 
-var redisPool *RedisSession.Pool
+var redisPool *redis.Pool
 var cookietype string
 var tokenName string
 var PoolMaxIdle = 10
