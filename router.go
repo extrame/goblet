@@ -9,19 +9,19 @@ import (
 	"github.com/golang/glog"
 )
 
-type _Router struct {
-	anchor *Anchor
+type router struct {
+	anchor *anchor
 }
 
-func (r *_Router) init() {
-	r.anchor = &Anchor{0, "/", "", []*Anchor{}, &_staticBlockOption{}}
+func (r *router) init() {
+	r.anchor = &anchor{0, "/", "", []*anchor{}, &_staticBlockOption{}}
 }
 
-func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (err error) {
+func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err error) {
 	defer func() {
-		ErrorWrap(w)
+		errorWrap(w)
 	}()
-	var anch *Anchor
+	var anch *anchor
 	var suffix_url string
 	var main, format string
 
@@ -80,26 +80,26 @@ func (rou *_Router) route(s *Server, w http.ResponseWriter, r *http.Request) (er
 	return ge.NOSUCHROUTER
 }
 
-func (r *_Router) add(opt BlockOption) {
+func (r *router) add(opt BlockOption) {
 	for _, v := range opt.GetRouting() {
 		r.addRoute(v, opt)
 	}
 }
 
-func (r *_Router) addRoute(path string, opt BlockOption) {
+func (r *router) addRoute(path string, opt BlockOption) {
 	r.anchor.add(path, opt)
 }
 
 //---------------------anchors---------------
-type Anchor struct {
+type anchor struct {
 	loc      int
 	char     string
 	prefix   string
-	branches []*Anchor
+	branches []*anchor
 	opt      BlockOption
 }
 
-func (a *Anchor) add(path string, opt BlockOption) bool {
+func (a *anchor) add(path string, opt BlockOption) bool {
 	if len(path) > a.loc {
 		var full_stored_path = a.prefix + a.char
 		if path[a.loc-len(a.prefix):a.loc+1] == full_stored_path {
@@ -111,10 +111,10 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 		}
 		for i := 0; i < len(full_stored_path); i++ {
 			if path[a.loc+1-len(full_stored_path):a.loc+1-i] == full_stored_path[:len(full_stored_path)-i] {
-				var branch *Anchor
+				var branch *anchor
 				if i != 0 {
-					branch = &Anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, a.opt}
-					a.branches = []*Anchor{branch}
+					branch = &anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, a.opt}
+					a.branches = []*anchor{branch}
 				} else {
 					if path[a.loc-len(a.prefix):] == full_stored_path {
 						a.opt = opt
@@ -124,7 +124,7 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 
 				//add new b
 				a.loc = a.loc - i
-				branch = &Anchor{len(path) - 1, path[len(path)-1:], path[a.loc+1 : len(path)-1], []*Anchor{}, opt}
+				branch = &anchor{len(path) - 1, path[len(path)-1:], path[a.loc+1 : len(path)-1], []*anchor{}, opt}
 				a.branches = append(a.branches, branch)
 				//change a
 				a.char = full_stored_path[len(full_stored_path)-1-i : len(full_stored_path)-i]
@@ -139,8 +139,8 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 			if path[loc_begin_prefix:i] == a.prefix[:i-loc_begin_prefix] {
 
 				//new branch for old
-				branch := &Anchor{a.loc, a.char, a.prefix[i-loc_begin_prefix+1:], a.branches, a.opt}
-				a.branches = []*Anchor{branch}
+				branch := &anchor{a.loc, a.char, a.prefix[i-loc_begin_prefix+1:], a.branches, a.opt}
+				a.branches = []*anchor{branch}
 
 				//change old
 				a.char = a.prefix[i-loc_begin_prefix-1 : i-loc_begin_prefix]
@@ -148,7 +148,7 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 				a.loc = i - 1
 
 				//new branch for new
-				branch = &Anchor{len(path) - 1, path[len(path)-1:], path[a.loc : len(path)-1], []*Anchor{}, opt}
+				branch = &anchor{len(path) - 1, path[len(path)-1:], path[a.loc : len(path)-1], []*anchor{}, opt}
 				a.branches = append(a.branches, branch)
 				return true
 			}
@@ -157,7 +157,7 @@ func (a *Anchor) add(path string, opt BlockOption) bool {
 	return false
 }
 
-func (a *Anchor) match(path string, leng int) (*Anchor, string) {
+func (a *anchor) match(path string, leng int) (*anchor, string) {
 	if leng > a.loc && path[a.loc:a.loc+1] == a.char {
 		if path[a.loc-len(a.prefix):a.loc] == a.prefix {
 			for _, v := range a.branches {

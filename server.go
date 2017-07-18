@@ -33,13 +33,14 @@ type ControllerNeedInit interface {
 	Init(*Server)
 }
 
+//Server 服务器类型
 type Server struct {
 	wwwRoot       *string
 	publicDir     *string
 	UploadsDir    *string
 	ListenPort    *int
 	IgnoreUrlCase *bool
-	router        _Router
+	router        router
 	env           *string
 	Renders       map[string]render.Render
 	HttpsEnable   *bool
@@ -69,18 +70,18 @@ type Server struct {
 	saver         Saver
 }
 
-type Handler interface {
-	Path() string
-	Dir() string
-}
+// type Handler interface {
+// 	Path() string
+// 	Dir() string
+// }
 
-type RestNewHander interface {
-	New() (int, interface{})
-}
+// type RestNewHander interface {
+// 	New() (int, interface{})
+// }
 
-type PageHandler interface {
-	Page() (int, interface{})
-}
+// type PageHandler interface {
+// 	Page() (int, interface{})
+// }
 
 func (s *Server) Organize(name string, plugins []interface{}) {
 	var err error
@@ -198,6 +199,7 @@ func (s *Server) Env() string {
 	return *s.env
 }
 
+//Debug 当服务器环境为调试环境时，执行相应的匿名函数，用于编写调试环境专用的代码块
 func (s *Server) Debug(fn func()) {
 	if s.Env() == config.DevelopEnv {
 		fn()
@@ -207,9 +209,8 @@ func (s *Server) Debug(fn func()) {
 func (s *Server) WwwRoot() string {
 	if abs, err := filepath.Abs(*s.wwwRoot); err == nil {
 		return abs
-	} else {
-		return *s.wwwRoot
 	}
+	return *s.wwwRoot
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -231,6 +232,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//GetPlugin 获得对应名称的插件
 func (s *Server) GetPlugin(key string) Plugin {
 	return s.plugins[key]
 }
@@ -279,6 +281,7 @@ func (s *Server) parseConfig() (err error) {
 	return
 }
 
+//Hash 获得一个字符串的加密版本
 func (s *Server) Hash(str string) string {
 	hash := sha1.New()
 	hash.Write([]byte(str))
@@ -286,6 +289,7 @@ func (s *Server) Hash(str string) string {
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
+//PublicDir 获得服务器对应的公共文件夹的地址
 func (s *Server) PublicDir() string {
 	return *s.publicDir
 }
@@ -297,6 +301,7 @@ func (s *Server) enableDbCache() {
 	}
 }
 
+//Run 运营一个服务器
 func (s *Server) Run() error {
 	s.Renders = make(map[string]render.Render)
 	s.Renders["html"] = new(render.HtmlRender)
