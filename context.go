@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/extrame/goblet/render"
+	"github.com/golang/glog"
 )
 
 var USERCOOKIENAME = "user"
@@ -219,6 +220,10 @@ func (c *Context) RespondOK() {
 }
 
 func (c *Context) RespondError(err error) {
+	if c.Server.Env() == DevelopEnv {
+		glog.Info("error is respond:", err)
+	}
+	c.responseMap = nil
 	c.RespondWithStatus(err.Error(), http.StatusBadRequest)
 }
 

@@ -144,7 +144,21 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.root = template.New("REST_HTTP_ROOT")
-	origin_funcs := template.FuncMap{"extra_info": RawHtml, "version": RawHtml, "bower": RawHtml, "noescape": Noescape, "js": RawHtml, "css": RawHtml, "raw": RawHtml, "yield": RawHtml, "status": RawHtml, "slice": Slice, "mask": RawHtml, "repeat": Repeat}
+	origin_funcs := template.FuncMap{
+		"extra_info": RawHtml,
+		"version":    RawHtml,
+		"bower":      RawHtml,
+		"noescape":   Noescape,
+		"js":         RawHtml,
+		"css":        RawHtml,
+		"raw":        RawHtml,
+		"yield":      RawHtml,
+		"status":     RawHtml,
+		"slice":      Slice,
+		"last":       Last,
+		"first":      First,
+		"mask":       RawHtml,
+		"repeat":     Repeat}
 	for k, v := range funcs {
 		origin_funcs[k] = v
 	}
@@ -347,6 +361,18 @@ func Slice(obj interface{}, leng int) interface{} {
 		new_array.Index(i).Set(item_array_in_new_array)
 	}
 	return new_array.Interface()
+}
+
+func Last(obj interface{}) interface{} {
+	slice := reflect.ValueOf(obj)
+
+	return slice.Index(slice.Len() - 1).Interface()
+}
+
+func First(obj interface{}) interface{} {
+	slice := reflect.ValueOf(obj)
+
+	return slice.Index(0).Interface()
 }
 
 func Repeat(count int) []int {

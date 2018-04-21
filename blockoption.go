@@ -311,6 +311,9 @@ func callMethod(method reflect.Value, ctx *Context, args ...interface{}) []refle
 
 func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context, args ...interface{}) {
 	method := r.block.MethodByName(methodName)
+	if !method.IsValid() {
+		glog.Fatalf("you have no method named (%s)", methodName)
+	}
 	if r.tryPre(methodName, ctx) {
 		callMethod(method, ctx, args...)
 	}

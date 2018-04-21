@@ -1,11 +1,11 @@
 package redis
 
 import (
+	"log"
+
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet"
 	"github.com/garyburd/redigo/redis"
-	"log"
-	"time"
 )
 
 //TODO

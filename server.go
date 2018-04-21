@@ -149,6 +149,8 @@ func (s *Server) connectDB() error {
 	return newDB(*s.dbEngine, *s.dbUser, *s.dbPwd, *s.dbHost, *s.dbName, *s.dbPort, *s.dbConTO, *s.dbKaInterval)
 }
 
+//ControlBy
+// Use Member of struct of type goblet.Router to redefine the path
 func (s *Server) ControlBy(block interface{}) {
 	cfg := s.prepareOption(block)
 	if bc, ok := block.(ControllerNeedInit); ok {
