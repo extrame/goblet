@@ -123,7 +123,7 @@ type RestBlockOption struct {
 }
 
 func (r *RestBlockOption) renderAsRead(id string, ctx *Context) {
-	r.BasicBlockOption.callMethodForBlock("Read", ctx, id)
+	r.BasicBlockOption.callMethodForBlock("Read", ctx)
 }
 
 func (r *RestBlockOption) UpdateRender(obj string, ctx *Context) {
@@ -145,19 +145,20 @@ func (r *RestBlockOption) Parse(c *Context) error {
 			c.method = REST_NEW
 			r.BasicBlockOption.callMethodForBlock("New", c)
 		} else if method == "GET" {
-			if nid := strings.TrimSuffix(id, ";edit"); nid != id {
+			if nsuff := strings.TrimSuffix(c.suffix, ";edit"); nsuff != c.suffix {
 				c.method = REST_EDIT
-				r.BasicBlockOption.callMethodForBlock("Edit", c, nid)
+				c.suffix = nsuff
+				r.BasicBlockOption.callMethodForBlock("Edit", c)
 			} else {
 				c.method = REST_READ
-				r.BasicBlockOption.callMethodForBlock("Read", c, id)
+				r.BasicBlockOption.callMethodForBlock("Read", c)
 			}
 		} else if method == "DELETE" {
 			c.method = REST_DELETE
-			r.BasicBlockOption.callMethodForBlock("Delete", c, id)
+			r.BasicBlockOption.callMethodForBlock("Delete", c)
 		} else {
 			c.method = REST_UPDATE
-			r.BasicBlockOption.callMethodForBlock("Update", c, id)
+			r.BasicBlockOption.callMethodForBlock("Update", c)
 		}
 	} else {
 		if method == "GET" {
@@ -287,35 +288,54 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 
 }
 
-func callMethod(method reflect.Value, ctx *Context, args ...interface{}) []reflect.Value {
+func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 	typ := method.Type()
 	rvArgs := make([]reflect.Value, typ.NumIn())
-	var n = 0
-	for _, arg := range args {
-		rvArgs[n] = reflect.ValueOf(arg)
-		n++
+	var n, i = 0, 0
+	var args []string
+
+	for ; i < typ.NumIn(); i++ {
+		argT := typ.In(i)
+		if argT.Kind() == reflect.String {
+			if args == nil {
+				if ctx.suffix[0] == '/' {
+					args = strings.Split(ctx.suffix[1:], "/")
+				} else {
+					args = strings.Split(ctx.suffix, "/")
+				}
+			}
+			if n < len(args) {
+				rvArgs[i] = reflect.ValueOf(args[n])
+				n++
+			} else {
+				fmt.Printf("[WARNING]method want more argument(%d) than url part (%v) have\n", typ.NumIn(), args)
+			}
+		} else {
+			break
+		}
 	}
-	rvArgs[n] = reflect.ValueOf(ctx)
-	n++
-	if typ.NumIn() == 2+len(args) {
-		newV := reflect.New(typ.In(n))
+
+	rvArgs[i] = reflect.ValueOf(ctx)
+	i++
+
+	if i < typ.NumIn() {
+		newV := reflect.New(typ.In(i))
 		if err := ctx.Fill(newV.Interface()); err != nil {
 			glog.Errorln("parse arguments error", err)
 		}
-		rvArgs[n] = newV.Elem()
-	} else if typ.NumIn() != 1+len(args) {
-		glog.Fatalln("input argument count is name same with definition")
+		rvArgs[i] = newV.Elem()
 	}
+
 	return method.Call(rvArgs)
 }
 
-func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context, args ...interface{}) {
+func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) {
 	method := r.block.MethodByName(methodName)
 	if !method.IsValid() {
 		glog.Fatalf("you have no method named (%s)", methodName)
 	}
 	if r.tryPre(methodName, ctx) {
-		callMethod(method, ctx, args...)
+		callMethod(method, ctx)
 	}
 }
 
