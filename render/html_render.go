@@ -27,7 +27,8 @@ var renderLock sync.Mutex
 type HtmlRender struct {
 	root     *template.Template
 	dir      string
-	models   map[string]*template.Template
+	models   *sync.Map
+	pathRoot *sync.Map
 	suffix   string
 	public   string
 	saveTemp bool
@@ -40,16 +41,20 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 	var status_code = ctx.StatusCode()
 
+	//for some refresh in test / develop env
 	if !h.saveTemp {
 		root, _ = h.root.Clone()
 		h.initGlobalTemplate(root)
 	} else {
-		root = h.root
+		if pR, ok := h.pathRoot.Load(ctx.TemplatePath()); ok {
+			root = pR.(*template.Template)
+		} else {
+			root, _ = h.root.Clone()
+			h.initModelHelperTemplate(root, ctx.TemplatePath())
+		}
 	}
 
 	path := ctx.TemplatePath() + "/" + ctx.Method()
-
-	h.initModelTemplate(root, ctx.TemplatePath())
 
 	isMobile := detect.IsMobile(ctx.UserAgent())
 
@@ -166,15 +171,16 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.dir = s.WwwRoot()
 	h.public = s.PublicDir()
 	h.suffix = ".html"
-	h.models = make(map[string]*template.Template)
+	h.models = new(sync.Map)
+	h.pathRoot = new(sync.Map)
 	h.saveTemp = (s.Env() == config.ProductEnv)
 	if h.saveTemp {
 		h.initGlobalTemplate(h.root)
 	}
 }
 
-func (h *HtmlRender) initTemplate(parent *template.Template, dir string, typ string) {
-	parent.New("")
+func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string, typ string) {
+	// parent.New("")
 	if !h.saveTemp { //for debug
 		glog.Infoln("init template in ", h.dir, dir, "helper")
 	}
@@ -193,12 +199,12 @@ func (h *HtmlRender) initTemplate(parent *template.Template, dir string, typ str
 }
 
 func (h *HtmlRender) initGlobalTemplate(parent *template.Template) {
-	h.initTemplate(parent, ".", "global")
+	h.initHelperTemplate(parent, ".", "global")
 }
 
-func (h *HtmlRender) initModelTemplate(parent *template.Template, dir string) {
+func (h *HtmlRender) initModelHelperTemplate(parent *template.Template, dir string) {
 	if dir != "" || dir != "." {
-		h.initTemplate(parent, dir, "model")
+		h.initHelperTemplate(parent, dir, "model")
 	}
 }
 
@@ -227,14 +233,15 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		file = args[1]
 	}
 	if !h.saveTemp { //for debug
-		// if name == ".html" {
-		// 	err = errors.New("name for template is empty")
-		// }
 		glog.Infoln("get template of", name, file)
 	}
 	file = filepath.FromSlash(file)
-	t := h.models[name]
-	if t == nil {
+	var t interface{}
+	var ok bool
+	if t, ok = h.models.Load(name); !ok {
+		if h.saveTemp {
+			glog.Infoln("try to parse template of", name)
+		}
 		var cloned_rest_model *template.Template
 		cloned_rest_model, err = root.Clone()
 
@@ -244,7 +251,7 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 			if err == nil {
 				t = cloned_rest_model.Lookup(name)
 				if h.saveTemp {
-					h.models[name] = t
+					h.models.Store(name, t)
 				}
 			} else {
 				if os.IsNotExist(err) {
@@ -256,7 +263,7 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 			}
 		}
 	}
-	return t, nil
+	return t.(*template.Template), nil
 }
 
 type HttpRenderInstance struct {

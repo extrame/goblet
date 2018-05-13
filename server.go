@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/glog"
+
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/error"
@@ -264,6 +266,16 @@ func (s *Server) parseConfig() (err error) {
 	s.HttpsKey = toml.String("basic.https_key", "")
 
 	flag.Parse()
+
+	*s.env = strings.ToLower(*s.env)
+
+	if *s.env != config.DevelopEnv && *s.env != config.ProductEnv && *s.env != config.OldProductEnv {
+		glog.Fatalln("environment must be development or production")
+	} else if *s.env == config.OldProductEnv {
+		*s.env = config.ProductEnv
+		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
+	}
+
 	*path = filepath.FromSlash(*path)
 	err = toml.Parse(*path)
 	for _, plugin := range s.plugins {

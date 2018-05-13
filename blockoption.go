@@ -381,7 +381,7 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 	}
 	valtype = val.Type()
 
-	basic.name = basic.block.Type().Name()
+	basic.name = valtype.Name()
 
 	ignoreCase := true
 

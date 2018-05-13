@@ -1,6 +1,7 @@
 package config
 
 const (
-	DevelopEnv = "development"
-	ProductEnv = "product"
+	DevelopEnv    = "development"
+	ProductEnv    = "production"
+	OldProductEnv = "product"
 )
