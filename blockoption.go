@@ -295,7 +295,7 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 	var args []string
 	var suffix = ctx.suffix
 
-	if suffix[0] == '/' {
+	if len(suffix) > 0 && suffix[0] == '/' {
 		suffix = suffix[1:]
 	}
 
