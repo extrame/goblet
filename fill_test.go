@@ -1,5 +1,11 @@
 package goblet
 
+import (
+	"fmt"
+	"strings"
+	"testing"
+)
+
 // func TestFillByMatch(t *testing.T) {
 // 	var fillby_valid = regexp.MustCompile(`^\s*fillby\(\s*(\w*)\s*\)\s*$`)
 // 	matched := fillby_valid.FindStringSubmatch("fillby(now)")
@@ -85,3 +91,9 @@ package goblet
 // 	ty := r.Type()
 // 	log.Println(ty.PkgPath(), ty.Name())
 // }
+
+func TestBO(t *testing.T) {
+	suffix := ""
+	args := strings.SplitN(suffix, "/", 2)
+	fmt.Println(len(args), args[0])
+}

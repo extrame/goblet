@@ -292,25 +292,24 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 	typ := method.Type()
 	rvArgs := make([]reflect.Value, typ.NumIn())
 	var i = 0
-	var args []string
 	var suffix = ctx.suffix
 
 	if len(suffix) > 0 && suffix[0] == '/' {
 		suffix = suffix[1:]
 	}
 
+	fmt.Println(suffix)
+
 	for ; i < typ.NumIn(); i++ {
 		argT := typ.In(i)
 		if argT.Kind() == reflect.String {
-			if args == nil {
-				if suffix[0] == '/' {
-					args = strings.SplitN(suffix[1:], "/", 2)
-				} else {
-					args = strings.SplitN(suffix, "/", 2)
-				}
-			}
+			args := strings.SplitN(suffix, "/", 2)
 			rvArgs[i] = reflect.ValueOf(args[0])
-			suffix = args[1]
+			if len(args) >= 2 {
+				suffix = args[1]
+			} else {
+				suffix = ""
+			}
 		} else {
 			break
 		}
