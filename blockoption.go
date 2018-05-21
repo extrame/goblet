@@ -298,8 +298,6 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 		suffix = suffix[1:]
 	}
 
-	fmt.Println(suffix)
-
 	for ; i < typ.NumIn(); i++ {
 		argT := typ.In(i)
 		if argT.Kind() == reflect.String {

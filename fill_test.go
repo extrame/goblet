@@ -93,7 +93,7 @@ import (
 // }
 
 func TestBO(t *testing.T) {
-	suffix := ""
+	suffix := "123/10"
 	args := strings.SplitN(suffix, "/", 2)
 	fmt.Println(len(args), args[0])
 }
