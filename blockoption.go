@@ -291,25 +291,26 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 	typ := method.Type()
 	rvArgs := make([]reflect.Value, typ.NumIn())
-	var n, i = 0, 0
+	var i = 0
 	var args []string
+	var suffix = ctx.suffix
+
+	if suffix[0] == '/' {
+		suffix = suffix[1:]
+	}
 
 	for ; i < typ.NumIn(); i++ {
 		argT := typ.In(i)
 		if argT.Kind() == reflect.String {
 			if args == nil {
-				if ctx.suffix[0] == '/' {
-					args = strings.Split(ctx.suffix[1:], "/")
+				if suffix[0] == '/' {
+					args = strings.SplitN(suffix[1:], "/", 2)
 				} else {
-					args = strings.Split(ctx.suffix, "/")
+					args = strings.SplitN(suffix, "/", 2)
 				}
 			}
-			if n < len(args) {
-				rvArgs[i] = reflect.ValueOf(args[n])
-				n++
-			} else {
-				fmt.Printf("[WARNING]method want more argument(%d) than url part (%v) have\n", typ.NumIn(), args)
-			}
+			rvArgs[i] = reflect.ValueOf(args[0])
+			suffix = args[1]
 		} else {
 			break
 		}
