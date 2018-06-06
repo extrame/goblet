@@ -150,12 +150,28 @@ func (c *Context) render() (err error) {
 				var fn = c.Server.funcs[i].Fn
 				switch f := fn.(type) {
 				case func(*Context) error:
-					funcMap[c.Server.funcs[i].Name] = func() interface{} {
+					funcMap[c.Server.funcs[i].Name] = func() error {
 						return f(c)
 					}
 				case func(*Context) interface{}:
 					funcMap[c.Server.funcs[i].Name] = func() interface{} {
 						return f(c)
+					}
+				case func(*Context, string) error:
+					funcMap[c.Server.funcs[i].Name] = func(s string) error {
+						return f(c, s)
+					}
+				case func(*Context, string) bool:
+					funcMap[c.Server.funcs[i].Name] = func(s string) bool {
+						return f(c, s)
+					}
+				case func(*Context, string, string) bool:
+					funcMap[c.Server.funcs[i].Name] = func(s1, s2 string) bool {
+						return f(c, s1, s2)
+					}
+				case func(*Context, string) interface{}:
+					funcMap[c.Server.funcs[i].Name] = func(s string) interface{} {
+						return f(c, s)
 					}
 				default:
 					funcMap[c.Server.funcs[i].Name] = f
@@ -224,7 +240,11 @@ func (c *Context) RespondError(err error) {
 		glog.Info("error is respond:", err)
 	}
 	c.responseMap = nil
-	c.RespondWithStatus(err.Error(), http.StatusBadRequest)
+	if err != nil {
+		c.RespondWithStatus(err.Error(), http.StatusBadRequest)
+	} else {
+		c.RespondOK()
+	}
 }
 
 //Reset the context renders

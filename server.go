@@ -37,6 +37,8 @@ type ControllerNeedInit interface {
 
 //Server 服务器类型
 type Server struct {
+	ConfigFile string
+
 	wwwRoot       *string
 	publicDir     *string
 	UploadsDir    *string
@@ -242,7 +244,7 @@ func (s *Server) GetPlugin(key string) Plugin {
 }
 
 func (s *Server) parseConfig() (err error) {
-	path := flag.String("config", "./"+s.Name+".conf", "设置配置文件的路径")
+	flag.StringVar(&s.ConfigFile, "config", "./"+s.Name+".conf", "设置配置文件的路径")
 	for key, plugin := range s.plugins {
 		plugin.ParseConfig(key)
 	}
@@ -276,8 +278,8 @@ func (s *Server) parseConfig() (err error) {
 		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
 	}
 
-	*path = filepath.FromSlash(*path)
-	err = toml.Parse(*path)
+	s.ConfigFile = filepath.FromSlash(s.ConfigFile)
+	err = toml.Parse(s.ConfigFile)
 	for _, plugin := range s.plugins {
 		plugin.Init(s)
 	}
