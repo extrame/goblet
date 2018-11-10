@@ -5,6 +5,10 @@ type Plugin interface {
 	Init(server *Server) error
 }
 
+type NewPlugin interface {
+	AddCfgAndInit(server *Server) error
+}
+
 //DbPwdPlugin Change the db connection password
 type DbPwdPlugin interface {
 	SetPwd(origin string) string

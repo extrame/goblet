@@ -35,3 +35,7 @@ func (s *Server) wrapError(w http.ResponseWriter, err interface{}, withStack boo
 }
 
 var Interrupted = errors.New("interrupted error")
+
+func (ctx *Context) WrapError(err error, info string) error {
+	return fmt.Errorf("[%s]err:%s", info, err)
+}

@@ -66,12 +66,16 @@ type Server struct {
 	readTimeOut   *int
 	writeTimeOut  *int
 	Name          string
-	plugins       map[string]Plugin
+	oldPlugins    map[string]Plugin
+	plugins       map[string]NewPlugin
 	funcs         []Fn
 	initCtrl      []ControllerNeedInit
 	pres          map[string]reflect.Value
 	nrPlugin      onNewRequestPlugin
 	saver         Saver
+	filler        map[string]FormFillFn
+	multiFiller   map[string]MultiFormFillFn
+	kv            KvDriver
 }
 
 // type Handler interface {
@@ -99,8 +103,19 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 				typ = typ.Elem()
 			}
 			key := strings.ToLower(typ.Name())
+			if s.oldPlugins == nil {
+				s.oldPlugins = make(map[string]Plugin)
+			}
+			s.oldPlugins[key] = tp
+		}
+		if tp, ok := plugin.(NewPlugin); ok {
+			typ := reflect.ValueOf(plugin).Type()
+			if typ.Kind() == reflect.Ptr {
+				typ = typ.Elem()
+			}
+			key := strings.ToLower(typ.Name())
 			if s.plugins == nil {
-				s.plugins = make(map[string]Plugin)
+				s.plugins = make(map[string]NewPlugin)
 			}
 			s.plugins[key] = tp
 		}
@@ -117,11 +132,16 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		if tp, ok := plugin.(Saver); ok {
 			s.saver = tp
 		}
+		if kv, ok := plugin.(KvDriver); ok {
+			s.kv = kv
+		}
 	}
 	if s.saver == nil {
 		s.saver = new(LocalSaver)
 	}
 	s.pres = make(map[string]reflect.Value)
+	s.filler = make(map[string]FormFillFn)
+	s.multiFiller = make(map[string]MultiFormFillFn)
 	if err = s.parseConfig(); err == nil {
 		s.router.init()
 		s.funcs = make([]Fn, 0)
@@ -144,7 +164,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		log.Fatalln(err)
 	}
 	s.enableDbCache()
-	for _, plugin := range s.plugins {
+	for _, plugin := range s.oldPlugins {
 		plugin.Init(s)
 	}
 }
@@ -240,12 +260,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 //GetPlugin 获得对应名称的插件
 func (s *Server) GetPlugin(key string) Plugin {
-	return s.plugins[key]
+	return s.oldPlugins[key]
 }
 
 func (s *Server) parseConfig() (err error) {
 	flag.StringVar(&s.ConfigFile, "config", "./"+s.Name+".conf", "设置配置文件的路径")
-	for key, plugin := range s.plugins {
+	for key, plugin := range s.oldPlugins {
+		glog.Errorln("使用旧版插件，请升级该插件到新版本")
 		plugin.ParseConfig(key)
 	}
 	s.wwwRoot = toml.String("basic.www_root", "./www")
@@ -280,8 +301,13 @@ func (s *Server) parseConfig() (err error) {
 
 	s.ConfigFile = filepath.FromSlash(s.ConfigFile)
 	err = toml.Parse(s.ConfigFile)
-	for _, plugin := range s.plugins {
+	for _, plugin := range s.oldPlugins {
 		plugin.Init(s)
+	}
+	for _, plugin := range s.plugins {
+		if err = plugin.AddCfgAndInit(s); err != nil {
+			glog.Fatalf("add plugin config error in (%T) with error (%s)", plugin, err)
+		}
 	}
 	if err == nil {
 		s.initLog()
@@ -334,6 +360,7 @@ func (s *Server) Run() error {
 	s.Renders["html"].Init(s, tempFuncMap)
 	s.Renders["json"] = new(render.JsonRender)
 	s.Renders["raw"] = new(render.RawRender)
+	s.Renders["xml"] = new(render.XmlRender)
 	log.Println("Listen at ", fmt.Sprintf(":%d", *s.ListenPort))
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", *s.ListenPort),

@@ -12,6 +12,17 @@ import (
 	"github.com/extrame/unmarshall"
 )
 
+type FormFillFn func(content string) (interface{}, error)
+type MultiFormFillFn func(ctx *Context, id string) (interface{}, error)
+
+func (s *Server) AddFillForTypeInForm(typ string, fn FormFillFn) {
+	s.filler[typ] = fn
+}
+
+func (s *Server) AddFillForTypeInMultiForm(typ string, fn MultiFormFillFn) {
+	s.multiFiller[typ] = fn
+}
+
 // types that impliment RequestDecoder can unmarshal
 // the request body into an apropriate type/struct
 type RequestDecoder interface {
@@ -57,6 +68,9 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 	}
 
 	var unmarshaller = unmarshall.Unmarshaller{
+		Values: func() map[string][]string {
+			return cx.request.Form
+		},
 		ValueGetter: func(tag string) []string {
 			values := (*map[string][]string)(&cx.request.Form)
 			if values != nil {
@@ -73,6 +87,16 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 		AutoFill:     autofill,
 	}
 
+	for typ, fn := range cx.Server.filler {
+		if unmarshaller.FillForSpecifiledType == nil {
+			unmarshaller.FillForSpecifiledType = make(map[string]func(id string) (reflect.Value, error))
+		}
+		unmarshaller.FillForSpecifiledType[typ] = func(content string) (reflect.Value, error) {
+			obj, err := fn(content)
+			return reflect.ValueOf(obj), err
+		}
+	}
+
 	return unmarshaller.Unmarshall(v)
 }
 
@@ -85,12 +109,16 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 	for k, v := range cx.request.MultipartForm.Value {
 		values[k] = v
 	}
+
 	var unmarshaller = unmarshall.Unmarshaller{
+		Values: func() map[string][]string {
+			return values
+		},
 		ValueGetter: func(tag string) []string {
 			return values[tag]
 		},
 		TagConcatter: concatPrefix,
-		FillForSpecifiledType: map[string]func(string) (reflect.Value, error){
+		FillForSpecifiledType: map[string]func(id string) (reflect.Value, error){
 			"github.com/extrame/goblet.File": func(id string) (reflect.Value, error) {
 				var file File
 				var err error
@@ -104,6 +132,13 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 			},
 		},
 		AutoFill: autofill,
+	}
+
+	for typ, fn := range cx.Server.multiFiller {
+		unmarshaller.FillForSpecifiledType[typ] = func(id string) (reflect.Value, error) {
+			obj, err := fn(cx, id)
+			return reflect.ValueOf(obj), err
+		}
 	}
 
 	return unmarshaller.Unmarshall(v)

@@ -11,9 +11,12 @@ func autoHide(data interface{}) interface{} {
 		return nil
 	}
 
-	val := reflect.ValueOf(data)
-	if val.Kind() == reflect.Ptr {
-		val = val.Elem()
+	origin := reflect.ValueOf(data)
+	var val reflect.Value
+	if origin.Kind() == reflect.Ptr {
+		val = origin.Elem()
+	} else {
+		val = origin
 	}
 
 	valtype := val.Type()
@@ -34,6 +37,9 @@ func autoHide(data interface{}) interface{} {
 				}
 			}
 		}
+	}
+	if origin.Kind() == reflect.Ptr {
+		return val.Addr().Interface()
 	}
 	return val.Interface()
 }

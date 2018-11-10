@@ -5,7 +5,7 @@ import (
 	"github.com/extrame/unmarshall"
 )
 
-func (s *Server) AddConfig(name string, obj interface{}) {
+func (s *Server) AddConfig(name string, obj interface{}) error {
 	var u = unmarshall.Unmarshaller{
 		ValueGetter: func(tag string) []string {
 			pText := toml.String(name+"."+tag, "")
@@ -22,5 +22,5 @@ func (s *Server) AddConfig(name string, obj interface{}) {
 		},
 		AutoFill: true,
 	}
-	u.Unmarshall(obj)
+	return u.Unmarshall(obj)
 }

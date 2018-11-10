@@ -235,13 +235,17 @@ func (c *Context) RespondOK() {
 	c.status_code = http.StatusOK
 }
 
-func (c *Context) RespondError(err error) {
+func (c *Context) RespondError(err error, context ...string) {
 	if c.Server.Env() == DevelopEnv {
 		glog.Info("error is respond:", err)
 	}
 	c.responseMap = nil
 	if err != nil {
-		c.RespondWithStatus(err.Error(), http.StatusBadRequest)
+		msg := err.Error()
+		if len(context) > 0 {
+			msg = "[" + strings.Join(context, "|") + "]" + msg
+		}
+		c.RespondWithStatus(msg, http.StatusBadRequest)
 	} else {
 		c.RespondOK()
 	}
