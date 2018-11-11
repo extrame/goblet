@@ -2,13 +2,14 @@ package goblet
 
 import (
 	"io"
+	"mime/multipart"
 	"os"
 	"path/filepath"
 )
 
 type File struct {
 	Name string
-	rc   io.ReadCloser
+	rc   multipart.File
 }
 
 func (f *File) Read(p []byte) (n int, err error) {
@@ -17,6 +18,10 @@ func (f *File) Read(p []byte) (n int, err error) {
 
 func (f *File) Close() error {
 	return f.rc.Close()
+}
+
+func (f *File) Seek(offset int64, whence int) (int64, error) {
+	return f.rc.Seek(offset, whence)
 }
 
 //将文件保存在公开目录，可以使用http访问到
