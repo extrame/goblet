@@ -360,14 +360,6 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 
 	var basic BasicBlockOption
 	basic.block = reflect.ValueOf(block)
-	initMethod := basic.block.MethodByName("Init")
-	if initMethod.IsValid() {
-		if initMethod.Type().NumIn() == 0 {
-			initMethod.Call(nil)
-		} else {
-			initMethod.Call([]reflect.Value{reflect.ValueOf(s)})
-		}
-	}
 
 	var val reflect.Value
 	var valtype reflect.Type

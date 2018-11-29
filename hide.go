@@ -27,7 +27,7 @@ func autoHide(data interface{}) interface{} {
 			v := val.Field(i)
 			tags := strings.Split(string(t.Tag), ",")
 			typeName := strings.ToLower(t.Name)
-			if typeName == "pwd" || typeName == "password" {
+			if (typeName == "pwd" || typeName == "password") && v.CanSet() {
 				v.SetString("hidden")
 				continue
 			}

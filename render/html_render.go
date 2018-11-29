@@ -45,6 +45,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 	if !h.saveTemp {
 		root, _ = h.root.Clone()
 		h.initGlobalTemplate(root)
+		h.initModelHelperTemplate(root, ctx.TemplatePath())
 	} else {
 		if pR, ok := h.pathRoot.Load(ctx.TemplatePath()); ok {
 			root = pR.(*template.Template)
@@ -191,7 +192,7 @@ func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string, t
 			glog.Infof("Parse helper:%s(%s)", typ+"/"+name, path)
 			e := parseFileWithName(parent, typ+"/"+name, path)
 			if e != nil {
-				fmt.Printf("ERROR template.ParseFile: %v", e)
+				glog.Infof("ERROR template.ParseFile: %v", e)
 			}
 		}
 		return nil

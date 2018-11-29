@@ -91,6 +91,7 @@ type Server struct {
 // 	Page() (int, interface{})
 // }
 
+//Organize 进行服务器环境的初始化配置，初始化所有plugin，对于plugin的所有操作，在Organize之后都可以视为已经初始化
 func (s *Server) Organize(name string, plugins []interface{}) {
 	var err error
 	var dbPwdPlugin DbPwdPlugin
@@ -216,7 +217,7 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 	if sync {
 		err = DB.Sync2(models)
 		if err != nil {
-			log.Fatalln("sync error:", err)
+			glog.Fatalln("sync error:", err)
 		}
 	}
 }

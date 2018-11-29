@@ -11,6 +11,10 @@ type BackEnd struct {
 	db *bolt.DB
 }
 
+func (b *BackEnd) DB() *bolt.DB {
+	return b.db
+}
+
 type BackEndConfig struct {
 	File string `goblet:file`
 }
@@ -32,7 +36,7 @@ func (b *BackEnd) AddCfgAndInit(server *goblet.Server) error {
 	server.AddConfig("bolt", &defaultConfig)
 
 	if defaultConfig.File == "" {
-		defaultConfig.File = server.Name + ".db"
+		defaultConfig.File = server.Name + "-kv.db"
 	}
 
 	return b.init(defaultConfig.File, nil)
