@@ -71,7 +71,7 @@ func (cx *Context) GetRender() (render string, err error) {
 			}
 		}
 	}
-	return "", RenderNotAllowd
+	return "", fmt.Errorf("render (%s) is not allowed", cx.format)
 }
 
 func (c *Context) UseStandErrPage() bool {
@@ -157,6 +157,10 @@ func (c *Context) render() (err error) {
 					funcMap[c.Server.funcs[i].Name] = func() interface{} {
 						return f(c)
 					}
+				case func(*Context) bool:
+					funcMap[c.Server.funcs[i].Name] = func() interface{} {
+						return f(c)
+					}
 				case func(*Context, string) error:
 					funcMap[c.Server.funcs[i].Name] = func(s string) error {
 						return f(c, s)
@@ -177,7 +181,10 @@ func (c *Context) render() (err error) {
 					funcMap[c.Server.funcs[i].Name] = f
 				}
 			}
-			return c.renderInstance.Render(c.writer, c.response, c.status_code, funcMap)
+			if c.ReqMethod() == "HEAD" {
+				return c.renderInstance.Render(&nullWriter{}, c.writer, c.response, c.status_code, funcMap)
+			}
+			return c.renderInstance.Render(c.writer, c.writer, c.response, c.status_code, funcMap)
 		} else {
 			c.writer.WriteHeader(500)
 			c.writer.Write([]byte("Internal Error: No Render Allowed, please contact the admin"))
@@ -220,12 +227,9 @@ func (c *Context) Respond(data interface{}) {
 	switch td := data.(type) {
 	case error:
 		c.RespondWithStatus(data, http.StatusInternalServerError)
-	case []byte:
+	case []byte, io.Reader:
 		c.format = "raw"
-		c.Writer().Write(td)
-	case io.Reader:
-		c.format = "raw"
-		io.Copy(c.Writer(), td)
+		c.RespondWithStatus(td, http.StatusOK)
 	default:
 		c.RespondWithStatus(data, http.StatusOK)
 	}
@@ -336,6 +340,7 @@ func (c *Context) RedirectTo(url string) {
 	c.writer.Header().Set("Location", url)
 	c.writer.WriteHeader(302)
 	c.format = "raw"
+	c.already_writed = true
 }
 
 ///////////for renders/////////////

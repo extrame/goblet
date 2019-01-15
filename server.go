@@ -65,6 +65,7 @@ type Server struct {
 	logFile       *string
 	readTimeOut   *int
 	writeTimeOut  *int
+	defaultType   *string
 	Name          string
 	oldPlugins    map[string]Plugin
 	plugins       map[string]NewPlugin
@@ -288,6 +289,7 @@ func (s *Server) parseConfig() (err error) {
 	s.HttpsEnable = toml.Bool("basic.https", false)
 	s.HttpsCertFile = toml.String("basic.https_certfile", "")
 	s.HttpsKey = toml.String("basic.https_key", "")
+	s.defaultType = toml.String("basic.default_type", "")
 
 	flag.Parse()
 
@@ -346,6 +348,9 @@ func (s *Server) enableDbCache() {
 
 //Run 运营一个服务器
 func (s *Server) Run() error {
+	if *s.version == "datetime" {
+		*s.version = fmt.Sprintf("%d", time.Now().Unix())
+	}
 	s.Renders = make(map[string]render.Render)
 	s.Renders["html"] = new(render.HtmlRender)
 	var tempFuncMap = make(template.FuncMap)

@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/golang/glog"
+
 	"github.com/extrame/unmarshall"
 )
 
@@ -54,7 +56,10 @@ func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool)
 	if err != nil {
 		return err
 	}
-	return xml.Unmarshal(cx.fill_bts, v)
+	if err = xml.Unmarshal(cx.fill_bts, v); err != nil {
+		glog.Errorf("[Fill Error]Request:%s,Err:%s\n", string(cx.fill_bts), err.Error())
+	}
+	return err
 }
 
 // a form-enc decoder for request body
@@ -166,7 +171,13 @@ func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	ct := cx.request.Header.Get("Content-Type")
 	// default to urlencoded
 	if ct == "" {
-		ct = "application/x-www-form-urlencoded"
+		if *cx.Server.defaultType != "" {
+			ct = *cx.Server.defaultType
+		} else {
+			ct = "application/x-www-form-urlencoded"
+		}
+	} else if strings.HasPrefix(ct, "text/plain") && *cx.Server.defaultType != "" {
+		ct = *cx.Server.defaultType
 	}
 	autofill := true
 	if len(fills) > 0 {

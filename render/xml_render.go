@@ -3,7 +3,7 @@ package render
 import (
 	"encoding/xml"
 	"html/template"
-	"net/http"
+	"io"
 )
 
 type XmlRender struct {
@@ -21,10 +21,10 @@ func (j *XmlRender) Init(s RenderServer, funcs template.FuncMap) {
 
 type XmlRenderInstance int8
 
-func (r *XmlRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
+func (r *XmlRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
-	wr.Header().Add("Content-Type", "application/Xml")
-	wr.WriteHeader(status)
+	hwr.Header().Add("Content-Type", "text/xml;charset=UTF-8")
+	hwr.WriteHeader(status)
 	v, err = xml.Marshal(data)
 	if err == nil {
 		wr.Write(v)
@@ -36,9 +36,9 @@ type XmlCbRenderInstance struct {
 	Cb string
 }
 
-func (r *XmlCbRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
+func (r *XmlCbRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
-	wr.WriteHeader(status)
+	hwr.WriteHeader(status)
 	v, err = xml.Marshal(data)
 	if err == nil {
 		wr.Write([]byte(r.Cb))

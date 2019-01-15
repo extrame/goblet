@@ -4,9 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
-	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -37,21 +36,22 @@ type HtmlRender struct {
 func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance, err error) {
 	var layout, yield *template.Template
 
-	var root *template.Template
+	var model_root *template.Template
 
 	var status_code = ctx.StatusCode()
 
 	//for some refresh in test / develop env
 	if !h.saveTemp {
-		root, _ = h.root.Clone()
-		h.initGlobalTemplate(root)
-		h.initModelHelperTemplate(root, ctx.TemplatePath())
+		model_root, _ = h.root.Clone()
+		h.initGlobalTemplate(h.root)
+		h.initModelHelperTemplate(model_root, ctx.TemplatePath())
 	} else {
 		if pR, ok := h.pathRoot.Load(ctx.TemplatePath()); ok {
-			root = pR.(*template.Template)
+			model_root = pR.(*template.Template)
 		} else {
-			root, _ = h.root.Clone()
-			h.initModelHelperTemplate(root, ctx.TemplatePath())
+			model_root, _ = h.root.Clone()
+			h.initModelHelperTemplate(model_root, ctx.TemplatePath())
+			h.pathRoot.Store(ctx.TemplatePath(), model_root)
 		}
 	}
 
@@ -63,12 +63,12 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 	case "Html":
 		if isMobile {
-			layout, err = h.getTemplates(root,
+			layout, err = h.getTemplates(model_root,
 				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
 				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
 			)
 		} else {
-			layout, err = h.getTemplates(root,
+			layout, err = h.getTemplates(model_root,
 				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
 			)
 		}
@@ -79,16 +79,21 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		fallthrough
 	case "Rest", "Group":
 		if isMobile {
-			layout, err = h.getTemplates(root,
-				ctx.TemplatePath()+"/layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+".mobile"+h.suffix),
-				ctx.TemplatePath()+"/layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix),
-				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
-				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
+			layout, err = h.getTemplates(model_root,
+				"layout/"+ctx.Layout()+".mobile"+h.suffix,
+				filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+".mobile"+h.suffix),
+				"layout/"+ctx.Layout()+h.suffix,
+				filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix),
+				"layout/"+ctx.Layout()+".mobile"+h.suffix,
+				filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
+				"layout/"+ctx.Layout()+h.suffix,
+				filepath.Join("layout", ctx.Layout()+h.suffix),
 			)
 		} else {
-			layout, err = h.getTemplates(root,
-				ctx.TemplatePath()+"/layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix),
-				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
+			layout, err = h.getTemplates(model_root,
+				"layout/"+ctx.Layout()+h.suffix, filepath.Join(ctx.TemplatePath(), "layout", ctx.Layout()+h.suffix),
+				"layout/"+ctx.Layout()+h.suffix,
+				filepath.Join("layout", ctx.Layout()+h.suffix),
 			)
 		}
 	}
@@ -103,29 +108,29 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 	if err == nil {
 		if isMobile {
-			yield, err = h.getTemplates(root,
+			yield, err = h.getTemplates(model_root,
 				path+".mobile"+h.suffix, path+".mobile"+h.suffix,
 				path+h.suffix, path+h.suffix)
 		} else {
-			yield, err = h.getTemplates(root, path+h.suffix, path+h.suffix)
+			yield, err = h.getTemplates(model_root, path+h.suffix, path+h.suffix)
 		}
 	}
 
 	if status_code >= 300 && ctx.UseStandErrPage() {
 		if isMobile {
-			layout, err = h.getTemplates(root,
+			layout, err = h.getTemplates(model_root,
 				"layout/error.mobile."+h.suffix, filepath.Join("layout", "error.mobile."+h.suffix),
 				"layout/error"+h.suffix, filepath.Join("layout", "error"+h.suffix),
 				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
 				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
 			)
 		} else {
-			layout, err = h.getTemplates(root,
+			layout, err = h.getTemplates(model_root,
 				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
 				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
 			)
 		}
-		yield, err = h.getTemplate(root, strconv.Itoa(status_code)+h.suffix, filepath.Join(strconv.Itoa(status_code)+h.suffix))
+		yield, err = h.getTemplate(model_root, strconv.Itoa(status_code)+h.suffix, filepath.Join(strconv.Itoa(status_code)+h.suffix))
 		if err != nil {
 			glog.Infoln("Find Err Code Fail, ", err)
 		}
@@ -142,9 +147,8 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 		return &HttpRenderInstance{layout, yield, "/css/" + path + mobile + ".css" + suffix, "/js/" + path + mobile + ".js" + suffix}, nil
 	} else {
-		glog.Errorf("parse Template error for %v", ctx)
+		glog.Infoln("parse Template missing for %v", ctx)
 	}
-
 	return
 }
 
@@ -180,7 +184,7 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	}
 }
 
-func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string, typ string) {
+func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string) {
 	// parent.New("")
 	if !h.saveTemp { //for debug
 		glog.Infoln("init template in ", h.dir, dir, "helper")
@@ -189,8 +193,8 @@ func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string, t
 	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
 			name := strings.TrimSuffix(info.Name(), h.suffix)
-			glog.Infof("Parse helper:%s(%s)", typ+"/"+name, path)
-			e := parseFileWithName(parent, typ+"/"+name, path)
+			glog.Infof("Parse helper:%s(%s)", name, path)
+			e := parseFileWithName(parent, name, path)
 			if e != nil {
 				glog.Infof("ERROR template.ParseFile: %v", e)
 			}
@@ -200,12 +204,12 @@ func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string, t
 }
 
 func (h *HtmlRender) initGlobalTemplate(parent *template.Template) {
-	h.initHelperTemplate(parent, ".", "global")
+	h.initHelperTemplate(parent, ".")
 }
 
 func (h *HtmlRender) initModelHelperTemplate(parent *template.Template, dir string) {
-	if dir != "" || dir != "." {
-		h.initHelperTemplate(parent, dir, "model")
+	if dir != "" && dir != "." {
+		h.initHelperTemplate(parent, dir)
 	}
 }
 
@@ -237,26 +241,22 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		glog.Infoln("get template of", name, file)
 	}
 	file = filepath.FromSlash(file)
-	var t interface{}
-	var ok bool
-	if t, ok = h.models.Load(name); !ok {
+	var t *template.Template
+	if t = root.Lookup(name); !h.saveTemp || t == nil {
 		if h.saveTemp {
 			glog.Infoln("try to parse template of", name)
 		}
-		var cloned_rest_model *template.Template
-		cloned_rest_model, err = root.Clone()
 
 		if err == nil {
 
-			err = parseFileWithName(cloned_rest_model, name, filepath.Join(h.dir, file))
+			err = parseFileWithName(root, name, filepath.Join(h.dir, file))
 			if err == nil {
-				t = cloned_rest_model.Lookup(name)
-				if h.saveTemp {
-					h.models.Store(name, t)
-				}
+				t = root.Lookup(name)
 			} else {
 				if os.IsNotExist(err) {
-					glog.Errorf("template for (%s) is missing", file)
+					if !h.saveTemp {
+						glog.Errorf("template for (%s) is missing", file)
+					}
 					return nil, ge.NOSUCHROUTER
 				} else {
 					return nil, err
@@ -264,7 +264,7 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 			}
 		}
 	}
-	return t.(*template.Template), nil
+	return t, nil
 }
 
 type HttpRenderInstance struct {
@@ -274,17 +274,20 @@ type HttpRenderInstance struct {
 	js_file  string
 }
 
-func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error {
+func (h *HttpRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface{}, status int, funcs template.FuncMap) error {
 	var mask_map = make(map[string]bool)
 
 	funcMap := template.FuncMap{
-		"yield": func() (template.HTML, error) {
-			err := h.yield.Execute(wr, data)
+		"yield": func() (html template.HTML, err error) {
+			var temp *template.Template
+			if temp, err = h.yield.Clone(); err == nil {
+				err = temp.Execute(wr, data)
+			}
 			if err != nil {
-				log.Printf("%v%T", err, err)
+				glog.Error("[in yield]%v%T", err, err)
 			}
 			// return safe html here since we are rendering our own template
-			return template.HTML(""), err
+			return html, err
 		},
 		"status": func() int {
 			return status
@@ -316,9 +319,11 @@ func (h *HttpRenderInstance) Render(wr http.ResponseWriter, data interface{}, st
 	h.yield.Funcs(funcMap)
 
 	if h.layout != nil {
-		return h.layout.Execute(wr, data)
+		temp, _ := h.layout.Clone()
+		return temp.Execute(wr, data)
 	} else if h.yield != nil {
-		return h.yield.Execute(wr, data)
+		temp, _ := h.yield.Clone()
+		return temp.Execute(wr, data)
 	}
 	return nil
 }

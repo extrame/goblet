@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"text/template"
 
-	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet"
 	"github.com/extrame/smtpoverttl"
 )
@@ -28,19 +27,14 @@ Content-Transfer-Encoding: base64
 `
 
 type _SmtpSender struct {
-	Root      *string
-	Server    *string
-	User      *string
-	UserName  *string
-	Pwd       *string
-	Ttl       *bool
-	Port      *int
+	Root      string `goblet:"root,mail/"`
+	Server    string
+	User      string
+	UserName  string `goblet:"user_name,Sender"`
+	Pwd       string
+	Ttl       bool
+	Port      int
 	Templates map[string]*template.Template
-}
-
-func (s *_SmtpSender) Init(server *goblet.Server) error {
-	s.Templates = make(map[string]*template.Template)
-	return nil
 }
 
 type client interface {
@@ -50,16 +44,15 @@ type client interface {
 	Data() (io.WriteCloser, error)
 }
 
-func (s *_SmtpSender) ParseConfig(prefix string) (err error) {
-	s.Root = toml.String(prefix+".root", "mail/")
-	s.Server = toml.String(prefix+".server", "")
-	s.User = toml.String(prefix+".user", "")
-	s.UserName = toml.String(prefix+".user_name", "Sender")
-	s.Pwd = toml.String(prefix+".password", "")
-	s.Ttl = toml.Bool(prefix+".ttl", false)
-	s.Port = toml.Int(prefix+".port", 25)
-	*s.Root = filepath.FromSlash(*s.Root)
-	return
+func (s *_SmtpSender) AddCfgAndInit(server *goblet.Server) error {
+
+	server.AddConfig("smtp", &s)
+
+	s.Root = filepath.FromSlash(s.Root)
+
+	s.Templates = make(map[string]*template.Template)
+
+	return nil
 }
 
 func SendTo(template_name string, subject string, receivers []mail.Address, args map[string]interface{}) (err error) {
@@ -72,7 +65,7 @@ func (s *_SmtpSender) SendTo(template_name string, subject string, receivers []m
 	var ok bool
 
 	if templa, ok = s.Templates[template_name]; !ok {
-		if templa, err = template.ParseFiles(filepath.Join(*s.Root, template_name)); err == nil {
+		if templa, err = template.ParseFiles(filepath.Join(s.Root, template_name)); err == nil {
 			s.Templates[template_name] = templa
 		} else {
 			return
@@ -80,14 +73,14 @@ func (s *_SmtpSender) SendTo(template_name string, subject string, receivers []m
 	}
 
 	var c client
-	if *s.Ttl {
+	if s.Ttl {
 		var config tls.Config
-		config.ServerName = *s.Server
-		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", *s.Server, *s.Port), &config); err == nil {
+		config.ServerName = s.Server
+		if c, err = smtpoverttl.DialTTL(fmt.Sprintf("%s:%d", s.Server, s.Port), &config); err == nil {
 			return s.sendMail(c, subject, templa, receivers, args)
 		}
 	} else {
-		if c, err = smtp.Dial(fmt.Sprintf("%s:%d", *s.Server, *s.Port)); err == nil {
+		if c, err = smtp.Dial(fmt.Sprintf("%s:%d", s.Server, s.Port)); err == nil {
 			return s.sendMail(c, subject, templa, receivers, args)
 		}
 	}
@@ -100,16 +93,16 @@ func (s *_SmtpSender) sendMail(c client, subject string, mail_body *template.Tem
 	var standard_header_template *template.Template
 
 	if standard_header_template, err = template.New("standard_header").Parse(StandardHeader); err == nil {
-		if err = c.Auth(smtpoverttl.PlainAuth("", *s.User, *s.Pwd, *s.Server)); err == nil {
+		if err = c.Auth(smtpoverttl.PlainAuth("", s.User, s.Pwd, s.Server)); err == nil {
 			for _, receiver := range receivers {
-				if err = c.Mail(*s.User); err == nil {
+				if err = c.Mail(s.User); err == nil {
 					if err = c.Rcpt(receiver.Address); err == nil {
 						// Send the email body.
 						var wc io.WriteCloser
 						if wc, err = c.Data(); err == nil {
 							defer wc.Close()
 
-							from := mail.Address{*s.UserName, *s.User}
+							from := mail.Address{s.UserName, s.User}
 
 							body_writer := new(bytes.Buffer)
 							if err = mail_body.Execute(body_writer, args); err != nil {

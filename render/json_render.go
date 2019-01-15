@@ -3,7 +3,7 @@ package render
 import (
 	"encoding/json"
 	"html/template"
-	"net/http"
+	"io"
 )
 
 type JsonRender struct {
@@ -21,10 +21,10 @@ func (j *JsonRender) Init(s RenderServer, funcs template.FuncMap) {
 
 type JsonRenderInstance int8
 
-func (r *JsonRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
+func (r *JsonRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
-	wr.Header().Add("Content-Type", "application/json")
-	wr.WriteHeader(status)
+	hwr.Header().Add("Content-Type", "application/json")
+	hwr.WriteHeader(status)
 	v, err = json.Marshal(data)
 	if err == nil {
 		wr.Write(v)
@@ -36,9 +36,9 @@ type JsonCbRenderInstance struct {
 	Cb string
 }
 
-func (r *JsonCbRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
+func (r *JsonCbRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
-	wr.WriteHeader(status)
+	hwr.WriteHeader(status)
 	v, err = json.Marshal(data)
 	if err == nil {
 		wr.Write([]byte(r.Cb))

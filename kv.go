@@ -8,6 +8,7 @@ import (
 type Kv interface {
 	Get(name string, pointer interface{}) error
 	Set(name string, pointer interface{}) error
+	Del(name string) error
 	Keys() []string
 }
 

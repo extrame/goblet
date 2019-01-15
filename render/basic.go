@@ -2,6 +2,7 @@ package render
 
 import (
 	"html/template"
+	"io"
 	"net/http"
 )
 
@@ -27,7 +28,12 @@ type RenderServer interface {
 
 //每一类的Render都必须返回一个RenderInstance用于具体的渲染
 type RenderInstance interface {
-	Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error
+	Render(wr io.Writer, header_wr HeadWriter, data interface{}, status int, funcs template.FuncMap) error
+}
+
+type HeadWriter interface {
+	Header() http.Header
+	WriteHeader(statusCode int)
 }
 
 type Render interface {

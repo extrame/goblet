@@ -2,7 +2,8 @@ package render
 
 import (
 	"html/template"
-	"net/http"
+	"io"
+	"strconv"
 )
 
 type RawRender int8
@@ -16,10 +17,16 @@ func (r *RawRender) Init(s RenderServer, funcs template.FuncMap) {
 
 type RawRenderInstance int8
 
-func (r *RawRenderInstance) Render(wr http.ResponseWriter, data interface{}, status int, funcs template.FuncMap) error {
+func (r *RawRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
+	var writen = int64(0)
 	switch tdata := data.(type) {
+	case io.Reader:
+		writen, err = io.Copy(wr, tdata)
 	case []byte:
-		wr.Write(tdata)
+		var int_writen = 0
+		int_writen, err = wr.Write(tdata)
+		writen = int64(int_writen)
 	}
-	return nil
+	hwr.Header().Set("Content-Length", strconv.FormatInt(writen, 10))
+	return err
 }

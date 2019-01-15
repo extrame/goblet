@@ -30,8 +30,6 @@ const (
 	REST_DELETEMANY = "deletemany"
 )
 
-var RenderNotAllowd = fmt.Errorf("render is not allowed")
-
 type BlockOption interface {
 	UpdateRender(string, *Context)
 	GetRouting() []string
@@ -144,7 +142,7 @@ func (r *RestBlockOption) Parse(c *Context) error {
 		if id == "new" {
 			c.method = REST_NEW
 			r.BasicBlockOption.callMethodForBlock("New", c)
-		} else if method == "GET" {
+		} else if method == "GET" || method == "HEAD" {
 			if nsuff := strings.TrimSuffix(c.suffix, ";edit"); nsuff != c.suffix {
 				c.method = REST_EDIT
 				c.suffix = nsuff
@@ -269,20 +267,24 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 	} else {
 		ctx.method = name
 
-		key := strings.ToLower(g.name + "-" + name)
-		if pc, ok := ctx.Server.pres[key]; ok {
-			results := callMethod(pc, ctx)
-			// pc.Call([]reflect.Value{arg})
-			if err, ok := results[0].Interface().(error); ok && err != nil {
-				if err != Interrupted {
-					ctx.RespondError(err)
-				}
-				return nil
-			}
-		} else {
-			// method.Call([]reflect.Value{arg})
+		if g.tryPre(name, ctx) {
 			callMethod(method, ctx)
 		}
+
+		// key := strings.ToLower(g.name + "-" + name)
+		// if pc, ok := ctx.Server.pres[key]; ok {
+		// 	results := callMethod(pc, ctx)
+		// 	// pc.Call([]reflect.Value{arg})
+		// 	if err, ok := results[0].Interface().(error); ok && err != nil {
+		// 		if err != Interrupted {
+		// 			ctx.RespondError(err)
+		// 		}
+		// 		return nil
+		// 	}
+		// } else {
+		// 	// method.Call([]reflect.Value{arg})
+		// 	callMethod(method, ctx)
+		// }
 	}
 	return nil
 
@@ -308,6 +310,11 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 			} else {
 				suffix = ""
 			}
+		} else if argT.Kind() == reflect.Slice && argT.Elem().Kind() == reflect.String {
+			args := strings.SplitN(suffix, "/", -1)
+			rvArgs[i] = reflect.ValueOf(args)
+			i++
+			break
 		} else {
 			break
 		}
@@ -330,7 +337,11 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) {
 	method := r.block.MethodByName(methodName)
 	if !method.IsValid() {
-		glog.Fatalf("you have no method named (%s)", methodName)
+		if ctx.Server.Env() == ProductEnv {
+			glog.Infof("you have no method named (%s)", methodName)
+		} else {
+			glog.Fatalf("you have no method named (%s)", methodName)
+		}
 	}
 	if r.tryPre(methodName, ctx) {
 		callMethod(method, ctx)
@@ -449,6 +460,8 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 	if basic.layout == "" {
 		basic.layout = "default"
 	}
+
+	glog.Errorf("[%T]fork on %v", block, basic.routing)
 
 	return newBlock(basic, block, ignoreCase)
 }

@@ -11,16 +11,15 @@ type Collection struct {
 }
 
 func (c *Collection) Get(name string, pointer interface{}) error {
-	var bytesChan = make(chan []byte)
+	var bts []byte
 
-	go c.db.Update(func(tx *bolt.Tx) error {
+	c.db.Update(func(tx *bolt.Tx) error {
 		if b, err := tx.CreateBucketIfNotExists([]byte(c.name)); err == nil {
-			bytesChan <- b.Get([]byte(name))
+			bts = b.Get([]byte(name))
 		}
 		return nil
 	})
 
-	bts := <-bytesChan
 	return bson.Unmarshal(bts, pointer)
 }
 
@@ -37,6 +36,17 @@ func (c *Collection) Set(name string, pointer interface{}) error {
 	} else {
 		return err
 	}
+}
+
+func (c *Collection) Del(name string) error {
+
+	return c.db.Update(func(tx *bolt.Tx) error {
+		if b, err := tx.CreateBucketIfNotExists([]byte(c.name)); err == nil {
+			return b.Delete([]byte(name))
+		} else {
+			return err
+		}
+	})
 }
 
 func (c *Collection) Keys() []string {
