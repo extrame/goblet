@@ -39,44 +39,45 @@ type ControllerNeedInit interface {
 type Server struct {
 	ConfigFile string
 
-	wwwRoot       *string
-	publicDir     *string
-	UploadsDir    *string
-	ListenPort    *int
-	IgnoreUrlCase *bool
-	router        router
-	env           *string
-	Renders       map[string]render.Render
-	HttpsEnable   *bool
-	HttpsCertFile *string
-	HttpsKey      *string
-	HashSecret    *string
-	dbEngine      *string
-	dbUser        *string
-	dbPwd         *string
-	dbHost        *string
-	dbName        *string
-	version       *string
-	dbPort        *int
-	dbConTO       *int
-	dbKaInterval  *int
-	enDbCache     *bool
-	cacheAmout    *int
-	logFile       *string
-	readTimeOut   *int
-	writeTimeOut  *int
-	defaultType   *string
-	Name          string
-	oldPlugins    map[string]Plugin
-	plugins       map[string]NewPlugin
-	funcs         []Fn
-	initCtrl      []ControllerNeedInit
-	pres          map[string]reflect.Value
-	nrPlugin      onNewRequestPlugin
-	saver         Saver
-	filler        map[string]FormFillFn
-	multiFiller   map[string]MultiFormFillFn
-	kv            KvDriver
+	wwwRoot         *string
+	publicDir       *string
+	UploadsDir      *string
+	ListenPort      *int
+	IgnoreUrlCase   *bool
+	router          router
+	env             *string
+	Renders         map[string]render.Render
+	HttpsEnable     *bool
+	HttpsCertFile   *string
+	HttpsKey        *string
+	HashSecret      *string
+	dbEngine        *string
+	dbUser          *string
+	dbPwd           *string
+	dbHost          *string
+	dbName          *string
+	version         *string
+	dbPort          *int
+	dbConTO         *int
+	dbKaInterval    *int
+	enDbCache       *bool
+	cacheAmout      *int
+	logFile         *string
+	readTimeOut     *int
+	writeTimeOut    *int
+	defaultType     *string
+	enableKeepAlive *bool
+	Name            string
+	oldPlugins      map[string]Plugin
+	plugins         map[string]NewPlugin
+	funcs           []Fn
+	initCtrl        []ControllerNeedInit
+	pres            map[string]reflect.Value
+	nrPlugin        onNewRequestPlugin
+	saver           Saver
+	filler          map[string]FormFillFn
+	multiFiller     map[string]MultiFormFillFn
+	kv              KvDriver
 }
 
 // type Handler interface {
@@ -290,6 +291,8 @@ func (s *Server) parseConfig() (err error) {
 	s.HttpsCertFile = toml.String("basic.https_certfile", "")
 	s.HttpsKey = toml.String("basic.https_key", "")
 	s.defaultType = toml.String("basic.default_type", "")
+	s.defaultType = toml.String("basic.default_type", "")
+	s.enableKeepAlive = toml.Bool("basic.keep_alive", true)
 
 	flag.Parse()
 
@@ -373,6 +376,9 @@ func (s *Server) Run() error {
 		Handler:      s,
 		WriteTimeout: time.Second * time.Duration(*s.writeTimeOut),
 		ReadTimeout:  time.Second * time.Duration(*s.readTimeOut),
+	}
+	if !(*s.enableKeepAlive) {
+		srv.SetKeepAlivesEnabled(false)
 	}
 	var err error
 	if !*s.HttpsEnable {
