@@ -1,8 +1,12 @@
 package goblet
 
 import (
+	"errors"
+
 	"github.com/golang/glog"
 )
+
+var NoSuchRecord = errors.New("no such record")
 
 //用于获取数值的接口
 type Kv interface {

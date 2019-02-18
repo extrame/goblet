@@ -42,7 +42,9 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 
 	//for some refresh in test / develop env
 	if !h.saveTemp {
+		renderLock.Lock()
 		model_root, _ = h.root.Clone()
+		renderLock.Unlock()
 		h.initGlobalTemplate(h.root)
 		h.initModelHelperTemplate(model_root, ctx.TemplatePath())
 	} else {

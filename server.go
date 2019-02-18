@@ -291,7 +291,6 @@ func (s *Server) parseConfig() (err error) {
 	s.HttpsCertFile = toml.String("basic.https_certfile", "")
 	s.HttpsKey = toml.String("basic.https_key", "")
 	s.defaultType = toml.String("basic.default_type", "")
-	s.defaultType = toml.String("basic.default_type", "")
 	s.enableKeepAlive = toml.Bool("basic.keep_alive", true)
 
 	flag.Parse()

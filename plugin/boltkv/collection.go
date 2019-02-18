@@ -2,6 +2,8 @@ package boltkv
 
 import (
 	"github.com/boltdb/bolt"
+	"github.com/extrame/goblet"
+	"github.com/pkg/errors"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -10,7 +12,7 @@ type Collection struct {
 	db   *bolt.DB
 }
 
-func (c *Collection) Get(name string, pointer interface{}) error {
+func (c *Collection) Get(name string, pointer interface{}) (err error) {
 	var bts []byte
 
 	c.db.Update(func(tx *bolt.Tx) error {
@@ -20,7 +22,13 @@ func (c *Collection) Get(name string, pointer interface{}) error {
 		return nil
 	})
 
-	return bson.Unmarshal(bts, pointer)
+	if len(bts) == 0 {
+		return goblet.NoSuchRecord
+	}
+	if err = bson.Unmarshal(bts, pointer); err != nil {
+		err = errors.Wrapf(err, "in bolt unmarshal(%s)", string(bts))
+	}
+	return err
 }
 
 func (c *Collection) Set(name string, pointer interface{}) error {
