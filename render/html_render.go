@@ -342,13 +342,13 @@ func parseFileWithName(parent *template.Template, name string, filepath string) 
 	// as t, this file becomes the contents of t, so
 	//  t, err := New(name).Funcs(xxx).ParseFiles(name)
 	// works. Otherwise we create a new template associated with t.
+	renderLock.Lock()
 	var tmpl *template.Template
 	if name == parent.Name() || name == "" {
 		tmpl = parent
 	} else {
 		tmpl = parent.New(name)
 	}
-	renderLock.Lock()
 	_, err = tmpl.Parse(s)
 	renderLock.Unlock()
 	if err != nil {
