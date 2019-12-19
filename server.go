@@ -2,7 +2,6 @@ package goblet
 
 import (
 	"crypto/sha1"
-	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -15,11 +14,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet/config"
-	"github.com/extrame/goblet/error"
+	ge "github.com/extrame/goblet/error"
 	"github.com/extrame/goblet/render"
 	"github.com/go-xorm/xorm"
 )
@@ -72,7 +74,7 @@ type Server struct {
 	plugins         map[string]NewPlugin
 	funcs           []Fn
 	initCtrl        []ControllerNeedInit
-	pres            map[string]reflect.Value
+	pres            map[string][]reflect.Value
 	nrPlugin        onNewRequestPlugin
 	saver           Saver
 	filler          map[string]FormFillFn
@@ -142,7 +144,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	if s.saver == nil {
 		s.saver = new(LocalSaver)
 	}
-	s.pres = make(map[string]reflect.Value)
+	s.pres = make(map[string][]reflect.Value)
 	s.filler = make(map[string]FormFillFn)
 	s.multiFiller = make(map[string]MultiFormFillFn)
 	if err = s.parseConfig(); err == nil {
@@ -202,7 +204,11 @@ func (s *Server) Pre(fn interface{}, conds ...string) {
 	if c, _, err := s.caller(); err == nil {
 		for _, m := range conds {
 			key := strings.ToLower(c + "-" + m)
-			s.pres[key] = reflect.ValueOf(fn)
+			if arr, ok := s.pres[key]; ok {
+				s.pres[key] = append(arr, reflect.ValueOf(fn))
+			} else {
+				s.pres[key] = []reflect.Value{reflect.ValueOf(fn)}
+			}
 		}
 	}
 }
@@ -242,13 +248,23 @@ func (s *Server) WwwRoot() string {
 	return *s.wwwRoot
 }
 
+func (s *Server) GetServerPathByCtrl(ctrl interface{}) []string {
+	root := s.WwwRoot()
+	cfg := s.prepareOption(ctrl)
+	var paths = make([]string, len(cfg.GetRouting()))
+	for i, r := range cfg.GetRouting() {
+		paths[i] = filepath.Join(root, r)
+	}
+	return paths
+}
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		if err := recover(); err != nil {
 			s.wrapError(w, err, true)
 		}
 	}()
-	if err := s.router.route(s, w, r); err == ge.NOSUCHROUTER {
+	if err := s.router.route(s, w, r); errors.Cause(err) == ge.NOSUCHROUTER {
 		var path string
 		if strings.HasSuffix(r.URL.Path, "/") {
 			path = r.URL.Path + "index.html"
@@ -280,7 +296,7 @@ func (s *Server) parseConfig() (err error) {
 	s.publicDir = toml.String("basic.public_dir", "public")
 	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")
 	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
-	s.HashSecret = toml.String("secret", "cX8Os0wfB6uCGZZSZHIi6rKsy7b0scE9")
+	s.HashSecret = toml.String("basic.secret", "a238974b2378c39021d23g43")
 	s.env = toml.String("basic.env", config.ProductEnv)
 	s.dbEngine = toml.String("basic.db_engine", "mysql")
 	s.enDbCache = toml.Bool("cache.enable", false)
@@ -369,7 +385,7 @@ func (s *Server) Run() error {
 	s.Renders["json"] = new(render.JsonRender)
 	s.Renders["raw"] = new(render.RawRender)
 	s.Renders["xml"] = new(render.XmlRender)
-	log.Println("Listen at ", fmt.Sprintf(":%d", *s.ListenPort))
+	logrus.WithField("port", *s.ListenPort).Infoln("Listening")
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", *s.ListenPort),
 		Handler:      s,
@@ -385,6 +401,6 @@ func (s *Server) Run() error {
 	} else {
 		err = srv.ListenAndServeTLS(*s.HttpsCertFile, *s.HttpsKey)
 	}
-	log.Println(err)
+	logrus.Println(err)
 	return err
 }

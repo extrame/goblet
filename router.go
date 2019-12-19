@@ -1,12 +1,14 @@
 package goblet
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/extrame/goblet/config"
-	"github.com/extrame/goblet/error"
+	ge "github.com/extrame/goblet/error"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 )
 
 type router struct {
@@ -27,7 +29,7 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 
 	if r.URL.Path == "/" {
 		anch, suffix_url = rou.anchor.match("/index", 6)
-		glog.Infof("routing /index\n", r.URL.Path)
+		glog.Infoln("routing /index\n", r.URL.Path)
 	}
 
 	context := &Context{
@@ -70,6 +72,8 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 			context.checkResponse()
 			if err = context.prepareRender(); err == nil {
 				err = context.render()
+			} else {
+				err = errors.Wrap(err, fmt.Sprintf("[Original Response]%v", context.response))
 			}
 		}
 		if *s.env == config.DevelopEnv && err != nil {

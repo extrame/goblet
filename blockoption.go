@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/extrame/goblet/error"
+	ge "github.com/extrame/goblet/error"
 	"github.com/golang/glog"
 )
 
@@ -76,11 +76,10 @@ func (h *HtmlBlockOption) Parse(c *Context) error {
 	method = strings.ToLower(method)
 
 	if method == "get" {
-		h.BasicBlockOption.callMethodForBlock("Get", c)
+		return h.BasicBlockOption.callMethodForBlock("Get", c)
 	} else if method == "post" {
-		h.BasicBlockOption.callMethodForBlock("Post", c)
+		return h.BasicBlockOption.callMethodForBlock("Post", c)
 	}
-
 	return nil
 }
 
@@ -120,8 +119,8 @@ type RestBlockOption struct {
 	BasicBlockOption
 }
 
-func (r *RestBlockOption) renderAsRead(id string, ctx *Context) {
-	r.BasicBlockOption.callMethodForBlock("Read", ctx)
+func (r *RestBlockOption) renderAsRead(id string, ctx *Context) error {
+	return r.BasicBlockOption.callMethodForBlock("Read", ctx)
 }
 
 func (r *RestBlockOption) UpdateRender(obj string, ctx *Context) {
@@ -135,42 +134,48 @@ func (r *RestBlockOption) Parse(c *Context) error {
 	}
 	method = strings.ToUpper(method)
 	var id string
+	var args []string
 	if len(c.suffix) > 0 {
 		id = c.suffix[1:]
+		args = strings.SplitN(id, "/", 2)
+		id = args[0]
 	}
 	if id != "" {
 		if id == "new" {
 			c.method = REST_NEW
-			r.BasicBlockOption.callMethodForBlock("New", c)
+			if args != nil && len(args) > 1 {
+				c.suffix = args[1]
+			}
+			return r.BasicBlockOption.callMethodForBlock("New", c)
 		} else if method == "GET" || method == "HEAD" {
 			if nsuff := strings.TrimSuffix(c.suffix, ";edit"); nsuff != c.suffix {
 				c.method = REST_EDIT
 				c.suffix = nsuff
-				r.BasicBlockOption.callMethodForBlock("Edit", c)
+				return r.BasicBlockOption.callMethodForBlock("Edit", c)
 			} else {
 				c.method = REST_READ
-				r.BasicBlockOption.callMethodForBlock("Read", c)
+				return r.BasicBlockOption.callMethodForBlock("Read", c)
 			}
 		} else if method == "DELETE" {
 			c.method = REST_DELETE
-			r.BasicBlockOption.callMethodForBlock("Delete", c)
+			return r.BasicBlockOption.callMethodForBlock("Delete", c)
 		} else {
 			c.method = REST_UPDATE
-			r.BasicBlockOption.callMethodForBlock("Update", c)
+			return r.BasicBlockOption.callMethodForBlock("Update", c)
 		}
 	} else {
 		if method == "GET" {
 			c.method = REST_READMANY
-			r.BasicBlockOption.callMethodForBlock("ReadMany", c)
+			return r.BasicBlockOption.callMethodForBlock("ReadMany", c)
 		} else if method == "POST" {
 			c.method = REST_CREATE
-			r.BasicBlockOption.callMethodForBlock("Create", c)
+			return r.BasicBlockOption.callMethodForBlock("Create", c)
 		} else if method == "PUT" {
 			c.method = REST_UPDATEMANY
-			r.BasicBlockOption.callMethodForBlock("UpdateMany", c)
+			return r.BasicBlockOption.callMethodForBlock("UpdateMany", c)
 		} else if method == "DELETE" {
 			c.method = REST_DELETEMANY
-			r.BasicBlockOption.callMethodForBlock("DeleteMany", c)
+			return r.BasicBlockOption.callMethodForBlock("DeleteMany", c)
 		}
 	}
 
@@ -181,13 +186,16 @@ func (r *BasicBlockOption) tryPre(m string, ctx *Context) bool {
 	key := r.name + "-" + m
 	key = strings.ToLower(key)
 	if pc, ok := ctx.Server.pres[key]; ok {
-		results := callMethod(pc, ctx)
-		if err, ok := results[0].Interface().(error); ok && err != nil {
-			if err != Interrupted {
-				ctx.RespondError(err)
+		for _, fn := range pc {
+			results := callMethod(fn, ctx)
+			if err, ok := results[0].Interface().(error); ok && err != nil {
+				if err != Interrupted {
+					ctx.RespondError(err)
+				}
+				return false
 			}
-			return false
 		}
+
 	}
 	return true
 }
@@ -224,18 +232,20 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 	if len(ctx.suffix) > 1 {
 		name = ctx.suffix[1:]
 
+		args := strings.Split(name, "/")
+
 		typ := g.block.Type()
 
 		if g.ignoreCase {
 			for i := 0; i < g.block.NumMethod(); i++ {
 				m := typ.Method(i)
-				if strings.ToLower(m.Name) == strings.ToLower(name) {
-					name = strings.ToLower(name)
+				if strings.ToLower(m.Name) == strings.ToLower(args[0]) {
+					name = strings.ToLower(args[0])
 					method = g.block.Method(i)
 				}
 			}
 		} else {
-			method = g.block.MethodByName(name)
+			method = g.block.MethodByName(args[0])
 		}
 		if !method.IsValid() {
 			if name = ctx.request.URL.Query().Get("method"); name == "" {
@@ -247,6 +257,12 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 				method = g.block.MethodByName("Post")
 			case "get":
 				method = g.block.MethodByName("Get")
+			}
+		} else {
+			if len(args) > 1 {
+				ctx.suffix = strings.Join(args[1:], "/")
+			} else {
+				ctx.suffix = ""
 			}
 		}
 	}
@@ -334,18 +350,23 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 	return method.Call(rvArgs)
 }
 
-func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) {
+func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) error {
 	method := r.block.MethodByName(methodName)
 	if !method.IsValid() {
+		var err = fmt.Errorf("you have no method named (%s)", methodName)
 		if ctx.Server.Env() == ProductEnv {
-			glog.Infof("you have no method named (%s)", methodName)
+			glog.Infof(err.Error())
 		} else {
-			glog.Fatalf("you have no method named (%s)", methodName)
+			glog.Fatalf(err.Error())
+		}
+		return err
+	} else {
+		if r.tryPre(methodName, ctx) {
+			callMethod(method, ctx)
 		}
 	}
-	if r.tryPre(methodName, ctx) {
-		callMethod(method, ctx)
-	}
+
+	return nil
 }
 
 type _staticBlockOption struct {
@@ -483,6 +504,10 @@ func newBlock(basic BasicBlockOption, block interface{}, ignoreCase bool) BlockO
 			return &HtmlBlockOption{basic}
 		case "Read", "ReadMany", "Delete", "DeleteMany", "Update", "UpdateMany", "New", "Create", "Edit":
 			return &RestBlockOption{basic}
+		case "Init":
+			continue
+		default:
+			return &groupBlockOption{basic, ignoreCase}
 		}
 	}
 	return &groupBlockOption{basic, ignoreCase}

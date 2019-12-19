@@ -128,7 +128,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 			)
 		} else {
 			layout, err = h.getTemplates(model_root,
-				"layout/"+ctx.Layout()+".mobile"+h.suffix, filepath.Join("layout", ctx.Layout()+".mobile"+h.suffix),
+				"layout/error"+h.suffix, filepath.Join("layout", "error"+h.suffix),
 				"layout/"+ctx.Layout()+h.suffix, filepath.Join("layout", ctx.Layout()+h.suffix),
 			)
 		}
@@ -143,15 +143,31 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		if v := ctx.Version(); v != "" {
 			suffix = "?" + v
 		}
-		mobile := ""
+		css := "/css/" + path + ".css"
+		js := "/js/" + path + ".js"
 		if isMobile {
-			mobile = ".mobile"
+			var mobile = "/css/" + path + ".mobile.css"
+			if h.Exists(mobile) {
+				css = mobile
+			}
+			mobile = "/js/" + path + ".mobile.js"
+			if h.Exists(mobile) {
+				js = mobile
+			}
 		}
-		return &HttpRenderInstance{layout, yield, "/css/" + path + mobile + ".css" + suffix, "/js/" + path + mobile + ".js" + suffix}, nil
+		return &HttpRenderInstance{layout, yield, css + suffix, js + suffix}, nil
 	} else {
 		glog.Infoln("parse Template missing for %v", ctx)
 	}
 	return
+}
+
+func (h *HtmlRender) Exists(file string) bool {
+	info, err := os.Stat(filepath.Join(h.dir, filepath.FromSlash(file)))
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
 
 func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
@@ -166,7 +182,7 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 		"raw":        RawHtml,
 		"yield":      RawHtml,
 		"status":     RawHtml,
-		"slice":      Slice,
+		"split":      Slice,
 		"last":       Last,
 		"first":      First,
 		"mask":       RawHtml,

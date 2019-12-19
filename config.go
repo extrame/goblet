@@ -1,6 +1,8 @@
 package goblet
 
 import (
+	"net/url"
+
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/unmarshall"
 )
@@ -16,6 +18,9 @@ func (s *Server) AddConfig(name string, obj interface{}) error {
 				return []string{}
 			}
 
+		},
+		ValuesGetter: func(prefix string) url.Values {
+			return make(url.Values)
 		},
 		TagConcatter: func(prefix string, tag string) string {
 			return prefix + "." + tag

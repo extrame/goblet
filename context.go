@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -50,6 +51,7 @@ func (c *Context) handleData() {
 
 }
 
+//GetRender,返回渲染类型,该返回需要判断是否允许相关渲染类型，如果不需要判断，请使用Format函数
 func (cx *Context) GetRender() (render string, err error) {
 	renders := cx.option.GetRender()
 	if cx.forceFormat != "" {
@@ -71,7 +73,11 @@ func (cx *Context) GetRender() (render string, err error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("render (%s) is not allowed", cx.format)
+	return "", fmt.Errorf("render (%s) is not allowed in %s", cx.format, cx.method)
+}
+
+func (c *Context) Format() string {
+	return c.format
 }
 
 func (c *Context) UseStandErrPage() bool {
@@ -83,6 +89,14 @@ func (c *Context) AddInfo(key string, value interface{}) {
 		c.infos = make(map[string]interface{})
 	}
 	c.infos[key] = value
+}
+
+func (c *Context) GetInfo(key string) (interface{}, bool) {
+	if val, ok := c.infos[key]; ok {
+		return val, ok
+	} else {
+		return nil, false
+	}
 }
 
 func (c *Context) Writer() http.ResponseWriter {
@@ -148,41 +162,91 @@ func (c *Context) render() (err error) {
 			}
 			for i := 0; i < len(c.Server.funcs); i++ {
 				var fn = c.Server.funcs[i].Fn
-				switch f := fn.(type) {
-				case func(*Context) error:
-					funcMap[c.Server.funcs[i].Name] = func() error {
-						return f(c)
+
+				rfn := reflect.ValueOf(fn)
+				rfnT := rfn.Type()
+
+				var nInTSlice = make([]reflect.Type, rfnT.NumIn())
+				var num = 0
+				var ctxIndex = -1
+
+				for index := 0; index < rfnT.NumIn(); index++ {
+					var in = rfnT.In(index)
+					if in.Kind() == reflect.Ptr {
+						ein := in.Elem()
+						if ein.Name() == "Context" && ein.PkgPath() == "github.com/extrame/goblet" {
+							ctxIndex = index
+						}
+					} else {
+						nInTSlice[num] = in
+						num++
 					}
-				case func(*Context) interface{}:
-					funcMap[c.Server.funcs[i].Name] = func() interface{} {
-						return f(c)
-					}
-				case func(*Context) bool:
-					funcMap[c.Server.funcs[i].Name] = func() interface{} {
-						return f(c)
-					}
-				case func(*Context, string) error:
-					funcMap[c.Server.funcs[i].Name] = func(s string) error {
-						return f(c, s)
-					}
-				case func(*Context, string) bool:
-					funcMap[c.Server.funcs[i].Name] = func(s string) bool {
-						return f(c, s)
-					}
-				case func(*Context, string, string) bool:
-					funcMap[c.Server.funcs[i].Name] = func(s1, s2 string) bool {
-						return f(c, s1, s2)
-					}
-				case func(*Context, string) interface{}:
-					funcMap[c.Server.funcs[i].Name] = func(s string) interface{} {
-						return f(c, s)
-					}
-				default:
-					funcMap[c.Server.funcs[i].Name] = f
 				}
+				if ctxIndex >= 0 {
+					nInTSlice = nInTSlice[:len(nInTSlice)-1]
+				}
+				var nOutTSlice = make([]reflect.Type, rfnT.NumOut())
+				for index := 0; index < rfnT.NumOut(); index++ {
+					nOutTSlice[index] = rfnT.Out(index)
+				}
+				var fT = reflect.FuncOf(nInTSlice, nOutTSlice, false)
+
+				funcMap[c.Server.funcs[i].Name] = reflect.MakeFunc(fT, func(args []reflect.Value) []reflect.Value {
+					var newArgs []reflect.Value
+					var rc = reflect.ValueOf(c)
+					if ctxIndex >= 0 {
+						if ctxIndex == 0 {
+							newArgs = append([]reflect.Value{rc}, args...)
+						} else if ctxIndex >= len(args) {
+							newArgs = append(args, rc)
+						} else {
+							newArgs = append(args[:ctxIndex], rc)
+							newArgs = append(newArgs, args[ctxIndex:]...)
+						}
+						return rfn.Call(newArgs)
+					}
+					return rfn.Call(args)
+				}).Interface()
+
+				// switch f := fn.(type) {
+				// case func(*Context) error:
+				// 	funcMap[c.Server.funcs[i].Name] = func() error {
+				// 		return f(c)
+				// 	}
+				// case func(*Context) interface{}:
+				// 	funcMap[c.Server.funcs[i].Name] = func() interface{} {
+				// 		return f(c)
+				// 	}
+				// case func(*Context) bool:
+				// 	funcMap[c.Server.funcs[i].Name] = func() interface{} {
+				// 		return f(c)
+				// 	}
+				// case func(*Context, string) error:
+				// 	funcMap[c.Server.funcs[i].Name] = func(s string) error {
+				// 		return f(c, s)
+				// 	}
+				// case func(*Context, string) bool:
+				// 	funcMap[c.Server.funcs[i].Name] = func(s string) bool {
+				// 		return f(c, s)
+				// 	}
+				// case func(*Context, string, string) bool:
+				// 	funcMap[c.Server.funcs[i].Name] = func(s1, s2 string) bool {
+				// 		return f(c, s1, s2)
+				// 	}
+				// case func(*Context, string) interface{}:
+				// 	funcMap[c.Server.funcs[i].Name] = func(s string) interface{} {
+				// 		return f(c, s)
+				// 	}
+				// default:
+				// 	funcMap[c.Server.funcs[i].Name] = f
+				// }
 			}
 			if c.ReqMethod() == "HEAD" {
-				return c.renderInstance.Render(&nullWriter{}, c.writer, c.response, c.status_code, funcMap)
+				if hi, ok := c.renderInstance.(render.HeadRenderInstance); ok {
+					return hi.HeadRender(&nullWriter{}, c.writer, c.response, c.status_code, funcMap)
+				} else {
+					return c.renderInstance.Render(&nullWriter{}, c.writer, c.response, c.status_code, funcMap)
+				}
 			}
 			return c.renderInstance.Render(c.writer, c.writer, c.response, c.status_code, funcMap)
 		} else {
@@ -205,7 +269,7 @@ func (c *Context) AddRespond(datas ...interface{}) {
 		for i := 0; i < len(datas)/2; i++ {
 			k := fmt.Sprintf("%s", datas[i])
 			if c.option.AutoHidden() {
-				v := autoHide(datas[i+1])
+				v := autoHide(datas[i+1], c)
 				c.responseMap[k] = v
 			} else {
 				c.responseMap[k] = datas[i+1]
@@ -228,11 +292,43 @@ func (c *Context) Respond(data interface{}) {
 	case error:
 		c.RespondWithStatus(data, http.StatusInternalServerError)
 	case []byte, io.Reader:
-		c.format = "raw"
+		c.forceFormat = "raw"
+		c.AllowRender("raw")
 		c.RespondWithStatus(td, http.StatusOK)
 	default:
 		c.RespondWithStatus(data, http.StatusOK)
 	}
+}
+
+func (c *Context) RespondField(data interface{}, fields ...string) {
+	var objs = reflect.ValueOf(data)
+	if objs.Type().Kind() == reflect.Ptr {
+		objs = objs.Elem()
+	}
+	var result interface{}
+	if objs.Type().Kind() == reflect.Slice || objs.Type().Kind() == reflect.Array {
+		resultSlice := make([]map[string]interface{}, 0)
+		for index := 0; index < objs.Len(); index++ {
+			resultOne := getMapFromValue(objs.Index(index), fields)
+			resultSlice = append(resultSlice, resultOne)
+		}
+		result = resultSlice
+		c.Respond(result)
+	} else {
+		c.responseMap = getMapFromValue(objs, fields)
+	}
+}
+
+func getMapFromValue(obj reflect.Value, fields []string) map[string]interface{} {
+	resultOne := make(map[string]interface{})
+	if obj.Type().Kind() == reflect.Ptr {
+		obj = obj.Elem()
+	}
+	for _, field := range fields {
+		resultOne[field] = obj.FieldByName(field).Interface()
+	}
+	return resultOne
+
 }
 
 func (c *Context) RespondOK() {
@@ -271,7 +367,7 @@ func (c *Context) RespondStatus(status int) {
 
 func (c *Context) RespondWithStatus(data interface{}, status int) {
 	if c.option.AutoHidden() {
-		c.response = autoHide(data)
+		c.response = autoHide(data, c)
 	} else {
 		c.response = data
 	}
@@ -280,7 +376,7 @@ func (c *Context) RespondWithStatus(data interface{}, status int) {
 
 func (c *Context) RespondWithRender(data interface{}, render string) {
 	if c.option.AutoHidden() {
-		c.response = autoHide(data)
+		c.response = autoHide(data, c)
 	} else {
 		c.response = data
 	}
@@ -323,6 +419,7 @@ func (c *Context) ResetDB() error {
 	return c.Server.connectDB()
 }
 
+//RenderAs 设置渲染的模型文件，注意和UseRender的区别，需要修改json/html等用UseRender
 func (c *Context) RenderAs(name string) {
 	c.method = name
 }
@@ -367,10 +464,6 @@ func (c *Context) Method() string {
 //返回用户请求的Method
 func (c *Context) ReqMethod() string {
 	return c.request.Method
-}
-
-func (c *Context) Format() string {
-	return c.format
 }
 
 func (c *Context) StatusCode() int {
@@ -447,6 +540,11 @@ func (c *Context) Version() string {
 //ReqURL 返回用户请求的URL
 func (c *Context) ReqURL() *url.URL {
 	return c.request.URL
+}
+
+//ReqHost 返回用户请求的host
+func (c *Context) ReqHost() string {
+	return c.request.Host
 }
 
 //ReqHeader 返回用户请求的Header

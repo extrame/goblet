@@ -18,6 +18,7 @@ type RenderContext interface {
 	Version() string
 	UseStandErrPage() bool
 	UserAgent() string
+	String() string
 }
 
 type RenderServer interface {
@@ -29,6 +30,10 @@ type RenderServer interface {
 //每一类的Render都必须返回一个RenderInstance用于具体的渲染
 type RenderInstance interface {
 	Render(wr io.Writer, header_wr HeadWriter, data interface{}, status int, funcs template.FuncMap) error
+}
+
+type HeadRenderInstance interface {
+	HeadRender(wr io.Writer, header_wr HeadWriter, data interface{}, status int, funcs template.FuncMap) error
 }
 
 type HeadWriter interface {

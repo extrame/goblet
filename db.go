@@ -10,7 +10,6 @@ import (
 
 	// _ "github.com/mattn/go-oci8"
 	"os"
-	// _ "github.com/mattn/go-sqlite3"
 )
 
 var DB *xorm.Engine

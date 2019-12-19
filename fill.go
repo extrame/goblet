@@ -3,9 +3,11 @@ package goblet
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"mime/multipart"
+	"net/url"
 	"reflect"
 	"strings"
 
@@ -72,9 +74,28 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 		cx.request.ParseForm()
 	}
 
+	var maxlength = 0
+	for k, _ := range cx.request.Form {
+		if len(k) > maxlength {
+			maxlength = len(k)
+		}
+	}
+
 	var unmarshaller = unmarshall.Unmarshaller{
 		Values: func() map[string][]string {
 			return cx.request.Form
+		},
+		ValuesGetter: func(prefix string) url.Values {
+			values := (*map[string][]string)(&cx.request.Form)
+			var sub = make(url.Values)
+			if values != nil {
+				for k, v := range *values {
+					if strings.HasPrefix(k, prefix+"[") {
+						sub[k] = v
+					}
+				}
+			}
+			return sub
 		},
 		ValueGetter: func(tag string) []string {
 			values := (*map[string][]string)(&cx.request.Form)
@@ -88,6 +109,7 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 			}
 			return []string{}
 		},
+		MaxLength:    maxlength,
 		TagConcatter: concatPrefix,
 		AutoFill:     autofill,
 	}
@@ -111,16 +133,42 @@ type MultiFormRequestDecoder struct{}
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
 	cx.request.ParseMultipartForm(32 << 20)
 	values := (map[string][]string)(cx.request.Form)
+	if cx.request.MultipartForm == nil {
+		return errors.New("MultipartForm is empty")
+	}
+	var maxlength = 0
+
 	for k, v := range cx.request.MultipartForm.Value {
 		values[k] = v
+		if len(k) > maxlength {
+			maxlength = len(k)
+		}
+	}
+
+	for k, _ := range cx.request.MultipartForm.File {
+		if len(k) > maxlength {
+			maxlength = len(k)
+		}
 	}
 
 	var unmarshaller = unmarshall.Unmarshaller{
 		Values: func() map[string][]string {
 			return values
 		},
+		MaxLength: maxlength,
 		ValueGetter: func(tag string) []string {
 			return values[tag]
+		},
+		ValuesGetter: func(prefix string) url.Values {
+			var sub = make(url.Values)
+			if values != nil {
+				for k, v := range values {
+					if strings.HasPrefix(k, prefix+"[") {
+						sub[k] = v
+					}
+				}
+			}
+			return sub
 		},
 		TagConcatter: concatPrefix,
 		FillForSpecifiledType: map[string]func(id string) (reflect.Value, error){
@@ -132,8 +180,10 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 				if f, h, err = cx.request.FormFile(id); err == nil {
 					file.Name = h.Filename
 					file.rc = f
+					return reflect.ValueOf(file), err
+				} else {
+					return reflect.ValueOf(nil), err
 				}
-				return reflect.ValueOf(file), err
 			},
 		},
 		AutoFill: autofill,

@@ -28,12 +28,12 @@ Content-Transfer-Encoding: base64
 
 type _SmtpSender struct {
 	Root      string `goblet:"root,mail/"`
-	Server    string
-	User      string
+	Server    string `goblet:"server"`
+	User      string `goblet:"user"`
 	UserName  string `goblet:"user_name,Sender"`
-	Pwd       string
-	Ttl       bool
-	Port      int
+	Pwd       string `goblet:"password"`
+	Ttl       bool   `goblet:"ttl"`
+	Port      int    `goblet:"port"`
 	Templates map[string]*template.Template
 }
 
@@ -51,6 +51,10 @@ func (s *_SmtpSender) AddCfgAndInit(server *goblet.Server) error {
 	s.Root = filepath.FromSlash(s.Root)
 
 	s.Templates = make(map[string]*template.Template)
+
+	if s.Port == 0 {
+		s.Port = 25
+	}
 
 	return nil
 }

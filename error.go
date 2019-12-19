@@ -9,13 +9,16 @@ import (
 
 	"github.com/extrame/go-random"
 	"github.com/extrame/goblet/config"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *Server) wrapError(w http.ResponseWriter, err interface{}, withStack bool) {
-	w.WriteHeader(500)
+	if withStack {
+		w.WriteHeader(500)
+	}
 	if s.Env() == config.ProductEnv {
 		errKey := gorandom.RandomNumeric(10)
-		log.Printf("%T,%v(ERROR key %s)\n", err, err, errKey)
+		logrus.WithField("error", err).WithField("key", errKey).Errorf("Error(%T) Happened\n", err)
 		if withStack {
 			log.Print(string(debug.Stack()))
 		}
