@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"xorm.io/xorm/caches"
 
 	"github.com/golang/glog"
 	"github.com/sirupsen/logrus"
@@ -23,7 +24,6 @@ import (
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
 	"github.com/extrame/goblet/render"
-	"github.com/go-xorm/xorm"
 )
 
 var NotImplemented = fmt.Errorf("this method is not implemented")
@@ -359,7 +359,7 @@ func (s *Server) PublicDir() string {
 
 func (s *Server) enableDbCache() {
 	if *s.enDbCache {
-		cacher := xorm.NewLRUCacher(xorm.NewMemoryStore(), *s.cacheAmout)
+		cacher := caches.NewLRUCacher(caches.NewMemoryStore(), *s.cacheAmout)
 		DB.SetDefaultCacher(cacher)
 	}
 }

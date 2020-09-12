@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	_ "github.com/denisenkom/go-mssqldb"
-	_ "github.com/go-sql-driver/MySQL"
-	"github.com/go-xorm/xorm"
+	_ "github.com/go-sql-driver/mysql"
+	"xorm.io/xorm"
 
 	// _ "github.com/mattn/go-oci8"
 	"os"
