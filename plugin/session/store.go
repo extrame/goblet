@@ -25,6 +25,7 @@ type sessionStore interface {
 	removeItem(userKey, itemKey string)
 }
 
+// localStore 使用本地内存作为session实现的版本
 type localStore struct {
 	store map[string]map[string]interface{}
 }

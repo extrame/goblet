@@ -278,8 +278,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 //GetPlugin 获得对应名称的插件
-func (s *Server) GetPlugin(key string) Plugin {
-	return s.oldPlugins[key]
+func (s *Server) GetPlugin(key string) NewPlugin {
+	return s.plugins[key]
 }
 
 func (s *Server) parseConfig() (err error) {

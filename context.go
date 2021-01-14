@@ -45,6 +45,11 @@ type Context struct {
 	bower_stack     map[string]bool
 	infos           map[string]interface{}
 	cookiesForWrite map[string]*http.Cookie
+	showHidden      bool
+}
+
+func (c *Context) ShowHidden() {
+	c.showHidden = true
 }
 
 func (c *Context) handleData() {
@@ -268,7 +273,7 @@ func (c *Context) AddRespond(datas ...interface{}) {
 		}
 		for i := 0; i < len(datas)/2; i++ {
 			k := fmt.Sprintf("%s", datas[i])
-			if c.option.AutoHidden() {
+			if c.showHidden || c.option.AutoHidden() {
 				v := autoHide(datas[i+1], c)
 				c.responseMap[k] = v
 			} else {
@@ -366,7 +371,7 @@ func (c *Context) RespondStatus(status int) {
 }
 
 func (c *Context) RespondWithStatus(data interface{}, status int) {
-	if c.option.AutoHidden() {
+	if c.showHidden || c.option.AutoHidden() {
 		c.response = autoHide(data, c)
 	} else {
 		c.response = data
@@ -375,7 +380,7 @@ func (c *Context) RespondWithStatus(data interface{}, status int) {
 }
 
 func (c *Context) RespondWithRender(data interface{}, render string) {
-	if c.option.AutoHidden() {
+	if c.showHidden || c.option.AutoHidden() {
 		c.response = autoHide(data, c)
 	} else {
 		c.response = data
