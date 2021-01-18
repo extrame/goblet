@@ -29,7 +29,6 @@ func (s *Session) OnNewRequest(ctx *goblet.Context) error {
 }
 
 func (s *Session) AddCfgAndInit(server *goblet.Server) error {
-
 	server.AddConfig("session", &s)
 	switch s.Type {
 	case "local":
@@ -37,7 +36,7 @@ func (s *Session) AddCfgAndInit(server *goblet.Server) error {
 	case "redis":
 		s.store = &redisStore{}
 	}
-	return nil
+	return s.store.Init()
 }
 
 // func (s *Session) Init(server *goblet.Server) (err error) {
