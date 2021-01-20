@@ -343,17 +343,14 @@ func (c *Context) RespondOK() {
 	}
 }
 
+//RespondError 返回错误，如果错误为空，返回成功
 func (c *Context) RespondError(err error, context ...string) {
 	if c.Server.Env() == DevelopEnv {
 		glog.Info("error is respond:", err)
 	}
 	c.responseMap = nil
 	if err != nil {
-		msg := err.Error()
-		if len(context) > 0 {
-			msg = "[" + strings.Join(context, "|") + "]" + msg
-		}
-		c.RespondWithStatus(msg, http.StatusBadRequest)
+		c.Server.errFunc(c, err, context...)
 	} else {
 		c.RespondOK()
 	}

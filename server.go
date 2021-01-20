@@ -81,10 +81,23 @@ type Server struct {
 	multiFiller     map[string]MultiFormFillFn
 	kv              KvDriver
 	okFunc          func(*Context)
+	errFunc         func(*Context, error, ...string)
+}
+
+var defaultErrFunc = func(c *Context, err error, context ...string) {
+	msg := err.Error()
+	if len(context) > 0 {
+		msg = "[" + strings.Join(context, "|") + "]" + msg
+	}
+	c.RespondWithStatus(msg, http.StatusBadRequest)
 }
 
 func (s *Server) SetDefaultOk(fn func(*Context)) {
 	s.okFunc = fn
+}
+
+func (s *Server) SetDefaultError(fn func(*Context, error, ...string)) {
+	s.errFunc = fn
 }
 
 // type Handler interface {
@@ -177,6 +190,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	for _, plugin := range s.oldPlugins {
 		plugin.Init(s)
 	}
+	s.errFunc = defaultErrFunc
 }
 
 func (s *Server) connectDB() error {
