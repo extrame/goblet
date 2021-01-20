@@ -338,6 +338,9 @@ func getMapFromValue(obj reflect.Value, fields []string) map[string]interface{} 
 
 func (c *Context) RespondOK() {
 	c.status_code = http.StatusOK
+	if c.Server.okFunc != nil {
+		c.Server.okFunc()
+	}
 }
 
 func (c *Context) RespondError(err error, context ...string) {

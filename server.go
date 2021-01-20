@@ -80,6 +80,11 @@ type Server struct {
 	filler          map[string]FormFillFn
 	multiFiller     map[string]MultiFormFillFn
 	kv              KvDriver
+	okFunc          func(*Context)
+}
+
+func (s *Server) SetDefaultOk(fn func(*Context)) {
+	s.okFunc = fn
 }
 
 // type Handler interface {
