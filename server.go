@@ -86,6 +86,7 @@ type Server struct {
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
+	c.responseMap = nil
 	msg := err.Error()
 	if len(context) > 0 {
 		msg = "[" + strings.Join(context, "|") + "]" + msg

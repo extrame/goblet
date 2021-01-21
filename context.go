@@ -348,7 +348,6 @@ func (c *Context) RespondError(err error, context ...string) {
 	if c.Server.Env() == DevelopEnv {
 		glog.Info("error is respond:", err)
 	}
-	c.responseMap = nil
 	if err != nil {
 		c.Server.errFunc(c, err, context...)
 	} else {
