@@ -23,3 +23,15 @@ type dbUserNamePlugin interface {
 type onNewRequestPlugin interface {
 	OnNewRequest(*Context) error
 }
+
+type OkFuncSetter interface {
+	RespendOk(*Context)
+}
+
+type ErrFuncSetter interface {
+	RespondError(*Context, error, ...string)
+}
+
+type DefaultRenderSetter interface {
+	DefaultRender() string
+}

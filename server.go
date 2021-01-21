@@ -82,6 +82,7 @@ type Server struct {
 	kv              KvDriver
 	okFunc          func(*Context)
 	errFunc         func(*Context, error, ...string)
+	defaultRender   string
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -158,6 +159,15 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		if kv, ok := plugin.(KvDriver); ok {
 			s.kv = kv
 		}
+		if ov, ok := plugin.(OkFuncSetter); ok {
+			s.okFunc = ov.RespendOk
+		}
+		if ev, ok := plugin.(ErrFuncSetter); ok {
+			s.errFunc = ev.RespondError
+		}
+		if rv, ok := plugin.(DefaultRenderSetter); ok {
+			s.defaultRender = rv.DefaultRender()
+		}
 	}
 	if s.saver == nil {
 		s.saver = new(LocalSaver)
@@ -190,7 +200,12 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	for _, plugin := range s.oldPlugins {
 		plugin.Init(s)
 	}
-	s.errFunc = defaultErrFunc
+	if s.errFunc == nil {
+		s.errFunc = defaultErrFunc
+	}
+	if s.defaultRender == "" {
+		s.defaultRender = "html"
+	}
 }
 
 func (s *Server) connectDB() error {

@@ -471,7 +471,7 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 	}
 
 	if len(basic.render) == 0 {
-		basic.render = []string{"html"}
+		basic.render = []string{s.defaultRender}
 	}
 
 	if basic.htmlRenderFileOrDir == "" {
