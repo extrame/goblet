@@ -362,7 +362,24 @@ func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) e
 		return err
 	} else {
 		if r.tryPre(methodName, ctx) {
-			callMethod(method, ctx)
+			results := callMethod(method, ctx)
+			//可以接收传统的无返回，直接结束
+			// 或者有返回，如果返回不是error，且不为空，返回结果
+			// 如果有返回，且返回是error，不为空，返回错误
+			// 其他情况，直接返回ok
+			if len(results) > 0 {
+				for _, res := range results {
+					var ires = res.Interface()
+					if err, ok := ires.(error); !ok && ires != nil {
+						ctx.Respond(ires)
+						return nil
+					} else if ok && err != nil {
+						ctx.RespondError(err)
+						return nil
+					}
+				}
+				ctx.RespondOK()
+			}
 		}
 	}
 
