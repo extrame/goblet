@@ -284,7 +284,20 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 		ctx.method = name
 
 		if g.tryPre(name, ctx) {
-			callMethod(method, ctx)
+			results := callMethod(method, ctx)
+			if len(results) > 0 && ctx.response == nil && ctx.responseMap == nil {
+				for _, res := range results {
+					var ires = res.Interface()
+					if err, ok := ires.(error); !ok && ires != nil {
+						ctx.Respond(ires)
+						return nil
+					} else if ok && err != nil {
+						ctx.RespondError(err)
+						return nil
+					}
+				}
+				ctx.RespondOK()
+			}
 		}
 
 		// key := strings.ToLower(g.name + "-" + name)
@@ -367,7 +380,7 @@ func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) e
 			// 或者有返回，如果返回不是error，且不为空，返回结果
 			// 如果有返回，且返回是error，不为空，返回错误
 			// 其他情况，直接返回ok
-			if len(results) > 0 {
+			if len(results) > 0 && ctx.response == nil && ctx.responseMap == nil {
 				for _, res := range results {
 					var ires = res.Interface()
 					if err, ok := ires.(error); !ok && ires != nil {
