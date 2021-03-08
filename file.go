@@ -90,6 +90,7 @@ func (s *Server) SaveInPrivate(path string, f *File) error {
 
 type Saver interface {
 	Save(fullpath string, f io.Reader) error
+	Delete(fullpath string) error
 }
 
 type LocalSaver struct {
@@ -106,4 +107,10 @@ func (l *LocalSaver) Save(path string, f io.Reader) error {
 		}
 	}
 	return err
+}
+
+func (l *LocalSaver) Delete(path string) error {
+	var file *os.File
+	var err error
+	return os.Remove(path)
 }
