@@ -79,7 +79,7 @@ func (s *Server) DelFileInPrivate(path string) error {
 
 func (s *Server) DelFileInPublic(path string) error {
 	fullPath := filepath.Join(*s.wwwRoot, s.PublicDir(), path)
-	return os.Remove(fullPath)
+	return s.saver.Delete(fullPath)
 }
 
 //将文件保存在私有目录，不可以使用http访问到
@@ -110,7 +110,5 @@ func (l *LocalSaver) Save(path string, f io.Reader) error {
 }
 
 func (l *LocalSaver) Delete(path string) error {
-	var file *os.File
-	var err error
 	return os.Remove(path)
 }
