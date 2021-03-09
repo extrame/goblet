@@ -338,13 +338,13 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 			var newV = reflect.New(argT)
 
 			if kind == reflect.String {
-				newV.SetString(args[0])
+				newV.Elem().SetString(args[0])
 			} else {
 				iValue, _ := strconv.ParseInt(args[0], 10, 64)
-				newV.SetInt(iValue)
+				newV.Elem().SetInt(iValue)
 			}
 
-			rvArgs[i] = newV
+			rvArgs[i] = newV.Elem()
 
 			if len(args) >= 2 {
 				suffix = args[1]
