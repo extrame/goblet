@@ -3,6 +3,7 @@ package goblet
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	ge "github.com/extrame/goblet/error"
@@ -331,15 +332,26 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 
 	for ; i < typ.NumIn(); i++ {
 		argT := typ.In(i)
-		if argT.Kind() == reflect.String {
+		var kind = argT.Kind()
+		if kind == reflect.String || (kind >= reflect.Int && kind <= reflect.Int64) {
 			args := strings.SplitN(suffix, "/", 2)
-			rvArgs[i] = reflect.ValueOf(args[0])
+			var newV = reflect.New(argT)
+
+			if kind == reflect.String {
+				newV.SetString(args[0])
+			} else {
+				iValue, _ := strconv.ParseInt(args[0], 10, 64)
+				newV.SetInt(iValue)
+			}
+
+			rvArgs[i] = newV
+
 			if len(args) >= 2 {
 				suffix = args[1]
 			} else {
 				suffix = ""
 			}
-		} else if argT.Kind() == reflect.Slice && argT.Elem().Kind() == reflect.String {
+		} else if kind == reflect.Slice && argT.Elem().Kind() == reflect.String {
 			args := strings.SplitN(suffix, "/", -1)
 			rvArgs[i] = reflect.ValueOf(args)
 			i++
