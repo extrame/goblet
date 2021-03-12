@@ -136,28 +136,29 @@ func (a *anchor) add(path string, opt BlockOption) bool {
 				return true
 			}
 		}
-	} else {
-		loc_begin_prefix := a.loc - len(a.prefix)
-		len_part_path := len(path) - loc_begin_prefix
-		for i := loc_begin_prefix + len_part_path - 1; i > loc_begin_prefix; i-- {
-			if path[loc_begin_prefix:i] == a.prefix[:i-loc_begin_prefix] {
-
-				//new branch for old
-				branch := &anchor{a.loc, a.char, a.prefix[i-loc_begin_prefix+1:], a.branches, a.opt}
-				a.branches = []*anchor{branch}
-
-				//change old
-				a.char = a.prefix[i-loc_begin_prefix-1 : i-loc_begin_prefix]
-				a.prefix = a.prefix[:i-loc_begin_prefix-1]
-				a.loc = i - 1
-
-				//new branch for new
-				branch = &anchor{len(path) - 1, path[len(path)-1:], path[a.loc : len(path)-1], []*anchor{}, opt}
-				a.branches = append(a.branches, branch)
-				return true
-			}
-		}
 	}
+	// else {
+	// 	loc_begin_prefix := a.loc - len(a.prefix)
+	// 	len_part_path := len(path) - loc_begin_prefix
+	// 	for i := loc_begin_prefix + len_part_path - 1; i > loc_begin_prefix; i-- {
+	// 		if path[loc_begin_prefix:i] == a.prefix[:i-loc_begin_prefix] {
+
+	// 			//new branch for old
+	// 			branch := &anchor{a.loc, a.char, a.prefix[i-loc_begin_prefix+1:], a.branches, a.opt}
+	// 			a.branches = []*anchor{branch}
+
+	// 			//change old
+	// 			a.char = a.prefix[i-loc_begin_prefix-1 : i-loc_begin_prefix]
+	// 			a.prefix = a.prefix[:i-loc_begin_prefix-1]
+	// 			a.loc = i - 1
+
+	// 			//new branch for new
+	// 			branch = &anchor{len(path) - 1, path[len(path)-1:], path[a.loc : len(path)-1], []*anchor{}, opt}
+	// 			a.branches = append(a.branches, branch)
+	// 			return true
+	// 		}
+	// 	}
+	// }
 	return false
 }
 
