@@ -7,8 +7,8 @@ import (
 
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type router struct {
@@ -29,7 +29,7 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 
 	if r.URL.Path == "/" {
 		anch, suffix_url = rou.anchor.match("/index", 6)
-		glog.Infoln("routing /index\n", r.URL.Path)
+		logrus.Debugln("routing /index", r.URL.Path)
 	}
 
 	context := &Context{
@@ -52,9 +52,9 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 			main = r.URL.Path
 		}
 		anch, suffix_url = rou.anchor.match(main, len(main))
-		glog.Infof("routing %s", r.URL.Path)
+		logrus.Infof("routing %s", r.URL.Path)
 		if anch != nil {
-			glog.Infof("(dynamic)")
+			logrus.Infof("(dynamic)")
 		}
 	} else {
 		format = "html"
@@ -77,7 +77,7 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 			}
 		}
 		if *s.env == config.DevelopEnv && err != nil {
-			glog.Infoln("Err in Dynamic :", err)
+			logrus.Infoln("Err in Dynamic :", err)
 		}
 		return
 	}
