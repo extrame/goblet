@@ -16,9 +16,9 @@ import (
 	"sync"
 
 	"github.com/extrame/goblet/config"
-	"github.com/extrame/goblet/error"
-	"github.com/golang/glog"
+	ge "github.com/extrame/goblet/error"
 	"github.com/mvader/detect"
+	"github.com/sirupsen/logrus"
 )
 
 var renderLock sync.Mutex
@@ -134,7 +134,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 		yield, err = h.getTemplate(model_root, strconv.Itoa(status_code)+h.suffix, filepath.Join(strconv.Itoa(status_code)+h.suffix))
 		if err != nil {
-			glog.Infoln("Find Err Code Fail, ", err)
+			logrus.Infoln("Find Err Code Fail, ", err)
 		}
 	}
 
@@ -157,7 +157,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 		return &HttpRenderInstance{layout, yield, css + suffix, js + suffix}, nil
 	} else {
-		glog.Infoln("parse Template missing for %v", ctx)
+		logrus.Debugf("parse Template missing for %v", ctx)
 	}
 	return
 }
@@ -205,16 +205,16 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string) {
 	// parent.New("")
 	if !h.saveTemp { //for debug
-		glog.Infoln("init template in ", h.dir, dir, "helper")
+		logrus.Infoln("init template in ", h.dir, dir, "helper")
 	}
 	//scan for the helpers
 	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
 			name := strings.TrimSuffix(info.Name(), h.suffix)
-			glog.Infof("Parse helper:%s(%s)", name, path)
+			logrus.Infof("Parse helper:%s(%s)", name, path)
 			e := parseFileWithName(parent, name, path)
 			if e != nil {
-				glog.Infof("ERROR template.ParseFile: %v", e)
+				logrus.Infof("ERROR template.ParseFile: %v", e)
 			}
 		}
 		return nil
@@ -256,13 +256,13 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		file = args[1]
 	}
 	if !h.saveTemp { //for debug
-		glog.Infoln("get template of", name, file)
+		logrus.Infoln("get template of", name, file)
 	}
 	file = filepath.FromSlash(file)
 	var t *template.Template
 	if t = root.Lookup(name); !h.saveTemp || t == nil {
 		if h.saveTemp {
-			glog.Infoln("try to parse template of", name)
+			logrus.Debugln("try to parse template of", name)
 		}
 
 		if err == nil {
@@ -273,7 +273,7 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 			} else {
 				if os.IsNotExist(err) {
 					if !h.saveTemp {
-						glog.Errorf("template for (%s) is missing", file)
+						logrus.Errorf("template for (%s) is missing", file)
 					}
 					return nil, ge.NOSUCHROUTER
 				} else {
@@ -302,7 +302,7 @@ func (h *HttpRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface
 				err = temp.Execute(wr, data)
 			}
 			if err != nil {
-				glog.Error("[in yield]%v%T", err, err)
+				logrus.Error("[in yield]%v%T", err, err)
 			}
 			// return safe html here since we are rendering our own template
 			return html, err

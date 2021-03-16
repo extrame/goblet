@@ -83,7 +83,7 @@ func (s *Server) DelFileInPublic(path string) error {
 }
 
 //将文件保存在私有目录，不可以使用http访问到
-func (s *Server) SaveInPrivate(path string, f *File) error {
+func (s *Server) SaveInPrivate(path string, f io.Reader) error {
 	fullPath := filepath.Join(*s.wwwRoot, path)
 	return s.saver.Save(fullPath, f)
 }
