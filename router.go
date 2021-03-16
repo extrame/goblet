@@ -113,29 +113,29 @@ func (a *anchor) add(path string, opt BlockOption) bool {
 				}
 			}
 		}
-		for i := 0; i < len(full_stored_path); i++ {
-			if path[a.loc+1-len(full_stored_path):a.loc+1-i] == full_stored_path[:len(full_stored_path)-i] {
-				var branch *anchor
-				if i != 0 {
-					branch = &anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, a.opt}
-					a.branches = []*anchor{branch}
-				} else {
-					if path[a.loc-len(a.prefix):] == full_stored_path {
-						a.opt = opt
-						return true
-					}
+		// for i := 0; i < len(full_stored_path); i++ {
+		if path[a.loc+1-len(full_stored_path):a.loc+1-i] == full_stored_path[:len(full_stored_path)-i] {
+			var branch *anchor
+			if i != 0 {
+				branch = &anchor{a.loc, a.char, strings.TrimPrefix(a.prefix, full_stored_path[:len(full_stored_path)-i]), a.branches, a.opt}
+				a.branches = []*anchor{branch}
+			} else {
+				if path[a.loc-len(a.prefix):] == full_stored_path {
+					a.opt = opt
+					return true
 				}
-
-				//add new b
-				a.loc = a.loc - i
-				branch = &anchor{len(path) - 1, path[len(path)-1:], path[a.loc+1 : len(path)-1], []*anchor{}, opt}
-				a.branches = append(a.branches, branch)
-				//change a
-				a.char = full_stored_path[len(full_stored_path)-1-i : len(full_stored_path)-i]
-				a.prefix = full_stored_path[:len(full_stored_path)-1-i]
-				return true
 			}
+
+			//add new b
+			a.loc = a.loc - i
+			branch = &anchor{len(path) - 1, path[len(path)-1:], path[a.loc+1 : len(path)-1], []*anchor{}, opt}
+			a.branches = append(a.branches, branch)
+			//change a
+			a.char = full_stored_path[len(full_stored_path)-1-i : len(full_stored_path)-i]
+			a.prefix = full_stored_path[:len(full_stored_path)-1-i]
+			return true
 		}
+		// }
 	}
 	// else {
 	// 	loc_begin_prefix := a.loc - len(a.prefix)

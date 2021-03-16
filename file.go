@@ -67,7 +67,7 @@ func (f *File) OpenInPrivate(s *Server) error {
 }
 
 //将文件保存在公开目录，可以使用http访问到
-func (s *Server) SaveInPublic(path string, f *File) error {
+func (s *Server) SaveInPublic(path string, f io.Reader) error {
 	fullPath := filepath.Join(*s.wwwRoot, s.PublicDir(), path)
 	return s.saver.Save(fullPath, f)
 }
