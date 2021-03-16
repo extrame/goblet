@@ -113,6 +113,7 @@ func (a *anchor) add(path string, opt BlockOption) bool {
 				}
 			}
 		}
+		i := 0
 		// for i := 0; i < len(full_stored_path); i++ {
 		if path[a.loc+1-len(full_stored_path):a.loc+1-i] == full_stored_path[:len(full_stored_path)-i] {
 			var branch *anchor
