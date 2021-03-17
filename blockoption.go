@@ -365,11 +365,23 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 	i++
 
 	if i < typ.NumIn() {
-		newV := reflect.New(typ.In(i))
+		var typArg = typ.In(i)
+		var newV reflect.Value
+		if typArg.Kind() == reflect.Ptr {
+			newV = reflect.New(typ.In(i).Elem())
+		} else {
+			newV = reflect.New(typ.In(i))
+		}
+
 		if err := ctx.Fill(newV.Interface()); err != nil {
 			glog.Errorln("parse arguments error", err)
 		}
-		rvArgs[i] = newV.Elem()
+		if typArg.Kind() == reflect.Ptr {
+			rvArgs[i] = newV
+		} else {
+			rvArgs[i] = newV.Elem()
+		}
+
 	}
 
 	return method.Call(rvArgs)
