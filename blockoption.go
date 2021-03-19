@@ -311,7 +311,7 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 func checkResult(results []reflect.Value, ctx *Context) {
 	if len(results) > 0 && ctx.response == nil && ctx.responseMap == nil {
 		for i := len(results); i > 0; i-- {
-			var ires = results[i].Interface()
+			var ires = results[i-1].Interface()
 			if err, ok := ires.(error); !ok {
 				ctx.Respond(ires)
 				return
