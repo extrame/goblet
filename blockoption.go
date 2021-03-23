@@ -188,7 +188,7 @@ func (r *BasicBlockOption) tryPre(m string, ctx *Context) bool {
 	key = strings.ToLower(key)
 	if pc, ok := ctx.Server.pres[key]; ok {
 		for _, fn := range pc {
-			results := callMethod(fn, ctx)
+			results, _ := callMethod(fn, ctx)
 			if err, ok := results[0].Interface().(error); ok && err != nil {
 				if err != Interrupted {
 					ctx.RespondError(err)
@@ -285,8 +285,8 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 		ctx.method = name
 
 		if g.tryPre(name, ctx) {
-			results := callMethod(method, ctx)
-			checkResult(results, ctx)
+			results, typ := callMethod(method, ctx)
+			checkResult(results, typ, ctx)
 		}
 
 		// key := strings.ToLower(g.name + "-" + name)
@@ -308,25 +308,28 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 
 }
 
-func checkResult(results []reflect.Value, ctx *Context) {
+var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
+
+func checkResult(results []reflect.Value, typ reflect.Type, ctx *Context) {
 	if len(results) > 0 && ctx.response == nil && ctx.responseMap == nil {
 		for i := len(results); i > 0; i-- {
 			var ires = results[i-1].Interface()
-			if err, ok := ires.(error); !ok {
+			var ti = typ.Out(i - 1)
+			ok := ti.Implements(errorInterface)
+			if !ok {
 				ctx.Respond(ires)
 				return
-			} else if ok && err != nil {
+			} else if ok && !results[i-1].IsNil() {
 				//优先按最后一个error参数返回错误，符合主流编程习惯
-				ctx.RespondError(err)
+				ctx.RespondError(ires.(error))
 				return
 			}
 		}
 		ctx.RespondOK()
 	}
-
 }
 
-func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
+func callMethod(method reflect.Value, ctx *Context) ([]reflect.Value, reflect.Type) {
 	typ := method.Type()
 	rvArgs := make([]reflect.Value, typ.NumIn())
 	var i = 0
@@ -390,7 +393,7 @@ func callMethod(method reflect.Value, ctx *Context) []reflect.Value {
 
 	}
 
-	return method.Call(rvArgs)
+	return method.Call(rvArgs), typ
 }
 
 func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) error {
@@ -405,12 +408,12 @@ func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) e
 		return err
 	} else {
 		if r.tryPre(methodName, ctx) {
-			results := callMethod(method, ctx)
+			results, typ := callMethod(method, ctx)
 			//可以接收传统的无返回，直接结束
 			// 或者有返回，如果返回不是error，且不为空，返回结果
 			// 如果有返回，且返回是error，不为空，返回错误
 			// 其他情况，直接返回ok
-			checkResult(results, ctx)
+			checkResult(results, typ, ctx)
 		}
 	}
 
