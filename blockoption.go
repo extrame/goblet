@@ -311,7 +311,8 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
 
 func checkResult(results []reflect.Value, typ reflect.Type, ctx *Context) {
-	if len(results) > 0 && ctx.response == nil && ctx.responseMap == nil {
+	// status_code is not setted
+	if len(results) > 0 && !ctx.already_writed && ctx.response == nil && ctx.responseMap == nil && ctx.status_code == 0 {
 		for i := len(results); i > 0; i-- {
 			var ires = results[i-1].Interface()
 			var ti = typ.Out(i - 1)
