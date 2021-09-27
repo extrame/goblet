@@ -13,9 +13,9 @@ require (
 	github.com/extrame/unmarshall v0.0.0-20210114085309-550b3096d6a7
 	github.com/garyburd/redigo v1.6.2
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/mvader/detect v0.0.0-20160524092137-c0c2ff5e5733
-    github.com/mvader/useragent v0.4.2-0.20160524083018-8a6137f931b1 // indirect
+	github.com/mvader/useragent v0.4.2-0.20160524083018-8a6137f931b1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.0

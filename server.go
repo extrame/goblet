@@ -17,7 +17,6 @@ import (
 	"github.com/pkg/errors"
 	"xorm.io/xorm/caches"
 
-	"github.com/golang/glog"
 	"github.com/sirupsen/logrus"
 
 	toml "github.com/extrame/go-toml-config"
@@ -260,7 +259,7 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 	if sync {
 		err = DB.Sync2(models)
 		if err != nil {
-			glog.Fatalln("sync error:", err)
+			logrus.Fatalln("sync error:", err)
 		}
 	}
 }
@@ -320,7 +319,7 @@ func (s *Server) GetPlugin(key string) NewPlugin {
 func (s *Server) parseConfig() (err error) {
 	flag.StringVar(&s.ConfigFile, "config", "./"+s.Name+".conf", "设置配置文件的路径")
 	for key, plugin := range s.oldPlugins {
-		glog.Errorln("使用旧版插件，请升级该插件到新版本")
+		logrus.Errorln("使用旧版插件，请升级该插件到新版本")
 		plugin.ParseConfig(key)
 	}
 	s.wwwRoot = toml.String("basic.www_root", "./www")
@@ -349,7 +348,7 @@ func (s *Server) parseConfig() (err error) {
 	*s.env = strings.ToLower(*s.env)
 
 	if *s.env != config.DevelopEnv && *s.env != config.ProductEnv && *s.env != config.OldProductEnv {
-		glog.Fatalln("environment must be development or production")
+		logrus.Fatalln("environment must be development or production")
 	} else if *s.env == config.OldProductEnv {
 		*s.env = config.ProductEnv
 		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
@@ -362,7 +361,7 @@ func (s *Server) parseConfig() (err error) {
 	}
 	for _, plugin := range s.plugins {
 		if err = plugin.AddCfgAndInit(s); err != nil {
-			glog.Fatalf("add plugin config error in (%T) with error (%s)", plugin, err)
+			logrus.Fatalf("add plugin config error in (%T) with error (%s)", plugin, err)
 		}
 	}
 	if err == nil {

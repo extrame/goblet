@@ -11,9 +11,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/glog"
-
 	"github.com/extrame/unmarshall"
+	"github.com/sirupsen/logrus"
 )
 
 type FormFillFn func(content string) (interface{}, error)
@@ -59,7 +58,7 @@ func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool)
 		return err
 	}
 	if err = xml.Unmarshal(cx.fill_bts, v); err != nil {
-		glog.Errorf("[Fill Error]Request:%s,Err:%s\n", string(cx.fill_bts), err.Error())
+		logrus.Errorf("[Fill Error]Request:%s,Err:%s\n", string(cx.fill_bts), err.Error())
 	}
 	return err
 }
@@ -179,6 +178,7 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 				var h *multipart.FileHeader
 				if f, h, err = cx.request.FormFile(id); err == nil {
 					file.Name = h.Filename
+					file.Header = h.Header
 					file.rc = f
 					return reflect.ValueOf(file), err
 				} else {

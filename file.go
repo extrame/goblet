@@ -3,14 +3,16 @@ package goblet
 import (
 	"io"
 	"mime/multipart"
+	"net/textproto"
 	"os"
 	"path/filepath"
 )
 
 type File struct {
-	Name string
-	Path string
-	rc   multipart.File `xorm:"-"`
+	Name   string
+	Path   string
+	Header textproto.MIMEHeader
+	rc     multipart.File `xorm:"-"`
 }
 
 func (f *File) Read(p []byte) (n int, err error) {

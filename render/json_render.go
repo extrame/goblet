@@ -23,7 +23,7 @@ type JsonRenderInstance int8
 
 func (r *JsonRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
-	hwr.Header().Add("Content-Type", "application/json")
+	hwr.Header().Add("Content-Type", "application/json; charset=utf-8")
 	hwr.WriteHeader(status)
 	v, err = json.Marshal(data)
 	if err == nil {

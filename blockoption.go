@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	ge "github.com/extrame/goblet/error"
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 )
 
 type Route byte
@@ -384,7 +384,7 @@ func callMethod(method reflect.Value, ctx *Context) ([]reflect.Value, reflect.Ty
 		}
 
 		if err := ctx.Fill(newV.Interface()); err != nil {
-			glog.Errorln("parse arguments error", err)
+			logrus.Errorln("parse arguments error", err)
 		}
 		if typArg.Kind() == reflect.Ptr {
 			rvArgs[i] = newV
@@ -402,9 +402,9 @@ func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) e
 	if !method.IsValid() {
 		var err = fmt.Errorf("you have no method named (%s)", methodName)
 		if ctx.Server.Env() == ProductEnv {
-			glog.Infof(err.Error())
+			logrus.Infof(err.Error())
 		} else {
-			glog.Fatalf(err.Error())
+			logrus.Fatalf(err.Error())
 		}
 		return err
 	} else {
@@ -534,7 +534,7 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 		basic.layout = "default"
 	}
 
-	glog.Errorf("[%T]fork on %v", block, basic.routing)
+	logrus.Errorf("[%T]fork on %v", block, basic.routing)
 
 	return newBlock(basic, block, ignoreCase)
 }

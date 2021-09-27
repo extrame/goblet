@@ -3,7 +3,7 @@ package goblet
 import (
 	"errors"
 
-	"github.com/golang/glog"
+	"github.com/sirupsen/logrus"
 )
 
 var NoSuchRecord = errors.New("no such record")
@@ -25,7 +25,7 @@ func (s *Server) KV(name string) Kv {
 	if s.kv != nil {
 		return s.kv.Collection(name)
 	} else {
-		glog.Errorln("not specified kv driver, please specified in server.Organize func")
+		logrus.Errorln("not specified kv driver, please specified in server.Organize func")
 		return nil
 	}
 }
