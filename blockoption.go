@@ -230,6 +230,8 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 	var method reflect.Value
 	var name string
 
+	isOptions := false
+
 	if len(ctx.suffix) > 1 {
 		name = ctx.suffix[1:]
 
@@ -254,6 +256,9 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 			}
 			name = strings.ToLower(name)
 			switch name {
+			case "options":
+				isOptions = true
+				fallthrough
 			case "post":
 				method = g.block.MethodByName("Post")
 			case "get":
@@ -273,6 +278,9 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 		}
 		name = strings.ToLower(name)
 		switch name {
+		case "options":
+			isOptions = true
+			fallthrough
 		case "post":
 			method = g.block.MethodByName("Post")
 		case "get":
@@ -281,6 +289,8 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 	}
 	if !method.IsValid() {
 		return ge.NOSUCHROUTER
+	} else if isOptions {
+		ctx.RespondOK()
 	} else {
 		ctx.method = name
 
