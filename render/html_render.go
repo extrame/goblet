@@ -134,7 +134,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 		yield, err = h.getTemplate(model_root, strconv.Itoa(status_code)+h.suffix, filepath.Join(strconv.Itoa(status_code)+h.suffix))
 		if err != nil {
-			logrus.Infoln("Find Err Code Fail, ", err)
+			logrus.Debugln("Find Err Code Fail, ", err)
 		}
 	}
 

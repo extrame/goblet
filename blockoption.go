@@ -230,7 +230,12 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 	var method reflect.Value
 	var name string
 
-	isOptions := false
+	const GetOptionButJustHasPost, GetOptionAndHasOption = 1, 2
+
+	isOptions := 0
+	var allowdMethods = []string{
+		"POST",
+	}
 
 	if len(ctx.suffix) > 1 {
 		name = ctx.suffix[1:]
@@ -257,8 +262,14 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 			name = strings.ToLower(name)
 			switch name {
 			case "options":
-				isOptions = true
-				fallthrough
+				isOptions = GetOptionAndHasOption
+				method = g.block.MethodByName("Options")
+				if method.IsValid() {
+					allowdMethods = append(allowdMethods, "OPTIONS")
+				} else {
+					isOptions = GetOptionButJustHasPost
+					method = g.block.MethodByName("Post")
+				}
 			case "post":
 				method = g.block.MethodByName("Post")
 			case "get":
@@ -279,17 +290,28 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 		name = strings.ToLower(name)
 		switch name {
 		case "options":
-			isOptions = true
-			fallthrough
+			method = g.block.MethodByName("Options")
+			if method.IsValid() {
+				isOptions = GetOptionAndHasOption
+				allowdMethods = append(allowdMethods, "OPTIONS")
+			} else {
+				isOptions = GetOptionButJustHasPost
+				method = g.block.MethodByName("Post")
+			}
 		case "post":
 			method = g.block.MethodByName("Post")
 		case "get":
 			method = g.block.MethodByName("Get")
 		}
 	}
+	if isOptions > 0 {
+		for i := len(allowdMethods); i > 0; i-- {
+			ctx.SetHeader("Allow", allowdMethods[i-1])
+		}
+	}
 	if !method.IsValid() {
 		return ge.NOSUCHROUTER
-	} else if isOptions {
+	} else if isOptions == GetOptionButJustHasPost {
 		ctx.RespondOK()
 	} else {
 		ctx.method = name
