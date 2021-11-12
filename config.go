@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/extrame/unmarshall"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -70,5 +71,6 @@ func getChildNode(parent *yaml.Node, name string) *yaml.Node {
 			return parent.Content[n+1]
 		}
 	}
-	return nil
+	logrus.Info("there is no cfg node named:", name)
+	return new(yaml.Node)
 }
