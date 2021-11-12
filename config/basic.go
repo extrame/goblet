@@ -34,5 +34,6 @@ func (s *Basic) UnmarshalYAML(value *yaml.Node) (err error) {
 	s.Env = ProductEnv
 	s.DbEngine = "mysql"
 	s.EnableKeepAlive = true
-	return value.Decode(s)
+	type plain Basic
+	return value.Decode((*plain)(s))
 }

@@ -2,22 +2,22 @@ package redissession
 
 import (
 	"errors"
-	"github.com/extrame/go-random"
-	toml "github.com/extrame/go-toml-config"
-	"github.com/extrame/goblet"
-	"github.com/garyburd/redigo/redis"
 	"log"
 	"net/http"
+
+	gorandom "github.com/extrame/go-random"
+	"github.com/extrame/goblet"
+	"github.com/garyburd/redigo/redis"
 )
 
 //TODO
 
 type RedisSession struct {
-	address     *string
-	pwd         *string
-	db          *int64
-	sessionType *string
-	tokenName   *string
+	Address     string `goblet:"address,localhost:6379"`
+	Pwd         string `goblet:"pwd"`
+	Db          int64  `goblet:"db"`
+	SessionType string `goblet:"type,cookie"`
+	TokenName   string `goblet:"token_name,token"`
 }
 
 var redisPool *redis.Pool
@@ -25,14 +25,12 @@ var cookietype string
 var tokenName string
 var PoolMaxIdle = 10
 
-func (r *RedisSession) ParseConfig(prefix string) error {
-	log.Println("++++++++++++=", prefix)
-	r.address = toml.String(prefix+".address", "localhost:6379")
-	r.pwd = toml.String(prefix+".password", "")
-	r.db = toml.Int64(prefix+".db", 0)
-	r.sessionType = toml.String(prefix+".type", "cookie")
-	r.tokenName = toml.String(prefix+".token_name", "token")
-	return nil
+func (r *RedisSession) AddCfgAndInit(server *goblet.Server) error {
+	err := server.AddConfig("redissession", r)
+	if err == nil {
+		return r.Init(server)
+	}
+	return err
 }
 
 func (s *RedisSession) OnNewRequest(ctx *goblet.Context) error {
@@ -61,22 +59,22 @@ func addSessionWithValue(ctx *goblet.Context, value string) {
 }
 
 func (r *RedisSession) Init(server *goblet.Server) error {
-	cookietype = *r.sessionType
-	tokenName = *r.tokenName
+	cookietype = r.SessionType
+	tokenName = r.TokenName
 	redisPool = redis.NewPool(func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", *r.address)
+		c, err := redis.Dial("tcp", r.Address)
 		if err != nil {
 			log.Println("--Redis--Connect redis fail:" + err.Error())
 			return nil, err
 		}
-		if len(*r.pwd) > 0 {
-			if _, err := c.Do("AUTH", *r.pwd); err != nil {
+		if len(r.Pwd) > 0 {
+			if _, err := c.Do("AUTH", r.Pwd); err != nil {
 				c.Close()
 				log.Println("--Redis--Auth redis fail:" + err.Error())
 				return nil, err
 			}
 		}
-		if _, err := c.Do("SELECT", *r.db); err != nil {
+		if _, err := c.Do("SELECT", r.Db); err != nil {
 			c.Close()
 			log.Println("--Redis--Select redis db fail:" + err.Error())
 			return nil, err

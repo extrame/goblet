@@ -2,35 +2,33 @@ package oss
 
 import (
 	"errors"
-	"github.com/denverdino/aliyungo/oss"
-	toml "github.com/extrame/go-toml-config"
-	"github.com/extrame/goblet"
 	"io"
+
+	"github.com/denverdino/aliyungo/oss"
+	"github.com/extrame/goblet"
 )
 
 type Alioss struct {
-	region          *string
-	accessKeyId     *string
-	accessKeySecret *string
+	Region          string `goblet:"region,beijing"`
+	AccessKeyId     string `goblet:"access_id"`
+	AccessKeySecret string `goblet:"access_secret"`
 }
 
 var ossclient *oss.Client
 
 func (r *Alioss) Init(server *goblet.Server) error {
-	ossclient = newSaver(r.region, r.accessKeyId, r.accessKeySecret)
+	ossclient = newSaver(r.Region, r.AccessKeyId, r.AccessKeySecret)
 	return nil
 }
 
-func (r *Alioss) ParseConfig(prefix string) error {
-	r.region = toml.String(prefix+".region", "beijing")
-	r.accessKeyId = toml.String(prefix+".access_id", "")
-	r.accessKeySecret = toml.String(prefix+".access_secret", "")
-	return nil
+func (s *Alioss) AddCfgAndInit(server *goblet.Server) error {
+	server.AddConfig("alioss", &s)
+	return s.Init(server)
 }
 
-func newSaver(region, accessKeyId, accessKeySecret *string) (l *oss.Client) {
+func newSaver(region, accessKeyId, accessKeySecret string) (l *oss.Client) {
 	reg := oss.Beijing
-	switch *region {
+	switch region {
 	case "beijing":
 		reg = oss.Beijing
 	case "qingdao":
@@ -45,11 +43,11 @@ func newSaver(region, accessKeyId, accessKeySecret *string) (l *oss.Client) {
 		reg = oss.Hongkong
 	}
 
-	return oss.NewOSSClient(reg, false, *accessKeyId, *accessKeySecret, false)
+	return oss.NewOSSClient(reg, false, accessKeyId, accessKeySecret, false)
 }
 
 func InitSaver(region, accessKeyId, accessKeySecret string) {
-	ossclient = newSaver(&region, &accessKeyId, &accessKeySecret)
+	ossclient = newSaver(region, accessKeyId, accessKeySecret)
 }
 
 func PutFile(bucket, path string, file io.Reader, size int64) error {

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	toml "github.com/extrame/go-toml-config"
+	"github.com/extrame/goblet/config"
 	"github.com/extrame/unmarshall"
 	"gopkg.in/yaml.v3"
 )
@@ -16,34 +17,50 @@ func TestConfigSubStruct(t *testing.T) {
 		Type   string `goblet:"type,t1"`
 		Detail []struct {
 			Name string `goblet:"name,here"`
-		} `goblet:"detail"`
+			Sex  int    `goblet:"sex"`
+		} `goblet:"array"`
 	}
 
-	var node = make(map[string]*yaml.Node)
+	var node = new(yaml.Node)
 
 	err := yaml.NewDecoder(strings.NewReader(`
 basic:
-  www_root: ./www
-type:
-  test: t2
+  www_root: ./www3214
+test:
+  type: t2
   array:
     - name: 1
       sex: 2
     - name: 2
       sex: 3
-  `)).Decode(&node)
+  `)).Decode(node)
 
-	fmt.Println(node, err)
+	// for n, m := range node {
+	// 	fmt.Println(n, m)
+	// }
 
-	var m = fetch(node["type"])
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	fmt.Println(m)
+	var basic = getChildNode(node, "basic")
+	var b config.Basic
+	basic.Decode(&b)
+
+	fmt.Println(b)
+
+	ctx := fetch(getChildNode(node, "test"))
+
+	fmt.Println(ctx)
 
 	var u = unmarshall.Unmarshaller{
 		ValueGetter: func(tag string) []string {
-
-			return []string{}
-
+			fmt.Println(tag, ctx[tag])
+			if v, ok := ctx[tag]; ok {
+				return []string{v}
+			} else {
+				return []string{}
+			}
 		},
 		ValuesGetter: func(prefix string) url.Values {
 			return make(url.Values)

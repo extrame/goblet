@@ -1,10 +1,5 @@
 package goblet
 
-type Plugin interface {
-	ParseConfig(prefix string) error
-	Init(server *Server) error
-}
-
 type NewPlugin interface {
 	AddCfgAndInit(server *Server) error
 }

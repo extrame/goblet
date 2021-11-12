@@ -45,5 +45,6 @@ func (d *Db) New(engine string) (db *xorm.Engine, err error) {
 func (s *Db) UnmarshalYAML(value *yaml.Node) (err error) {
 	s.Port = 3306
 	s.TO = 30
-	return value.Decode(s)
+	type plain Db
+	return value.Decode((*plain)(s))
 }

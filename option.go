@@ -1,8 +1,7 @@
 package goblet
 
 type Option struct {
-	DB      string
-	Plugins []Plugin
+	DB string
 }
 
 func (o Option) overlay(opts []Option) {

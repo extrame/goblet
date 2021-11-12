@@ -1,41 +1,44 @@
 package session
 
 import (
-	toml "github.com/extrame/go-toml-config"
-	"github.com/garyburd/redigo/redis"
 	"log"
+
+	"github.com/extrame/goblet"
+	"github.com/garyburd/redigo/redis"
 )
 
 type redisStore struct {
-	address *string
-	pwd     *string
-	db      *int64
+	Address string `goblet:"address,localhost:6379"`
+	Pwd     string `goblet:"password"`
+	Db      int64  `goblet:"db"`
 }
 
 var redisPool *redis.Pool
 var PoolMaxIdle = 10
 
-func (r *redisStore) parseConfig(prefix string) {
-	r.address = toml.String("redis.address", "localhost:6379")
-	r.pwd = toml.String("redis.password", "")
-	r.db = toml.Int64("redis.db", 0)
+func (r *redisStore) AddCfgAndInit(server *goblet.Server) error {
+	err := server.AddConfig("redisstore", r)
+	if err == nil {
+		return r.Init()
+	}
+	return err
 }
 
 func (r *redisStore) Init() error {
 	redisPool = redis.NewPool(func() (redis.Conn, error) {
-		c, err := redis.Dial("tcp", *r.address)
+		c, err := redis.Dial("tcp", r.Address)
 		if err != nil {
 			log.Println("--Redis--Connect redis fail:" + err.Error())
 			return nil, err
 		}
-		if len(*r.pwd) > 0 {
-			if _, err := c.Do("AUTH", *r.pwd); err != nil {
+		if len(r.Pwd) > 0 {
+			if _, err := c.Do("AUTH", r.Pwd); err != nil {
 				c.Close()
 				log.Println("--Redis--Auth redis fail:" + err.Error())
 				return nil, err
 			}
 		}
-		if _, err := c.Do("SELECT", *r.db); err != nil {
+		if _, err := c.Do("SELECT", r.Db); err != nil {
 			c.Close()
 			log.Println("--Redis--Select redis db fail:" + err.Error())
 			return nil, err

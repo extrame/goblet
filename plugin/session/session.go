@@ -39,24 +39,6 @@ func (s *Session) AddCfgAndInit(server *goblet.Server) error {
 	return s.store.Init()
 }
 
-// func (s *Session) Init(server *goblet.Server) (err error) {
-// 	switch *s.storeType {
-// 	case "local":
-// 		s.store = &localStore{}
-// 	case "redis":
-// 		s.store = &redisStore{}
-// 	}
-// 	return s.store.Init()
-// }
-
-// func (s *Session) ParseConfig(prefix string) (err error) {
-// 	s.storeType = toml.String(prefix+".store", "local")
-// 	s.Redis.Address = toml.String(prefix+".redis.address", "localhost:6379")
-// 	s.Redis.Pwd = toml.String(prefix+".redis.password", "")
-// 	s.Redis.Db = toml.Int64(prefix+".redis.db", 0)
-// 	return
-// }
-
 func (s *Session) addSession(ctx *goblet.Context) {
 	cookie := new(http.Cookie)
 	cookie.Name = sessionName

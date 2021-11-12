@@ -1,7 +1,9 @@
 package session
 
+import "github.com/extrame/goblet"
+
 type sessionStore interface {
-	parseConfig(prefix string)
+	AddCfgAndInit(*goblet.Server) error
 	storeForUser(key string, itemKey string, item interface{})
 	get(userKey, itemKey string) (interface{}, bool)
 
@@ -36,7 +38,8 @@ func (l *localStore) removeItem(userKey, itemKey string) {
 	}
 }
 
-func (l *localStore) parseConfig(prefix string) {
+func (l *localStore) AddCfgAndInit(*goblet.Server) error {
+	return nil
 }
 
 func (l *localStore) Init() error {

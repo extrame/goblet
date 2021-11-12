@@ -8,8 +8,8 @@ type Cache struct {
 }
 
 func (s *Cache) UnmarshalYAML(value *yaml.Node) (err error) {
-
-	err = value.Decode(s)
+	type plain Cache
+	err = value.Decode((*plain)(s))
 
 	if err == nil {
 		if s.Amount == 0 {
@@ -18,6 +18,3 @@ func (s *Cache) UnmarshalYAML(value *yaml.Node) (err error) {
 	}
 	return
 }
-
-// s.enDbCache = toml.Bool("cache.enable", false)
-// s.cacheAmout = toml.Int("cache.amount", 1000)

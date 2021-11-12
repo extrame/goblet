@@ -49,7 +49,6 @@ type Server struct {
 	Renders map[string]render.Render
 
 	Name          string
-	oldPlugins    map[string]Plugin
 	plugins       map[string]NewPlugin
 	funcs         []Fn
 	initCtrl      []ControllerNeedInit
@@ -62,7 +61,7 @@ type Server struct {
 	okFunc        func(*Context)
 	errFunc       func(*Context, error, ...string)
 	defaultRender string
-	cfg           map[string]*yaml.Node
+	cfg           *yaml.Node
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -102,17 +101,6 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	var dbUserPlugin dbUserNamePlugin
 	s.Name = name
 	for _, plugin := range plugins {
-		if tp, ok := plugin.(Plugin); ok {
-			typ := reflect.ValueOf(plugin).Type()
-			if typ.Kind() == reflect.Ptr {
-				typ = typ.Elem()
-			}
-			key := strings.ToLower(typ.Name())
-			if s.oldPlugins == nil {
-				s.oldPlugins = make(map[string]Plugin)
-			}
-			s.oldPlugins[key] = tp
-		}
 		if tp, ok := plugin.(NewPlugin); ok {
 			typ := reflect.ValueOf(plugin).Type()
 			if typ.Kind() == reflect.Ptr {
@@ -178,9 +166,6 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		log.Fatalln(err)
 	}
 	s.enableDbCache()
-	for _, plugin := range s.oldPlugins {
-		plugin.Init(s)
-	}
 	if s.errFunc == nil {
 		s.errFunc = defaultErrFunc
 	}
@@ -300,10 +285,6 @@ func (s *Server) GetPlugin(key string) NewPlugin {
 
 func (s *Server) parseConfig() (err error) {
 	flag.StringVar(&s.ConfigFile, "config", "./"+s.Name+".conf", "设置配置文件的路径")
-	for key, plugin := range s.oldPlugins {
-		logrus.Errorln("使用旧版插件，请升级该插件到新版本")
-		plugin.ParseConfig(key)
-	}
 	flag.Parse()
 
 	s.ConfigFile = filepath.FromSlash(s.ConfigFile)
@@ -311,13 +292,14 @@ func (s *Server) parseConfig() (err error) {
 	f, err = os.Open(s.ConfigFile)
 	if err == nil {
 		s.initLog()
-		err = yaml.NewDecoder(f).Decode(&s.cfg)
+		s.cfg = new(yaml.Node)
+		err = yaml.NewDecoder(f).Decode(s.cfg)
 		if err == nil {
-			if err = s.cfg["basic"].Decode(&s.Basic); err == nil {
+			if err = s.getCfg("basic").Decode(&s.Basic); err == nil {
 				s.Db.Name = s.Name
-				if err = s.cfg["db"].Decode(&s.Db); err == nil {
-					if err = s.cfg["cache"].Decode(&s.Cache); err == nil {
-						s.cfg["log"].Decode(&s.Log)
+				if err = s.getCfg("db").Decode(&s.Db); err == nil {
+					if err = s.getCfg("cache").Decode(&s.Cache); err == nil {
+						s.getCfg("log").Decode(&s.Log)
 					}
 				}
 			}
@@ -329,9 +311,6 @@ func (s *Server) parseConfig() (err error) {
 	} else if s.Basic.Env == config.OldProductEnv {
 		s.Basic.Env = config.ProductEnv
 		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
-	}
-	for _, plugin := range s.oldPlugins {
-		plugin.Init(s)
 	}
 	for _, plugin := range s.plugins {
 		if err = plugin.AddCfgAndInit(s); err != nil {
@@ -398,4 +377,8 @@ func (s *Server) Run() error {
 	}
 	logrus.Println(err)
 	return err
+}
+
+func (s *Server) getCfg(name string) *yaml.Node {
+	return getChildNode(s.cfg, name)
 }
