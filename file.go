@@ -47,7 +47,7 @@ func (f *File) GetSize() int64 {
 
 func (f *File) SaveInPublic(dir string, s *Server) error {
 	f.Path = filepath.Join(s.PublicDir(), dir, f.Name)
-	return s.saver.Save(filepath.Join(*s.wwwRoot, f.Path), f)
+	return s.saver.Save(filepath.Join(s.Basic.WwwRoot, f.Path), f)
 }
 
 func (f *File) SaveInTemp(dir string, s *Server) error {
@@ -57,11 +57,11 @@ func (f *File) SaveInTemp(dir string, s *Server) error {
 
 func (f *File) SaveInPrivate(dir string, s *Server) error {
 	f.Path = filepath.Join(dir, f.Name)
-	return s.saver.Save(filepath.Join(*s.wwwRoot, f.Path), f)
+	return s.saver.Save(filepath.Join(s.Basic.WwwRoot, f.Path), f)
 }
 
 func (f *File) OpenInPrivate(s *Server) error {
-	fi, err := os.Open(filepath.Join(*s.wwwRoot, f.Path))
+	fi, err := os.Open(filepath.Join(s.Basic.WwwRoot, f.Path))
 	if err == nil {
 		f.rc = fi
 	}
@@ -70,23 +70,23 @@ func (f *File) OpenInPrivate(s *Server) error {
 
 //将文件保存在公开目录，可以使用http访问到
 func (s *Server) SaveInPublic(path string, f io.Reader) error {
-	fullPath := filepath.Join(*s.wwwRoot, s.PublicDir(), path)
+	fullPath := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path)
 	return s.saver.Save(fullPath, f)
 }
 
 func (s *Server) DelFileInPrivate(path string) error {
-	fullPath := filepath.Join(*s.wwwRoot, path)
+	fullPath := filepath.Join(s.Basic.WwwRoot, path)
 	return os.Remove(fullPath)
 }
 
 func (s *Server) DelFileInPublic(path string) error {
-	fullPath := filepath.Join(*s.wwwRoot, s.PublicDir(), path)
+	fullPath := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path)
 	return s.saver.Delete(fullPath)
 }
 
 //将文件保存在私有目录，不可以使用http访问到
 func (s *Server) SaveInPrivate(path string, f io.Reader) error {
-	fullPath := filepath.Join(*s.wwwRoot, path)
+	fullPath := filepath.Join(s.Basic.WwwRoot, path)
 	return s.saver.Save(fullPath, f)
 }
 

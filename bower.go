@@ -15,26 +15,26 @@ import (
 var bower_cache = make(map[string][][2]string)
 
 func (s *Server) Bower(name string, version ...string) (res [][2]string, err error) {
-	if *s.env == config.ProductEnv {
+	if s.Basic.Env == config.ProductEnv {
 		if res, ok := bower_cache[name]; ok {
 			return res, nil
 		}
 	}
 
-	root := filepath.Join(*s.wwwRoot, "public", "plugins", name)
+	root := filepath.Join(s.Basic.WwwRoot, "public", "plugins", name)
 	if _, err = os.Stat(root); os.IsNotExist(err) {
-		if *s.env == config.ProductEnv {
+		if s.Basic.Env == config.ProductEnv {
 			log.Panicf("no %s plugins in production environment", name)
 		}
-		if _, err = os.Stat(filepath.Join(*s.wwwRoot, "public", ".bowerrc")); os.IsNotExist(err) {
-			ioutil.WriteFile(filepath.Join(*s.wwwRoot, "public", ".bowerrc"), []byte(`{"directory" : "plugins"}`), 0644)
+		if _, err = os.Stat(filepath.Join(s.Basic.WwwRoot, "public", ".bowerrc")); os.IsNotExist(err) {
+			ioutil.WriteFile(filepath.Join(s.Basic.WwwRoot, "public", ".bowerrc"), []byte(`{"directory" : "plugins"}`), 0644)
 		}
 		if len(version) > 0 {
 			name = name + "#" + version[0]
 		}
 		c := exec.Command("bower", "install", "-S", name, "--allow-root")
 		c.Env = os.Environ()
-		c.Dir = filepath.Join(*s.wwwRoot, "public")
+		c.Dir = filepath.Join(s.Basic.WwwRoot, "public")
 		c.Stderr = LogFile
 		if err = c.Run(); err != nil {
 			return
@@ -51,7 +51,7 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 		}
 	}
 
-	if *s.env == config.ProductEnv {
+	if s.Basic.Env == config.ProductEnv {
 		if err == nil {
 			bower_cache[name] = res
 		}
@@ -62,7 +62,7 @@ func (s *Server) Bower(name string, version ...string) (res [][2]string, err err
 
 func appendHTML(s *Server, b *bower.Component, name string, maps *[][2]string) {
 
-	root := filepath.Join(*s.wwwRoot, "public", "plugins")
+	root := filepath.Join(s.Basic.WwwRoot, "public", "plugins")
 	if b.Dependencies != nil {
 		for k := range b.Dependencies {
 			if bts, e := ioutil.ReadFile(filepath.Join(root, k, "bower.json")); e == nil {
@@ -79,10 +79,10 @@ func appendHTML(s *Server, b *bower.Component, name string, maps *[][2]string) {
 	switch bs := b.Main.(type) {
 	case []interface{}:
 		for _, v := range bs {
-			res += appendHtmlItem(*s.env, root, name, v.(string))
+			res += appendHtmlItem(s.Basic.Env, root, name, v.(string))
 		}
 	case string:
-		res += appendHtmlItem(*s.env, root, name, bs)
+		res += appendHtmlItem(s.Basic.Env, root, name, bs)
 	default:
 		log.Panicf("%v,%T", b.Main, b.Main)
 	}

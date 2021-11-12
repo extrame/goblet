@@ -1,9 +1,9 @@
 package plugin
 
 import (
-	"fmt"
-	"github.com/extrame/goblet"
 	"net/http"
+
+	"github.com/extrame/goblet"
 )
 
 type User struct {
@@ -57,7 +57,7 @@ func (u *User) New(cx *goblet.Context) {
 	if len(u.CreateOnlyByPermits) > 0 {
 		var user UserModule
 		if id, has := cx.GetLoginId(); has {
-			if has, err := goblet.DB.Id(id).Get(&user); err == nil && has {
+			if has, err := goblet.DB.ID(id).Get(&user); err == nil && has {
 				for _, permit := range u.CreateOnlyByPermits {
 					if _, ok := user.Permits[permit]; ok {
 						cx.RespondOK()

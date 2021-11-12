@@ -160,7 +160,7 @@ func (c *Context) render() (err error) {
 				return template.HTML(res), err
 			}
 			funcMap["version"] = func() string {
-				return *c.Server.version
+				return c.Version()
 			}
 			funcMap["extra_info"] = func(key string) interface{} {
 				return c.infos[key]
@@ -538,7 +538,7 @@ func (c *Context) PathToURL(path string) (*url.URL, error) {
 
 //Version 返回用户配置的代码版本
 func (c *Context) Version() string {
-	return *c.Server.version
+	return c.Server.Basic.Version
 }
 
 //ReqURL 返回用户请求的URL

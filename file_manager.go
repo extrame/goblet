@@ -18,7 +18,7 @@ const (
 )
 
 func (cx *Context) SaveFileAt(path ...string) *filerSaver {
-	path = append([]string{*cx.Server.UploadsDir}, path...)
+	path = append([]string{cx.Server.Basic.UploadsDir}, path...)
 	return &filerSaver{filepath.Join(path...), setName, cx.request, "", nil}
 }
 

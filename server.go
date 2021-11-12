@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -19,10 +20,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
 	"github.com/extrame/goblet/render"
+	yaml "gopkg.in/yaml.v3"
 )
 
 var NotImplemented = fmt.Errorf("this method is not implemented")
@@ -40,48 +41,28 @@ type ControllerNeedInit interface {
 type Server struct {
 	ConfigFile string
 
-	wwwRoot         *string
-	publicDir       *string
-	UploadsDir      *string
-	ListenPort      *int
-	IgnoreUrlCase   *bool
-	router          router
-	env             *string
-	Renders         map[string]render.Render
-	HttpsEnable     *bool
-	HttpsCertFile   *string
-	HttpsKey        *string
-	HashSecret      *string
-	dbEngine        *string
-	dbUser          *string
-	dbPwd           *string
-	dbHost          *string
-	dbName          *string
-	version         *string
-	dbPort          *int
-	dbConTO         *int
-	dbKaInterval    *int
-	enDbCache       *bool
-	cacheAmout      *int
-	logFile         *string
-	readTimeOut     *int
-	writeTimeOut    *int
-	defaultType     *string
-	enableKeepAlive *bool
-	Name            string
-	oldPlugins      map[string]Plugin
-	plugins         map[string]NewPlugin
-	funcs           []Fn
-	initCtrl        []ControllerNeedInit
-	pres            map[string][]reflect.Value
-	nrPlugin        onNewRequestPlugin
-	saver           Saver
-	filler          map[string]FormFillFn
-	multiFiller     map[string]MultiFormFillFn
-	kv              KvDriver
-	okFunc          func(*Context)
-	errFunc         func(*Context, error, ...string)
-	defaultRender   string
+	Basic   config.Basic
+	Cache   config.Cache
+	Log     config.Log
+	Db      config.Db
+	router  router
+	Renders map[string]render.Render
+
+	Name          string
+	oldPlugins    map[string]Plugin
+	plugins       map[string]NewPlugin
+	funcs         []Fn
+	initCtrl      []ControllerNeedInit
+	pres          map[string][]reflect.Value
+	nrPlugin      onNewRequestPlugin
+	saver         Saver
+	filler        map[string]FormFillFn
+	multiFiller   map[string]MultiFormFillFn
+	kv            KvDriver
+	okFunc        func(*Context)
+	errFunc       func(*Context, error, ...string)
+	defaultRender string
+	cfg           map[string]*yaml.Node
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -179,18 +160,18 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		s.router.init()
 		s.funcs = make([]Fn, 0)
 		if dbPwdPlugin != nil {
-			*(s.dbPwd) = dbPwdPlugin.SetPwd(*s.dbPwd)
+			s.Db.Pwd = dbPwdPlugin.SetPwd(s.Db.Pwd)
 		}
 		if dbUserPlugin != nil {
-			*(s.dbUser) = dbUserPlugin.SetName(*s.dbUser)
+			s.Db.User = dbUserPlugin.SetName(s.Db.User)
 		}
 		err = s.connectDB()
 		if err == nil {
-			if *s.env == config.DevelopEnv {
+			if s.Basic.Env == config.DevelopEnv {
 				log.Println("connect DB success")
 				DB.ShowSQL(true)
 			}
-		} else if err != noneDbDriver {
+		} else if err != config.NoDbDriver {
 			log.Fatalln("connect error:", err)
 		}
 	} else {
@@ -208,8 +189,9 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	}
 }
 
-func (s *Server) connectDB() error {
-	return newDB(*s.dbEngine, *s.dbUser, *s.dbPwd, *s.dbHost, *s.dbName, *s.dbPort, *s.dbConTO, *s.dbKaInterval)
+func (s *Server) connectDB() (err error) {
+	DB, err = s.Db.New(s.Basic.DbEngine)
+	return err
 }
 
 //ControlBy
@@ -265,7 +247,7 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 }
 
 func (s *Server) Env() string {
-	return *s.env
+	return s.Basic.Env
 }
 
 //Debug 当服务器环境为调试环境时，执行相应的匿名函数，用于编写调试环境专用的代码块
@@ -276,10 +258,10 @@ func (s *Server) Debug(fn func()) {
 }
 
 func (s *Server) WwwRoot() string {
-	if abs, err := filepath.Abs(*s.wwwRoot); err == nil {
+	if abs, err := filepath.Abs(s.Basic.WwwRoot); err == nil {
 		return abs
 	}
-	return *s.wwwRoot
+	return s.Basic.WwwRoot
 }
 
 func (s *Server) GetServerPathByCtrl(ctrl interface{}) []string {
@@ -305,7 +287,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			path = r.URL.Path
 		}
-		http.ServeFile(w, r, filepath.Join(*s.wwwRoot, s.PublicDir(), path))
+		http.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path))
 	} else if err != nil {
 		s.wrapError(w, err, false)
 	}
@@ -322,40 +304,32 @@ func (s *Server) parseConfig() (err error) {
 		logrus.Errorln("使用旧版插件，请升级该插件到新版本")
 		plugin.ParseConfig(key)
 	}
-	s.wwwRoot = toml.String("basic.www_root", "./www")
-	s.ListenPort = toml.Int("basic.port", 8080)
-	s.readTimeOut = toml.Int("basic.read_timeout", 30)
-	s.writeTimeOut = toml.Int("basic.write_timeout", 30)
-
-	s.publicDir = toml.String("basic.public_dir", "public")
-	s.UploadsDir = toml.String("basic.uploads_dir", "./uploads")
-	s.IgnoreUrlCase = toml.Bool("basic.ignore_url_case", true)
-	s.HashSecret = toml.String("basic.secret", "a238974b2378c39021d23g43")
-	s.env = toml.String("basic.env", config.ProductEnv)
-	s.dbEngine = toml.String("basic.db_engine", "mysql")
-	s.enDbCache = toml.Bool("cache.enable", false)
-	s.cacheAmout = toml.Int("cache.amount", 1000)
-	s.logFile = toml.String("log.file", "")
-	s.version = toml.String("basic.version", "")
-	s.HttpsEnable = toml.Bool("basic.https", false)
-	s.HttpsCertFile = toml.String("basic.https_certfile", "")
-	s.HttpsKey = toml.String("basic.https_key", "")
-	s.defaultType = toml.String("basic.default_type", "")
-	s.enableKeepAlive = toml.Bool("basic.keep_alive", true)
-
 	flag.Parse()
 
-	*s.env = strings.ToLower(*s.env)
-
-	if *s.env != config.DevelopEnv && *s.env != config.ProductEnv && *s.env != config.OldProductEnv {
-		logrus.Fatalln("environment must be development or production")
-	} else if *s.env == config.OldProductEnv {
-		*s.env = config.ProductEnv
-		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
+	s.ConfigFile = filepath.FromSlash(s.ConfigFile)
+	var f *os.File
+	f, err = os.Open(s.ConfigFile)
+	if err == nil {
+		s.initLog()
+		err = yaml.NewDecoder(f).Decode(&s.cfg)
+		if err == nil {
+			if err = s.cfg["basic"].Decode(&s.Basic); err == nil {
+				s.Db.Name = s.Name
+				if err = s.cfg["db"].Decode(&s.Db); err == nil {
+					if err = s.cfg["cache"].Decode(&s.Cache); err == nil {
+						s.cfg["log"].Decode(&s.Log)
+					}
+				}
+			}
+		}
 	}
 
-	s.ConfigFile = filepath.FromSlash(s.ConfigFile)
-	err = toml.Parse(s.ConfigFile)
+	if s.Basic.Env != config.DevelopEnv && s.Basic.Env != config.ProductEnv && s.Basic.Env != config.OldProductEnv {
+		logrus.Fatalln("environment must be development or production")
+	} else if s.Basic.Env == config.OldProductEnv {
+		s.Basic.Env = config.ProductEnv
+		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
+	}
 	for _, plugin := range s.oldPlugins {
 		plugin.Init(s)
 	}
@@ -364,17 +338,6 @@ func (s *Server) parseConfig() (err error) {
 			logrus.Fatalf("add plugin config error in (%T) with error (%s)", plugin, err)
 		}
 	}
-	if err == nil {
-		s.initLog()
-		s.dbHost = toml.String(*s.dbEngine+".host", s.Name)
-		s.dbUser = toml.String(*s.dbEngine+".user", "")
-		s.dbPwd = toml.String(*s.dbEngine+".password", "")
-		s.dbName = toml.String(*s.dbEngine+".name", "")
-		s.dbPort = toml.Int(*s.dbEngine+".port", 3306)
-		s.dbConTO = toml.Int(*s.dbEngine+".connect_timeout", 30)
-		s.dbKaInterval = toml.Int(*s.dbEngine+".ka_interval", 0)
-		err = toml.Load()
-	}
 	return
 }
 
@@ -382,26 +345,26 @@ func (s *Server) parseConfig() (err error) {
 func (s *Server) Hash(str string) string {
 	hash := sha1.New()
 	hash.Write([]byte(str))
-	hash.Write([]byte(*s.HashSecret))
+	hash.Write([]byte(s.Basic.HashSecret))
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 //PublicDir 获得服务器对应的公共文件夹的地址
 func (s *Server) PublicDir() string {
-	return *s.publicDir
+	return s.Basic.PublicDir
 }
 
 func (s *Server) enableDbCache() {
-	if *s.enDbCache {
-		cacher := caches.NewLRUCacher(caches.NewMemoryStore(), *s.cacheAmout)
+	if s.Cache.Enable {
+		cacher := caches.NewLRUCacher(caches.NewMemoryStore(), s.Cache.Amount)
 		DB.SetDefaultCacher(cacher)
 	}
 }
 
 //Run 运营一个服务器
 func (s *Server) Run() error {
-	if *s.version == "datetime" {
-		*s.version = fmt.Sprintf("%d", time.Now().Unix())
+	if s.Basic.Version == "datetime" {
+		s.Basic.Version = fmt.Sprintf("%d", time.Now().Unix())
 	}
 	s.Renders = make(map[string]render.Render)
 	s.Renders["html"] = new(render.HtmlRender)
@@ -419,21 +382,19 @@ func (s *Server) Run() error {
 	s.Renders["json"] = new(render.JsonRender)
 	s.Renders["raw"] = new(render.RawRender)
 	s.Renders["xml"] = new(render.XmlRender)
-	logrus.WithField("port", *s.ListenPort).Infoln("Listening")
+	logrus.WithField("port", s.Basic.Port).Infoln("Listening")
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", *s.ListenPort),
+		Addr:         fmt.Sprintf(":%d", s.Basic.Port),
 		Handler:      s,
-		WriteTimeout: time.Second * time.Duration(*s.writeTimeOut),
-		ReadTimeout:  time.Second * time.Duration(*s.readTimeOut),
+		WriteTimeout: time.Second * time.Duration(s.Basic.WriteT0),
+		ReadTimeout:  time.Second * time.Duration(s.Basic.ReadT0),
 	}
-	if !(*s.enableKeepAlive) {
-		srv.SetKeepAlivesEnabled(false)
-	}
+	srv.SetKeepAlivesEnabled(s.Basic.EnableKeepAlive)
 	var err error
-	if !*s.HttpsEnable {
-		err = srv.ListenAndServe()
+	if s.Basic.HttpsEnable {
+		err = srv.ListenAndServeTLS(s.Basic.HttpsCertFile, s.Basic.HttpsKey)
 	} else {
-		err = srv.ListenAndServeTLS(*s.HttpsCertFile, *s.HttpsKey)
+		err = srv.ListenAndServe()
 	}
 	logrus.Println(err)
 	return err

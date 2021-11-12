@@ -76,7 +76,7 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 				err = errors.Wrap(err, fmt.Sprintf("[Original Response]%v", context.response))
 			}
 		}
-		if *s.env == config.DevelopEnv && err != nil {
+		if s.Basic.Env == config.DevelopEnv && err != nil {
 			logrus.Infoln("Err in Dynamic :", err)
 		}
 		return

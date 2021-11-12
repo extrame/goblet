@@ -221,13 +221,13 @@ func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	ct := cx.request.Header.Get("Content-Type")
 	// default to urlencoded
 	if ct == "" {
-		if *cx.Server.defaultType != "" {
-			ct = *cx.Server.defaultType
+		if cx.Server.Basic.DefaultType != "" {
+			ct = cx.Server.Basic.DefaultType
 		} else {
 			ct = "application/x-www-form-urlencoded"
 		}
-	} else if strings.HasPrefix(ct, "text/plain") && *cx.Server.defaultType != "" {
-		ct = *cx.Server.defaultType
+	} else if strings.HasPrefix(ct, "text/plain") && cx.Server.Basic.DefaultType != "" {
+		ct = cx.Server.Basic.DefaultType
 	}
 	autofill := true
 	if len(fills) > 0 {

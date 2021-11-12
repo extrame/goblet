@@ -1,19 +1,35 @@
 package goblet
 
 import (
+	"fmt"
 	"net/url"
 
-	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/unmarshall"
+	"gopkg.in/yaml.v3"
 )
 
+func fetch(node *yaml.Node) map[string][]string {
+	var fetched = make(map[string][]string)
+	for _, c := range node.Content {
+		// DocumentNode Kind = 1 << iota
+		// SequenceNode
+		// MappingNode
+		// ScalarNode
+		// AliasNode
+		fetched[c.Anchor] = nil
+		fmt.Println(c)
+	}
+	return fetched
+}
+
 func (s *Server) AddConfig(name string, obj interface{}) error {
+	var node = s.cfg[name]
+	var content = fetch(node)
+
 	var u = unmarshall.Unmarshaller{
 		ValueGetter: func(tag string) []string {
-			pText := toml.String(name+"."+tag, "")
-			toml.Load()
-			if *pText != "" {
-				return []string{*pText}
+			if c, ok := content[tag]; ok {
+				return c
 			} else {
 				return []string{}
 			}
