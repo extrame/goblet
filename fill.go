@@ -130,7 +130,10 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 type MultiFormRequestDecoder struct{}
 
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	cx.request.ParseMultipartForm(32 << 20)
+	err := cx.request.ParseMultipartForm(32 << 20)
+	if err != nil {
+		return err
+	}
 	values := (map[string][]string)(cx.request.Form)
 	if cx.request.MultipartForm == nil {
 		return errors.New("MultipartForm is empty")
