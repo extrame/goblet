@@ -62,6 +62,7 @@ type Server struct {
 	errFunc       func(*Context, error, ...string)
 	defaultRender string
 	cfg           *yaml.Node
+	cfgFileSuffix string
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -156,7 +157,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		err = s.connectDB()
 		if err == nil {
 			if s.Basic.Env == config.DevelopEnv {
-				log.Println("connect DB success")
+				log.Println("connect to DB")
 				DB.ShowSQL(true)
 			}
 		} else if err != config.NoDbDriver {
@@ -283,8 +284,15 @@ func (s *Server) GetPlugin(key string) NewPlugin {
 	return s.plugins[key]
 }
 
+func (s *Server) SetConfigSuffix(suffix string) {
+	s.cfgFileSuffix = suffix
+}
+
 func (s *Server) parseConfig() (err error) {
-	flag.StringVar(&s.ConfigFile, "config", "./"+s.Name+".conf", "设置配置文件的路径")
+	if s.cfgFileSuffix == "" {
+		s.cfgFileSuffix = "conf"
+	}
+	flag.StringVar(&s.ConfigFile, "config", "./"+s.Name+"."+s.cfgFileSuffix, "设置配置文件的路径")
 	flag.Parse()
 
 	s.ConfigFile = filepath.FromSlash(s.ConfigFile)
