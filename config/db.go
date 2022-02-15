@@ -39,7 +39,7 @@ func (d *Db) New(engine string) (db *xorm.Engine, err error) {
 	} else if engine == "none" {
 		return nil, NoDbDriver
 	} else {
-		return nil, fmt.Sprintf("unsupported db type:%s,supported:[mysql,oci8,mssql,sqlite3,none]")
+		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,oci8,mssql,sqlite3,none]", engine)
 	}
 	return xorm.NewEngine(engine, q)
 }
