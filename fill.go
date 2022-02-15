@@ -108,6 +108,7 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 			}
 			return []string{}
 		},
+		Tag:          "goblet",
 		MaxLength:    maxlength,
 		TagConcatter: concatPrefix,
 		AutoFill:     autofill,
@@ -190,6 +191,7 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 			},
 		},
 		AutoFill: autofill,
+		Tag:      "goblet",
 	}
 
 	for typ, fn := range cx.Server.multiFiller {

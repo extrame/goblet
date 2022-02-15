@@ -378,7 +378,3 @@ func (s *Server) Run() error {
 	logrus.Println(err)
 	return err
 }
-
-func (s *Server) getCfg(name string) *yaml.Node {
-	return getChildNode(s.cfg, name)
-}

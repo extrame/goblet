@@ -9,6 +9,7 @@ import (
 	toml "github.com/extrame/go-toml-config"
 	"github.com/extrame/goblet/config"
 	"github.com/extrame/unmarshall"
+	myyaml "github.com/extrame/unmarshall/yaml"
 	"gopkg.in/yaml.v3"
 )
 
@@ -43,13 +44,13 @@ test:
 		t.Fatal(err)
 	}
 
-	var basic = getChildNode(node, "basic")
+	var basic = myyaml.GetChildNode(node, "basic")
 	var b config.Basic
 	basic.Decode(&b)
 
 	fmt.Println(b)
 
-	ctx := fetch(getChildNode(node, "test"))
+	ctx := fetch(myyaml.GetChildNode(node, "test"))
 
 	fmt.Println(ctx)
 
@@ -68,6 +69,7 @@ test:
 		TagConcatter: func(prefix string, tag string) string {
 			return prefix + "." + tag
 		},
+		Tag:      "goblet",
 		AutoFill: true,
 	}
 	u.Unmarshall(&obj)
@@ -99,6 +101,7 @@ func TestConfigSubArray(t *testing.T) {
 			}
 
 		},
+		Tag: "goblet",
 		ValuesGetter: func(prefix string) url.Values {
 			return make(url.Values)
 		},

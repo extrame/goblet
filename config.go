@@ -2,10 +2,8 @@ package goblet
 
 import (
 	"fmt"
-	"net/url"
 
-	"github.com/extrame/unmarshall"
-	"github.com/sirupsen/logrus"
+	myyaml "github.com/extrame/unmarshall/yaml"
 	"gopkg.in/yaml.v3"
 )
 
@@ -39,38 +37,10 @@ func fetch(node *yaml.Node) map[string]string {
 }
 
 func (s *Server) AddConfig(name string, obj interface{}) error {
-	var node = s.getCfg(name)
-	var content = fetch(node)
-
-	var u = unmarshall.Unmarshaller{
-		ValueGetter: func(tag string) []string {
-			if c, ok := content[tag]; ok {
-				return []string{c}
-			} else {
-				return []string{}
-			}
-
-		},
-		ValuesGetter: func(prefix string) url.Values {
-			return make(url.Values)
-		},
-		TagConcatter: func(prefix string, tag string) string {
-			return prefix + "." + tag
-		},
-		AutoFill: true,
-	}
-	return u.Unmarshall(obj)
+	var node = myyaml.GetChildNode(s.cfg, name)
+	return myyaml.UnmarshalNode(node, obj)
 }
 
-func getChildNode(parent *yaml.Node, name string) *yaml.Node {
-	if parent.Kind == yaml.DocumentNode && parent.Anchor == "" {
-		parent = parent.Content[0]
-	}
-	for n, m := range parent.Content {
-		if m.Kind == yaml.ScalarNode && m.Value == name && len(parent.Content) > n+1 {
-			return parent.Content[n+1]
-		}
-	}
-	logrus.Info("there is no cfg node named:", name)
-	return new(yaml.Node)
+func (s *Server) getCfg(name string) *yaml.Node {
+	return myyaml.GetChildNode(s.cfg, name)
 }
