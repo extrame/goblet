@@ -9,6 +9,11 @@ type DbPwdPlugin interface {
 	SetPwd(origin string) string
 }
 
+//ChangeSuffixOfConfig Change the config file suffix, default is conf
+type ChangeSuffixOfConfig interface {
+	GetConfigSuffix() string
+}
+
 //DbPwdPlugin Change the db connection name
 type dbUserNamePlugin interface {
 	SetName(origin string) string

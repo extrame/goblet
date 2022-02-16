@@ -117,6 +117,9 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		if tp, ok := plugin.(DbPwdPlugin); ok {
 			dbPwdPlugin = tp
 		}
+		if tp, ok := plugin.(ChangeSuffixOfConfig); ok {
+			s.cfgFileSuffix = tp.GetConfigSuffix()
+		}
 		if tp, ok := plugin.(dbUserNamePlugin); ok {
 			dbUserPlugin = tp
 		}

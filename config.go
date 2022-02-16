@@ -37,12 +37,8 @@ func fetch(node *yaml.Node) map[string]string {
 }
 
 func (s *Server) AddConfig(name string, obj interface{}) error {
-	node, err := myyaml.GetChildNode(s.cfg, name)
-	if err == nil {
-		return myyaml.UnmarshalNode(node, obj, "goblet")
-	} else {
-		return err
-	}
+	node, _ := myyaml.GetChildNode(s.cfg, name)
+	return myyaml.UnmarshalNode(node, obj, "goblet")
 }
 
 func (s *Server) getCfg(name string) *yaml.Node {
