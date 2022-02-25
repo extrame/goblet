@@ -204,9 +204,7 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 
 func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string) {
 	// parent.New("")
-	if !h.saveTemp { //for debug
-		logrus.Infoln("init template in ", h.dir, dir, "helper")
-	}
+	logrus.Debug("init template in ", h.dir, dir, "helper")
 	//scan for the helpers
 	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
@@ -255,15 +253,11 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		name = args[1]
 		file = args[1]
 	}
-	if !h.saveTemp { //for debug
-		logrus.Infoln("get template of", name, file)
-	}
+	logrus.Debugln("get template of", name, file)
 	file = filepath.FromSlash(file)
 	var t *template.Template
 	if t = root.Lookup(name); !h.saveTemp || t == nil {
-		if h.saveTemp {
-			logrus.Debugln("try to parse template of", name)
-		}
+		logrus.Debugln("try to parse template of", name)
 
 		if err == nil {
 
@@ -272,9 +266,14 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 				t = root.Lookup(name)
 			} else {
 				if os.IsNotExist(err) {
-					if !h.saveTemp {
-						logrus.Errorf("template for (%s) is missing", file)
+					if temp, ok := defaultTemplates[name]; ok {
+						err := parseBytesWithName(root, name, temp)
+						if err == nil {
+							t = root.Lookup(name)
+							return t, nil
+						}
 					}
+					logrus.Debugf("template for (%s) is missing", file)
 					return nil, ge.NOSUCHROUTER
 				} else {
 					return nil, err
@@ -358,6 +357,10 @@ func parseFileWithName(parent *template.Template, name string, filepath string) 
 	// as t, this file becomes the contents of t, so
 	//  t, err := New(name).Funcs(xxx).ParseFiles(name)
 	// works. Otherwise we create a new template associated with t.
+	return parseBytesWithName(parent, name, s)
+}
+
+func parseBytesWithName(parent *template.Template, name string, content string) (err error) {
 	renderLock.Lock()
 	var tmpl *template.Template
 	if name == parent.Name() || name == "" {
@@ -365,7 +368,7 @@ func parseFileWithName(parent *template.Template, name string, filepath string) 
 	} else {
 		tmpl = parent.New(name)
 	}
-	_, err = tmpl.Parse(s)
+	_, err = tmpl.Parse(content)
 	renderLock.Unlock()
 	if err != nil {
 		return err

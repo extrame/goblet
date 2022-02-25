@@ -323,6 +323,9 @@ func (s *Server) parseConfig() (err error) {
 		s.Basic.Env = config.ProductEnv
 		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
 	}
+	if s.Basic.Env == config.DevelopEnv {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
 	for _, plugin := range s.plugins {
 		if err = plugin.AddCfgAndInit(s); err != nil {
 			logrus.Fatalf("add plugin config error in (%T) with error (%s)", plugin, err)
