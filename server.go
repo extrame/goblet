@@ -309,6 +309,9 @@ func (s *Server) parseConfig() (err error) {
 			if err = s.getCfg("basic").Decode(&s.Basic); err == nil {
 				s.Db.Name = s.Name
 				if err = s.getCfg("db").Decode(&s.Db); err == nil {
+					if s.Db.Host == "" {
+						s.Db.Host = s.Name
+					}
 					if err = s.getCfg("cache").Decode(&s.Cache); err == nil {
 						s.getCfg("log").Decode(&s.Log)
 					}
