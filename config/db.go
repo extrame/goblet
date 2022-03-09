@@ -29,7 +29,7 @@ func (d *Db) New(engine string) (db *xorm.Engine, err error) {
 		q = fmt.Sprintf("%s/%s@%s:%d/%s", d.User, d.Pwd, d.Host, d.Port, d.Name)
 	} else if engine == "mssql" {
 		q = fmt.Sprintf("Server=%s;Database=%s;User ID=%s;Password=%s;connection timeout=%d;keepAlive=%d", d.Host, d.Name, d.User, d.Pwd, d.TO, d.KaInterval)
-	} else if engine == "sqlite3" {
+	} else if engine == "sqlite3" || engine == "sqlite" {
 		if info, err := os.Stat(d.Host + ".db"); err == nil {
 			if info.IsDir() {
 				return nil, fmt.Errorf("If you want to use sqlite3, please set db.host as rw file")
@@ -39,7 +39,7 @@ func (d *Db) New(engine string) (db *xorm.Engine, err error) {
 	} else if engine == "none" {
 		return nil, NoDbDriver
 	} else {
-		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,oci8,mssql,sqlite3,none]", engine)
+		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,oci8,mssql,sqlite3,sqlite,none]", engine)
 	}
 	return xorm.NewEngine(engine, q)
 }
