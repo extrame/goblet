@@ -68,6 +68,19 @@ func (f *File) OpenInPrivate(s *Server) error {
 	return err
 }
 
+// Open open file in any location of server, if want to open file relate to www dir, please use OpenInPrivate
+func Open(path string) (f *File, err error) {
+	var fi *os.File
+	fi, err = os.Open(path)
+	if err == nil {
+		f = new(File)
+		f.rc = fi
+		f.Path = path
+		//TODO limit open file out of current dir
+	}
+	return
+}
+
 //将文件保存在公开目录，可以使用http访问到
 func (s *Server) SaveInPublic(path string, f io.Reader) error {
 	fullPath := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path)

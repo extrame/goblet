@@ -20,6 +20,7 @@ func (r *RawRender) Init(s RenderServer, funcs template.FuncMap) {
 
 type RawRenderInstance int8
 
+//interface to respond file with customerized name and size
 type RawFile interface {
 	io.Reader
 	io.Seeker
@@ -30,6 +31,8 @@ type RawFile interface {
 func (r *RawRenderInstance) HeadRender(wr io.Writer, hwr HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var writen = int64(0)
 	switch tdata := data.(type) {
+	case RawFile:
+		writen = tdata.GetSize()
 	case *os.File:
 		var info, _ = tdata.Stat()
 		writen = info.Size()

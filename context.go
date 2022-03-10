@@ -296,7 +296,7 @@ func (c *Context) Respond(data interface{}) {
 	switch td := data.(type) {
 	case error:
 		c.RespondWithStatus(data, http.StatusInternalServerError)
-	case []byte, io.Reader:
+	case []byte, io.Reader, *File:
 		c.forceFormat = "raw"
 		c.AllowRender("raw")
 		c.RespondWithStatus(td, http.StatusOK)
