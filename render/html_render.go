@@ -158,9 +158,9 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		return &HttpRenderInstance{layout, yield, css + suffix, js + suffix}, nil
 	} else if err != checkedAndStillNotExists {
 		logrus.Debugf("parse Template missing for %v", ctx)
-		return nil, ge.NOSUCHROUTER
+		return nil, err
 	}
-	return
+	return nil, ge.NOSUCHROUTER
 }
 
 func (h *HtmlRender) Exists(file string) bool {
