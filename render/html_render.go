@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"text/template/parse"
 
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
@@ -103,12 +104,19 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 	//for static file
 	if err == ge.NOSUCHROUTER && ctx.BlockOptionType() == "Static" {
 		file := filepath.Join(h.dir, h.public, fmt.Sprintf("%s.%s", path, ctx.Format()))
-		if _, err := os.Stat(file); os.IsNotExist(err) {
+		if _, err = os.Stat(file); os.IsNotExist(err) {
 			status_code = 404
+		} else if err == nil {
+			html, er := ioutil.ReadFile(file)
+			if er != nil {
+				yield, er = h.newTreeForRawHtml(model_root, path+h.suffix, string(html))
+			}
+			if er != nil {
+				status_code = 500
+				return
+			}
 		}
-	}
-
-	if err == nil {
+	} else if err == nil {
 		if isMobile {
 			yield, err = h.getTemplates(model_root,
 				path+".mobile"+h.suffix, path+".mobile"+h.suffix,
@@ -160,6 +168,39 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		logrus.Debugf("parse Template missing for %v", ctx)
 	}
 	return
+}
+
+func (h *HtmlRender) newTreeForRawHtml(root *template.Template, name, html string) (*template.Template, error) {
+
+	logrus.Debugln("get static template of", name)
+
+	var t *template.Template
+	if t = root.Lookup(name); !h.saveTemp || t == nil {
+		logrus.Debugln("try to parse template of", name)
+
+		var listNode parse.ListNode
+		var pipeLine parse.PipeNode
+		pipeLine.Cmds = []*parse.CommandNode{
+			{
+				Args: []parse.Node{
+					parse.NewIdentifier("raw"),
+					&parse.StringNode{Text: html},
+				},
+			},
+		}
+		listNode.Nodes = append(listNode.Nodes, &parse.ActionNode{
+			NodeType: parse.NodeAction,
+			Pipe:     &pipeLine,
+		})
+		var tree = &parse.Tree{Root: &listNode}
+		var err error
+		t, err = root.AddParseTree(name, tree)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return t, nil
+
 }
 
 func (h *HtmlRender) Exists(file string) bool {
@@ -259,25 +300,22 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 	if t = root.Lookup(name); !h.saveTemp || t == nil {
 		logrus.Debugln("try to parse template of", name)
 
+		err = parseFileWithName(root, name, filepath.Join(h.dir, file))
 		if err == nil {
-
-			err = parseFileWithName(root, name, filepath.Join(h.dir, file))
-			if err == nil {
-				t = root.Lookup(name)
-			} else {
-				if os.IsNotExist(err) {
-					if temp, ok := defaultTemplates[name]; ok {
-						err := parseBytesWithName(root, name, temp)
-						if err == nil {
-							t = root.Lookup(name)
-							return t, nil
-						}
+			t = root.Lookup(name)
+		} else {
+			if os.IsNotExist(err) {
+				if temp, ok := defaultTemplates[name]; ok {
+					err := parseBytesWithName(root, name, temp)
+					if err == nil {
+						t = root.Lookup(name)
+						return t, nil
 					}
-					logrus.Debugf("template for (%s) is missing", file)
-					return nil, ge.NOSUCHROUTER
-				} else {
-					return nil, err
 				}
+				logrus.Debugf("template for (%s) is missing", file)
+				return nil, ge.NOSUCHROUTER
+			} else {
+				return nil, err
 			}
 		}
 	}
