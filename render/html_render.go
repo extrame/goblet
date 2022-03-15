@@ -22,15 +22,17 @@ import (
 )
 
 var renderLock sync.Mutex
+var checkedAndStillNotExists = errors.New("checkedAndStillNotExists")
 
 type HtmlRender struct {
-	root     *template.Template
-	dir      string
-	models   *sync.Map
-	pathRoot *sync.Map
-	suffix   string
-	public   string
-	saveTemp bool
+	root      *template.Template
+	dir       string
+	models    *sync.Map
+	pathRoot  *sync.Map
+	suffix    string
+	public    string
+	saveTemp  bool
+	notExists sync.Map
 }
 
 func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance, err error) {
@@ -100,7 +102,7 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 	}
 
-	//for static file
+	//for static file 使得StaticRouter也可以使用404错误模版来渲染错误
 	if err == ge.NOSUCHROUTER && ctx.BlockOptionType() == "Static" {
 		file := filepath.Join(h.dir, h.public, fmt.Sprintf("%s.%s", path, ctx.Format()))
 		if _, err := os.Stat(file); os.IsNotExist(err) {
@@ -108,14 +110,12 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		}
 	}
 
-	if err == nil {
-		if isMobile {
-			yield, err = h.getTemplates(model_root,
-				path+".mobile"+h.suffix, path+".mobile"+h.suffix,
-				path+h.suffix, path+h.suffix)
-		} else {
-			yield, err = h.getTemplates(model_root, path+h.suffix, path+h.suffix)
-		}
+	if isMobile {
+		yield, err = h.getTemplates(model_root,
+			path+".mobile"+h.suffix, path+".mobile"+h.suffix,
+			path+h.suffix, path+h.suffix)
+	} else {
+		yield, err = h.getTemplates(model_root, path+h.suffix, path+h.suffix)
 	}
 
 	if status_code >= 300 && ctx.UseStandErrPage() {
@@ -156,8 +156,9 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 			}
 		}
 		return &HttpRenderInstance{layout, yield, css + suffix, js + suffix}, nil
-	} else {
+	} else if err != checkedAndStillNotExists {
 		logrus.Debugf("parse Template missing for %v", ctx)
+		return nil, ge.NOSUCHROUTER
 	}
 	return
 }
@@ -253,31 +254,30 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		name = args[1]
 		file = args[1]
 	}
-	logrus.Debugln("get template of", name, file)
 	file = filepath.FromSlash(file)
 	var t *template.Template
 	if t = root.Lookup(name); !h.saveTemp || t == nil {
-		logrus.Debugln("try to parse template of", name)
-
+		_, checked := h.notExists.Load(name)
+		if !checked {
+			//如果没检查过，打印日志，如果是原来检查不存在的，任何模式都跳过打日志
+			logrus.Debugln("try to parse template of", name)
+		} else if h.saveTemp {
+			// saveTemp 产品模式，不再重复检查
+			return nil, checkedAndStillNotExists
+		}
+		err = parseFileWithName(root, name, filepath.Join(h.dir, file))
 		if err == nil {
-
-			err = parseFileWithName(root, name, filepath.Join(h.dir, file))
-			if err == nil {
-				t = root.Lookup(name)
-			} else {
-				if os.IsNotExist(err) {
-					if temp, ok := defaultTemplates[name]; ok {
-						err := parseBytesWithName(root, name, temp)
-						if err == nil {
-							t = root.Lookup(name)
-							return t, nil
-						}
-					}
+			t = root.Lookup(name)
+		} else {
+			if os.IsNotExist(err) {
+				if !checked {
 					logrus.Debugf("template for (%s) is missing", file)
+					h.notExists.Store(name, true)
 					return nil, ge.NOSUCHROUTER
-				} else {
-					return nil, err
 				}
+				return nil, checkedAndStillNotExists
+			} else {
+				return nil, err
 			}
 		}
 	}
