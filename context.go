@@ -145,6 +145,20 @@ func (c *Context) render() (err error) {
 	if !c.already_writed {
 		if c.renderInstance != nil {
 			funcMap := make(template.FuncMap)
+			funcMap["bower"] = func(name string, version ...string) (template.HTML, error) {
+				if c.bower_stack == nil {
+					c.bower_stack = make(map[string]bool)
+				}
+				maps, err := c.Server.Bower(name, version...)
+				res := ""
+				for _, strs := range maps {
+					if _, loaded := c.bower_stack[strs[0]]; !loaded {
+						res += strs[1]
+						c.bower_stack[strs[0]] = true
+					}
+				}
+				return template.HTML(res), err
+			}
 			funcMap["version"] = func() string {
 				return c.Version()
 			}
@@ -451,7 +465,7 @@ func (c *Context) Method() string {
 	return c.method
 }
 
-//返回用户请求的Method，例如GET、POST、HEAD等
+//返回用户请求的Method
 func (c *Context) ReqMethod() string {
 	return c.request.Method
 }
