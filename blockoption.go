@@ -526,6 +526,9 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 
 			if t.Type.Name() == "Route" && t.Type.PkgPath() == "github.com/extrame/goblet" {
 				basic.routing = tags
+				if len(tags) > 0 {
+					basic.htmlRenderFileOrDir = strings.TrimLeft(tags[0], "/")
+				}
 				continue
 			}
 			if t.Type.Name() == "NoHidden" && t.Type.PkgPath() == "github.com/extrame/goblet" {
