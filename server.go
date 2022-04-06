@@ -285,9 +285,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if geE.Method != "" {
 			//dynamic return a method which should used as static render
 			logrus.Infoln("use static file name return by dynamic", geE.Method)
-			file := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method+".html")
+			file := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method)
 			if _, err := os.Stat(file); !os.IsNotExist(err) {
-				http.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method+".html"))
+				http.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method))
 				return
 			}
 		}
