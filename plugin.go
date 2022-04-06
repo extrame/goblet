@@ -35,3 +35,7 @@ type ErrFuncSetter interface {
 type DefaultRenderSetter interface {
 	DefaultRender() string
 }
+
+type SilenceUrlSetter interface {
+	SetSilenceUrls() map[string]bool
+}

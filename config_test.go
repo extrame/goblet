@@ -44,35 +44,35 @@ test:
 		t.Fatal(err)
 	}
 
-	var basic = myyaml.GetChildNode(node, "basic")
+	basic, _ := myyaml.GetChildNode(node, "basic")
 	var b config.Basic
 	basic.Decode(&b)
 
 	fmt.Println(b)
 
-	ctx := fetch(myyaml.GetChildNode(node, "test"))
+	// ctx := fetch(myyaml.GetChildNode(node, "test"))
 
-	fmt.Println(ctx)
+	// fmt.Println(ctx)
 
-	var u = unmarshall.Unmarshaller{
-		ValueGetter: func(tag string) []string {
-			fmt.Println(tag, ctx[tag])
-			if v, ok := ctx[tag]; ok {
-				return []string{v}
-			} else {
-				return []string{}
-			}
-		},
-		ValuesGetter: func(prefix string) url.Values {
-			return make(url.Values)
-		},
-		TagConcatter: func(prefix string, tag string) string {
-			return prefix + "." + tag
-		},
-		Tag:      "goblet",
-		AutoFill: true,
-	}
-	u.Unmarshall(&obj)
+	// var u = unmarshall.Unmarshaller{
+	// 	ValueGetter: func(tag string) []string {
+	// 		fmt.Println(tag, ctx[tag])
+	// 		if v, ok := ctx[tag]; ok {
+	// 			return []string{v}
+	// 		} else {
+	// 			return []string{}
+	// 		}
+	// 	},
+	// 	ValuesGetter: func(prefix string) url.Values {
+	// 		return make(url.Values)
+	// 	},
+	// 	TagConcatter: func(prefix string, tag string) string {
+	// 		return prefix + "." + tag
+	// 	},
+	// 	Tag:      "goblet",
+	// 	AutoFill: true,
+	// }
+	// u.Unmarshall(&obj)
 	fmt.Println(obj)
 }
 

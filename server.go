@@ -63,6 +63,7 @@ type Server struct {
 	defaultRender string
 	cfg           *yaml.Node
 	cfgFileSuffix string
+	silenceUrls   map[string]bool
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -141,6 +142,9 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		if rv, ok := plugin.(DefaultRenderSetter); ok {
 			s.defaultRender = rv.DefaultRender()
 		}
+		if sv, ok := plugin.(SilenceUrlSetter); ok {
+			s.silenceUrls = sv.SetSilenceUrls()
+		}
 	}
 	if s.saver == nil {
 		s.saver = new(LocalSaver)
@@ -176,6 +180,11 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	if s.defaultRender == "" {
 		s.defaultRender = "html"
 	}
+}
+
+func (s *Server) isSilence(u string) bool {
+	si, ok := s.silenceUrls[u]
+	return ok && si
 }
 
 func (s *Server) connectDB() (err error) {
@@ -269,8 +278,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.wrapError(w, err, true)
 		}
 	}()
-	if err := s.router.route(s, w, r); errors.Cause(err) == ge.NOSUCHROUTER {
+	err := s.router.route(s, w, r)
+	err = errors.Cause(err)
+	if geE, ok := err.(*ge.Error); ok && geE.Code == ge.ERROR_NOSUCHROUTER {
 		var path string
+		if geE.Method != "" {
+			//dynamic return a method which should used as static render
+			logrus.Infoln("use static file name return by dynamic", geE.Method)
+			file := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method+".html")
+			if _, err := os.Stat(file); !os.IsNotExist(err) {
+				http.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method+".html"))
+				return
+			}
+		}
 		if strings.HasSuffix(r.URL.Path, "/") {
 			path = r.URL.Path + "index.html"
 		} else {

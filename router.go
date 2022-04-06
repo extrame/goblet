@@ -29,7 +29,9 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 
 	if r.URL.Path == "/" {
 		anch, suffix_url = rou.anchor.match("/index", 6)
-		logrus.Debugln("routing /index", r.URL.Path)
+		if !s.isSilence(r.URL.Path) {
+			logrus.Debugln("routing /index", r.URL.Path)
+		}
 	}
 
 	context := &Context{
@@ -52,7 +54,9 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 			main = r.URL.Path
 		}
 		anch, suffix_url = rou.anchor.match(main, len(main))
-		logrus.Infof("routing %s", r.URL.Path)
+		if !s.isSilence(r.URL.Path) {
+			logrus.Infof("routing %s", r.URL.Path)
+		}
 		if anch != nil {
 			logrus.Infof("(dynamic)")
 		}
@@ -76,12 +80,12 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 				err = errors.Wrap(err, fmt.Sprintf("[Original Response]%v", context.response))
 			}
 		}
-		if s.Basic.Env == config.DevelopEnv && err != nil {
+		if s.Basic.Env == config.DevelopEnv && err != nil && !s.isSilence(r.URL.Path) {
 			logrus.Infoln("Err in Dynamic :", err)
 		}
 		return
 	}
-	return ge.NOSUCHROUTER
+	return ge.NOSUCHROUTER("")
 }
 
 func (r *router) add(opt BlockOption) {

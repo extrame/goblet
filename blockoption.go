@@ -310,7 +310,7 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 		}
 	}
 	if !method.IsValid() {
-		return ge.NOSUCHROUTER
+		return ge.NOSUCHROUTER("")
 	} else if isOptions == GetOptionButJustHasPost {
 		ctx.RespondOK()
 	} else {
