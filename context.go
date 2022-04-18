@@ -508,6 +508,19 @@ func (c *Context) RemoteAddr() net.Addr {
 	return addr
 }
 
+func (c *Context) RemoteIP() (net.IP, error) {
+	if remoteIP := c.request.Header.Get("X-Forwarded-For"); remoteIP != "" {
+		return net.ParseIP(remoteIP), nil
+	} else {
+		tcp, err := net.ResolveTCPAddr("tcp", c.request.RemoteAddr)
+		if err == nil {
+			return tcp.IP, nil
+		} else {
+			return nil, nil
+		}
+	}
+}
+
 //返回对端地址，请注意，如果是负载均衡过来的请求，会直接返回负载均衡地址，不会重新获取客户端地址，如果要
 //获取这种情况下的客户端正式IP，请调用 RemoteAddr方法
 func (c *Context) FromAddr() net.Addr {
