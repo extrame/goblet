@@ -37,6 +37,10 @@ type ControllerNeedInit interface {
 	Init(*Server)
 }
 
+type ControllerNeedInitAndReturnError interface {
+	Init(*Server) error
+}
+
 //Server 服务器类型
 type Server struct {
 	ConfigFile string
@@ -52,6 +56,7 @@ type Server struct {
 	plugins       map[string]NewPlugin
 	funcs         []Fn
 	initCtrl      []ControllerNeedInit
+	initCtrlNew   []ControllerNeedInitAndReturnError
 	pres          map[string][]reflect.Value
 	nrPlugin      onNewRequestPlugin
 	saver         Saver
@@ -198,6 +203,9 @@ func (s *Server) ControlBy(block interface{}) {
 	cfg := s.prepareOption(block)
 	if bc, ok := block.(ControllerNeedInit); ok {
 		s.initCtrl = append(s.initCtrl, bc)
+	}
+	if bc, ok := block.(ControllerNeedInitAndReturnError); ok {
+		s.initCtrlNew = append(s.initCtrlNew, bc)
 	}
 	s.router.add(cfg)
 }
@@ -387,6 +395,12 @@ func (s *Server) Run() error {
 	var tempFuncMap = make(template.FuncMap)
 	for _, bc := range s.initCtrl {
 		bc.Init(s)
+	}
+	for _, bc := range s.initCtrlNew {
+		err := bc.Init(s)
+		if err != nil {
+			return err
+		}
 	}
 	for _, v := range s.funcs {
 		tempFunc := func() int {
