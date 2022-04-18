@@ -460,12 +460,12 @@ func (c *Context) BlockOptionType() string {
 	return ""
 }
 
-//返回当前的Method
+//返回当前的Method，json/html等
 func (c *Context) Method() string {
 	return c.method
 }
 
-//返回用户请求的Method
+//返回用户请求的Method, GET/POST/HEAD等
 func (c *Context) ReqMethod() string {
 	return c.request.Method
 }
@@ -494,7 +494,23 @@ func (r *RemoteAddr) Network() string {
 	return "tcp"
 }
 
+//该方法返回对端连接地址，返回有两种情况，如果头部没有X-Forwarded-For，表示是直接从客户端直接连接的。
+//此时，返回的addr，Network()方法返回“tcp"。如果头部有X-Forwarded-For，表示是从负载均衡跳转过来的。
+//此时，返回的addr，Network()方法返回“ip”
 func (c *Context) RemoteAddr() net.Addr {
+	addr := new(RemoteAddr)
+	addr.str = c.request.RemoteAddr
+	if remoteIP := c.request.Header.Get("X-Forwarded-For"); remoteIP != "" {
+		return &net.IPAddr{
+			IP: net.ParseIP(remoteIP),
+		}
+	}
+	return addr
+}
+
+//返回对端地址，请注意，如果是负载均衡过来的请求，会直接返回负载均衡地址，不会重新获取客户端地址，如果要
+//获取这种情况下的客户端正式IP，请调用 RemoteAddr方法
+func (c *Context) FromAddr() net.Addr {
 	addr := new(RemoteAddr)
 	addr.str = c.request.RemoteAddr
 	return addr
