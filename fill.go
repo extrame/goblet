@@ -224,6 +224,10 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	// get content type
 	ct := cx.request.Header.Get("Content-Type")
+	//if method is GET, only form in url is supported
+	if cx.request.Method == "GET" {
+		ct = "application/x-www-form-urlencoded"
+	}
 	// default to urlencoded
 	if ct == "" {
 		if cx.Server.Basic.DefaultType != "" {
@@ -234,6 +238,7 @@ func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	} else if strings.HasPrefix(ct, "text/plain") && cx.Server.Basic.DefaultType != "" {
 		ct = cx.Server.Basic.DefaultType
 	}
+
 	autofill := true
 	if len(fills) > 0 {
 		autofill = fills[0]
