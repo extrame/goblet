@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"xorm.io/xorm"
 )
@@ -22,6 +23,7 @@ type Db struct {
 }
 
 func (d *Db) New(engine string) (db *xorm.Engine, err error) {
+
 	var q string
 	if engine == "mysql" {
 		q = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", d.User, d.Pwd, d.Host, d.Port, d.Name)
@@ -41,6 +43,7 @@ func (d *Db) New(engine string) (db *xorm.Engine, err error) {
 	} else {
 		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,oci8,mssql,sqlite3,sqlite,none]", engine)
 	}
+	logrus.WithField("db type", engine).WithField("url", q)
 	return xorm.NewEngine(engine, q)
 }
 
