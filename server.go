@@ -169,7 +169,6 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		err = s.connectDB()
 		if err == nil {
 			if s.Basic.Env == config.DevelopEnv {
-				log.Println("connect to DB")
 				DB.ShowSQL(true)
 			}
 		} else if err != config.NoDbDriver {
