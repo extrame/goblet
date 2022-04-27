@@ -43,7 +43,7 @@ func (d *Db) New(engine string) (db *xorm.Engine, err error) {
 	} else {
 		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,oci8,mssql,sqlite3,sqlite,none]", engine)
 	}
-	logrus.WithField("db type", engine).WithField("url", q)
+	logrus.WithField("db type", engine).WithField("url", q).Infoln("connect to DB")
 	return xorm.NewEngine(engine, q)
 }
 
