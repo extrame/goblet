@@ -9,7 +9,7 @@ import (
 	"github.com/extrame/goblet"
 )
 
-var LoginInHead _loginInHead
+var LoginInHead = new(_loginInHead)
 
 type _loginInHead struct {
 }

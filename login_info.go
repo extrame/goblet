@@ -27,7 +27,7 @@ func (c *CookieLoginInfoStorer) AddLoginAs(ctx *Context, name string, id string,
 }
 
 func (c *CookieLoginInfoStorer) GetLoginIdAs(ctx *Context, key string) (string, error) {
-	cookie, err := ctx.SignedCookie(key)
+	cookie, err := ctx.SignedCookie(key + "Id")
 	if err == nil {
 		return cookie.Value, nil
 	}
