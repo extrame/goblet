@@ -11,7 +11,7 @@ func (c *Context) GetLoginId() (string, bool) {
 }
 
 func (c *Context) GetLoginIdAs(name string) (string, bool) {
-	cookie, err := c.Server.loginSaver.GetLoginIdAs(c, name+"Id")
+	cookie, err := c.Server.loginSaver.GetLoginIdAs(c, name)
 	if cookie != "" && err == nil {
 		return cookie, true
 	}
@@ -70,7 +70,7 @@ func (c *Context) DelLogin() {
 
 //Delete the login cookie as specified name
 func (c *Context) DelLoginAs(name string) {
-	cookie, err := c.SignedCookie(name + "Id")
+	cookie, err := c.SignedCookie(name)
 	if cookie != nil && err == nil {
 		cookie.MaxAge = -1
 		expire := time.Now()
