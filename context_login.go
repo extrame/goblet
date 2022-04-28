@@ -2,7 +2,6 @@ package goblet
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
 )
@@ -12,9 +11,9 @@ func (c *Context) GetLoginId() (string, bool) {
 }
 
 func (c *Context) GetLoginIdAs(name string) (string, bool) {
-	cookie, err := c.SignedCookie(name + "Id")
-	if cookie != nil && err == nil {
-		return cookie.Value, true
+	cookie, err := c.Server.loginSaver.GetLoginIdAs(c, name+"Id")
+	if cookie != "" && err == nil {
+		return cookie, true
 	}
 	return "", false
 }
@@ -35,9 +34,9 @@ func (c *Context) AddLoginIdAs(id interface{}, name string, timeduration ...time
 		userid = strconv.FormatInt(rid, 10)
 	}
 	if timeduration == nil {
-		c.addLoginAs(name, userid)
+		c.Server.loginSaver.AddLoginAs(c, name, userid)
 	} else {
-		c.addLoginAs(name, userid, timeduration[0])
+		c.Server.loginSaver.AddLoginAs(c, name, userid, timeduration[0])
 	}
 
 }
@@ -57,25 +56,11 @@ func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
 		userid = fmt.Sprintf("%s", id)
 	}
 	if timeduration == nil {
-		c.addLoginAs("user", userid)
+		c.Server.loginSaver.AddLoginAs(c, "user", userid)
 	} else {
-		c.addLoginAs("user", userid, timeduration[0])
+		c.Server.loginSaver.AddLoginAs(c, "user", userid, timeduration[0])
 	}
 
-}
-
-func (c *Context) addLoginAs(name string, id string, timeduration ...time.Duration) {
-	expire := time.Now().AddDate(0, 0, 1)
-	if timeduration != nil {
-		expire = time.Now().Add(timeduration[0])
-	}
-	cookie := new(http.Cookie)
-	cookie.Name = name + "Id"
-	cookie.Value = id
-	cookie.Expires = expire
-	cookie.Path = "/"
-	cookie.RawExpires = expire.Format(time.UnixDate)
-	c.AddSignedCookie(cookie)
 }
 
 //Delete the login cookie saved

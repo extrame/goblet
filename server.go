@@ -69,6 +69,7 @@ type Server struct {
 	cfg           *yaml.Node
 	cfgFileSuffix string
 	silenceUrls   map[string]bool
+	loginSaver    LoginInfoStorer
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -149,6 +150,11 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		}
 		if sv, ok := plugin.(SilenceUrlSetter); ok {
 			s.silenceUrls = sv.SetSilenceUrls()
+		}
+		if lv, ok := plugin.(LoginInfoStorer); ok {
+			s.loginSaver = lv
+		} else {
+			s.loginSaver = new(CookieLoginInfoStorer)
 		}
 	}
 	if s.saver == nil {
