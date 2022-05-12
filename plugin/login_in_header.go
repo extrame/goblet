@@ -23,8 +23,8 @@ func (l *_loginInHead) GetLoginIdAs(ctx *goblet.Context, key string) (string, er
 	if auth != "" {
 		parts := strings.Split(auth, " ")
 		if len(parts) == 4 {
-			if parts[0] == "Basic" && parts[1] == key && parts[4] == ctx.Server.Hash(parts[3]) {
-				return parts[3], nil
+			if parts[0] == "Basic" && parts[1] == key && parts[3] == ctx.Server.Hash(parts[2]) {
+				return parts[2], nil
 			}
 		}
 	}
