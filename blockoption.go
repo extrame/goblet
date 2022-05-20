@@ -342,7 +342,7 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
 
-func checkResult(results []reflect.Value, typ reflect.Type, ctx *Context) {
+func checkResult(results []reflect.Value, typ reflect.Type, ctx *Context) error {
 	// status_code is not setted
 	if len(results) > 0 && !ctx.already_writed && ctx.response == nil && ctx.responseMap == nil {
 		for i := len(results); i > 0; i-- {
@@ -351,15 +351,21 @@ func checkResult(results []reflect.Value, typ reflect.Type, ctx *Context) {
 			ok := ti.Implements(errorInterface)
 			if !ok {
 				ctx.Respond(ires)
-				return
+				return nil
 			} else if ok && !results[i-1].IsNil() {
+				ierr := ires.(error)
+				if ge.IsNoSuchRouter(ierr) {
+					//程序中要求进行Nosuchrouter处理的，直接返回给路由
+					return ierr
+				}
 				//优先按最后一个error参数返回错误，符合主流编程习惯
 				ctx.RespondError(ires.(error))
-				return
+				return nil
 			}
 		}
 		ctx.RespondOK()
 	}
+	return nil
 }
 
 func callMethod(method reflect.Value, ctx *Context) ([]reflect.Value, reflect.Type) {
@@ -446,7 +452,7 @@ func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) e
 			// 或者有返回，如果返回不是error，且不为空，返回结果
 			// 如果有返回，且返回是error，不为空，返回错误
 			// 其他情况，直接返回ok
-			checkResult(results, typ, ctx)
+			return checkResult(results, typ, ctx)
 		}
 	}
 
