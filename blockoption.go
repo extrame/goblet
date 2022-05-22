@@ -318,7 +318,7 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 
 		if g.tryPre(name, ctx) {
 			results, typ := callMethod(method, ctx)
-			checkResult(results, typ, ctx)
+			return checkResult(results, typ, ctx)
 		}
 
 		// key := strings.ToLower(g.name + "-" + name)
