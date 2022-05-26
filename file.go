@@ -116,7 +116,7 @@ func (l *LocalSaver) Save(path string, f io.Reader) error {
 	var err error
 	err = os.MkdirAll(filepath.Dir(path), 0777)
 	if err == nil {
-		if file, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0666); err == nil {
+		if file, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err == nil {
 			io.Copy(file, f)
 			file.Close()
 		}
