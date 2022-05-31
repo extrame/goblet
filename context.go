@@ -330,7 +330,12 @@ func getMapFromValue(obj reflect.Value, fields []string) map[string]interface{} 
 		obj = obj.Elem()
 	}
 	for _, field := range fields {
-		resultOne[field] = obj.FieldByName(field).Interface()
+		var f = obj.FieldByName(field)
+		if f.IsValid() {
+			resultOne[field] = f.Interface()
+		} else {
+			resultOne[field] = nil
+		}
 	}
 	return resultOne
 
