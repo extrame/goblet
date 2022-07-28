@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 )
 
+//File the input file type, if you want to response a file, just response(*os.File)
 type File struct {
 	Name   string
 	Path   string
