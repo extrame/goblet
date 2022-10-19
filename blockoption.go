@@ -17,7 +17,7 @@ type SingleController byte
 type RestController byte
 type GroupController byte
 type ErrorRender byte
-type NoHidden byte
+type AutoHide byte
 
 const (
 	REST_READ       = "read"
@@ -57,7 +57,7 @@ type BasicBlockOption struct {
 	block               reflect.Value
 	name                string
 	errRender           string
-	noHidden            bool
+	hide                bool
 }
 
 type HtmlBlockOption struct {
@@ -101,7 +101,7 @@ func (h *BasicBlockOption) SetRender(renders []string) {
 }
 
 func (h *BasicBlockOption) AutoHidden() bool {
-	return !h.noHidden
+	return h.hide
 }
 
 func (h *BasicBlockOption) GetRender() []string {
@@ -537,8 +537,8 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 				}
 				continue
 			}
-			if t.Type.Name() == "NoHidden" && t.Type.PkgPath() == "github.com/extrame/goblet" {
-				basic.noHidden = true
+			if t.Type.Name() == "AutoHide" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+				basic.hide = true
 				continue
 			}
 			if t.Type.Name() == "ErrorRender" && t.Type.PkgPath() == "github.com/extrame/goblet" {
