@@ -297,8 +297,7 @@ func (c *Context) Respond(data interface{}) {
 	case error:
 		c.RespondWithStatus(data, http.StatusInternalServerError)
 	case []byte, io.Reader, *File:
-		c.forceFormat = "raw"
-		c.AllowRender("raw")
+		c.UseRender("raw")
 		c.RespondWithStatus(td, http.StatusOK)
 	default:
 		c.RespondWithStatus(data, http.StatusOK)
@@ -363,6 +362,7 @@ func (c *Context) RespondError(err error, context ...string) {
 //Reset the context renders
 func (c *Context) UseRender(render string) {
 	c.forceFormat = render
+	c.AllowRender("raw")
 }
 
 //AllowRender Allow some temporary render
