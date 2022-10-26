@@ -594,3 +594,8 @@ func (c *Context) ReqHeader() http.Header {
 func (c *Context) UserAgent() string {
 	return c.request.UserAgent()
 }
+
+//BasicAuth 返回Basic Auth
+func (c *Context) BasicAuth() (string, string, bool) {
+	return c.request.BasicAuth()
+}
