@@ -81,8 +81,10 @@ func (r *RawRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface{
 	// hwr.Header().Set("Content-Length", strconv.FormatInt(writen, 10))
 	return err
 returnFile:
-	hwr.Header().Set("Content-Disposition", "attachment; filename="+name)
-	hwr.Header().Set("Content-Type", "application/octet-stream")
+	if hwr.Header().Get("Content-Type") == "" {
+		hwr.Header().Set("Content-Type", "application/octet-stream")
+		hwr.Header().Set("Content-Disposition", "attachment; filename="+name)
+	}
 	var ret int64
 	if ret, err = seeker.Seek(0, 1); err == nil {
 		hwr.Header().Set("Content-Length", strconv.FormatInt(size-ret, 10))

@@ -10,7 +10,9 @@ import (
 
 //File the input file type, if you want to response a file, just response(*os.File)
 type File struct {
-	Name   string
+	//Name the filename uploaded with file
+	Name string
+	//Path the filepath after saved in server
 	Path   string
 	Header textproto.MIMEHeader
 	rc     multipart.File `xorm:"-"`
