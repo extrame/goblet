@@ -8,6 +8,7 @@ import (
 type LoginInfoStorer interface {
 	AddLoginAs(ctx *Context, name string, id string, timeduration ...time.Duration)
 	GetLoginIdAs(ctx *Context, key string) (string, error)
+	DeleteLoginAs(ctx *Context, key string) error
 }
 
 type CookieLoginInfoStorer struct{}
@@ -32,4 +33,16 @@ func (c *CookieLoginInfoStorer) GetLoginIdAs(ctx *Context, key string) (string, 
 		return cookie.Value, nil
 	}
 	return "", err
+}
+
+func (c *CookieLoginInfoStorer) DeleteLoginAs(ctx *Context, key string) error {
+	cookie, err := ctx.SignedCookie(key + "Id")
+	if cookie != nil && err == nil {
+		cookie.MaxAge = -1
+		expire := time.Now()
+		cookie.Expires = expire
+		cookie.RawExpires = expire.Format(time.UnixDate)
+		_, err = ctx.AddSignedCookie(cookie)
+	}
+	return err
 }

@@ -64,18 +64,11 @@ func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
 }
 
 //Delete the login cookie saved
-func (c *Context) DelLogin() {
-	c.DelLoginAs("user")
+func (c *Context) DelLogin() error {
+	return c.DelLoginAs("user")
 }
 
 //Delete the login cookie as specified name
-func (c *Context) DelLoginAs(name string) {
-	cookie, err := c.SignedCookie(name)
-	if cookie != nil && err == nil {
-		cookie.MaxAge = -1
-		expire := time.Now()
-		cookie.Expires = expire
-		cookie.RawExpires = expire.Format(time.UnixDate)
-		c.AddSignedCookie(cookie)
-	}
+func (c *Context) DelLoginAs(name string) error {
+	return c.Server.loginSaver.DeleteLoginAs(c, name)
 }

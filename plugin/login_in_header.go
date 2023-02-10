@@ -30,3 +30,8 @@ func (l *_loginInHead) GetLoginIdAs(ctx *goblet.Context, key string) (string, er
 	}
 	return "", errors.New("NOT VALID LOGIN INFO:" + auth)
 }
+
+func (l *_loginInHead) DeleteLoginAs(ctx *goblet.Context, key string) error {
+	ctx.SetHeader("Authorization", "")
+	return nil
+}
