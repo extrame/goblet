@@ -41,6 +41,7 @@ func (c *CookieLoginInfoStorer) DeleteLoginAs(ctx *Context, key string) error {
 		cookie.MaxAge = -1
 		expire := time.Now()
 		cookie.Expires = expire
+		cookie.Path = "/"
 		cookie.RawExpires = expire.Format(time.UnixDate)
 		_, err = ctx.AddSignedCookie(cookie)
 	}
