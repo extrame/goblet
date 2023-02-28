@@ -46,6 +46,8 @@ type BlockOption interface {
 	TemplatePath() string
 	ErrorRender() string
 	AutoHidden() bool
+	//Get the type of block
+	String() string
 }
 
 type BasicBlockOption struct {
@@ -60,8 +62,16 @@ type BasicBlockOption struct {
 	hide                bool
 }
 
+func (h *BasicBlockOption) String() string {
+	return fmt.Sprintf("Basic(%s)", h.name)
+}
+
 type HtmlBlockOption struct {
 	BasicBlockOption
+}
+
+func (h *HtmlBlockOption) String() string {
+	return fmt.Sprintf("Html(%s)", h.name)
 }
 
 func (h *HtmlBlockOption) MatchSuffix(suffix string) bool {
@@ -209,6 +219,10 @@ func (r *RestBlockOption) MatchSuffix(suffix string) bool {
 	return len(suffix) == 0 || suffix[0:1] == "/"
 }
 
+func (h *RestBlockOption) String() string {
+	return fmt.Sprintf("Rest(%s)", h.name)
+}
+
 type groupBlockOption struct {
 	BasicBlockOption
 	ignoreCase bool
@@ -223,7 +237,7 @@ func (g *groupBlockOption) String() string {
 	if !g.ignoreCase {
 		with = "without"
 	}
-	return fmt.Sprintf("GroupBlockOption %s ignore case", with)
+	return fmt.Sprintf("Group(%s) %s ignore case", g.name, with)
 }
 
 func (g *groupBlockOption) Parse(ctx *Context) error {
@@ -476,6 +490,10 @@ func (c *_staticBlockOption) Parse(ctx *Context) error {
 	ctx.forceFormat = "html"
 	ctx.layout = "default"
 	return nil
+}
+
+func (h *_staticBlockOption) String() string {
+	return fmt.Sprintf("Static(%s)", h.name)
 }
 
 func (s *Server) prepareOption(block interface{}) BlockOption {

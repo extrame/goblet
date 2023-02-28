@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -451,18 +450,7 @@ func (c *Context) RedirectTo(url string) {
 
 ///////////for renders/////////////
 func (c *Context) BlockOptionType() string {
-	switch c.option.(type) {
-	case *RestBlockOption:
-		return "Rest"
-	case *groupBlockOption:
-		return "Group"
-	case *_staticBlockOption:
-		return "Static"
-	case *HtmlBlockOption:
-		return "Html"
-	}
-	log.Panic("err of block option type!!!")
-	return ""
+	return c.option.String()
 }
 
 //返回当前的Method，json/html等

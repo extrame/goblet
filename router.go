@@ -58,7 +58,7 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 			logrus.Infof("routing %s", r.URL.Path)
 		}
 		if anch != nil {
-			logrus.Infof("(dynamic)")
+			logrus.Infof("(dynamic) %v", anch.opt)
 		}
 	} else {
 		format = "html"
