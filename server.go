@@ -2,7 +2,6 @@ package goblet
 
 import (
 	"crypto/sha1"
-	"flag"
 	"fmt"
 	"html/template"
 	"log"
@@ -70,6 +69,7 @@ type Server struct {
 	cfgFileSuffix string
 	silenceUrls   map[string]bool
 	loginSaver    LoginInfoStorer
+	configer      Configer
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -155,6 +155,11 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 			s.loginSaver = lv
 		} else {
 			s.loginSaver = new(CookieLoginInfoStorer)
+		}
+		if lv, ok := plugin.(Configer); ok {
+			s.configer = lv
+		} else {
+			s.configer = new(YamlConfiger)
 		}
 	}
 	if s.saver == nil {
@@ -325,19 +330,11 @@ func (s *Server) SetConfigSuffix(suffix string) {
 }
 
 func (s *Server) parseConfig() (err error) {
-	if s.cfgFileSuffix == "" {
-		s.cfgFileSuffix = "conf"
-	}
-	flag.StringVar(&s.ConfigFile, "config", "./"+s.Name+"."+s.cfgFileSuffix, "设置配置文件的路径")
-	flag.Parse()
-
-	s.ConfigFile = filepath.FromSlash(s.ConfigFile)
-	var f *os.File
-	f, err = os.Open(s.ConfigFile)
+	reader, err := s.configer.GetConfigSource(s)
 	if err == nil {
 		s.initLog()
 		s.cfg = new(yaml.Node)
-		err = yaml.NewDecoder(f).Decode(s.cfg)
+		err = yaml.NewDecoder(reader).Decode(s.cfg)
 		if err == nil {
 			if err = s.getCfg("basic").Decode(&s.Basic); err == nil {
 				s.Db.Name = s.Name
@@ -351,6 +348,10 @@ func (s *Server) parseConfig() (err error) {
 				}
 			}
 		}
+	}
+
+	if err != nil {
+		return err
 	}
 
 	if s.Basic.Env != config.DevelopEnv && s.Basic.Env != config.ProductEnv && s.Basic.Env != config.OldProductEnv {
