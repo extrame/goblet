@@ -1,8 +1,10 @@
 package goblet
 
-func TestMatcher(ctrl interface{}, url string) (string, bool) {
+func TestMatcher(url string, ctrls ...interface{}) (string, string) {
 	testServer := Organize("goblet-test", &StringConfiger{Content: BasicConfig})
-	testServer.ControlBy(ctrl)
+	for _, ctrl := range ctrls {
+		testServer.ControlBy(ctrl)
+	}
 	anchor, suffix := testServer.router.anchor.match(url, len(url))
-	return suffix, anchor != nil
+	return anchor.opt.String(), suffix
 }

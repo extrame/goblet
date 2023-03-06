@@ -39,3 +39,7 @@ type DefaultRenderSetter interface {
 type SilenceUrlSetter interface {
 	SetSilenceUrls() map[string]bool
 }
+
+type DelimSetter interface {
+	SetDelim() [2]string
+}

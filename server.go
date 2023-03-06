@@ -70,6 +70,7 @@ type Server struct {
 	silenceUrls   map[string]bool
 	loginSaver    LoginInfoStorer
 	configer      Configer
+	delims        []string
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -160,6 +161,10 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 			s.configer = lv
 		} else {
 			s.configer = new(YamlConfiger)
+		}
+		if dv, ok := plugin.(DelimSetter); ok {
+			var delimis = dv.SetDelim()
+			s.delims = delimis[:]
 		}
 	}
 	if s.saver == nil {
@@ -389,6 +394,10 @@ func (s *Server) enableDbCache() {
 		cacher := caches.NewLRUCacher(caches.NewMemoryStore(), s.Cache.Amount)
 		DB.SetDefaultCacher(cacher)
 	}
+}
+
+func (s *Server) GetDelims() []string {
+	return s.delims
 }
 
 //Run 运营一个服务器

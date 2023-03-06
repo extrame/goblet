@@ -25,6 +25,7 @@ type RenderServer interface {
 	WwwRoot() string
 	PublicDir() string
 	Env() string
+	GetDelims() []string
 }
 
 //每一类的Render都必须返回一个RenderInstance用于具体的渲染

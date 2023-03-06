@@ -34,6 +34,7 @@ type HtmlRender struct {
 	public    string
 	saveTemp  bool
 	notExists sync.Map
+	delims    []string
 }
 
 func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance, err error) {
@@ -142,6 +143,14 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 	}
 
 	if err == nil {
+
+		if h.delims != nil {
+			yield.Delims(h.delims[0], h.delims[1])
+			if layout != nil {
+				layout.Delims(h.delims[0], h.delims[1])
+			}
+		}
+
 		suffix := ""
 		if v := ctx.Version(); v != "" {
 			suffix = "?" + v
@@ -208,6 +217,7 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 	h.models = new(sync.Map)
 	h.pathRoot = new(sync.Map)
 	h.saveTemp = (s.Env() == config.ProductEnv)
+	h.delims = s.GetDelims()
 	if h.saveTemp {
 		h.initGlobalTemplate(h.root)
 	}
