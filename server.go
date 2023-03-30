@@ -370,6 +370,10 @@ func (s *Server) parseConfig() (err error) {
 		s.Basic.DbEngine = "none"
 	}
 
+	if s.Basic.Port == 0 {
+		s.Basic.Port = 8080
+	}
+
 	if s.Basic.Env != config.DevelopEnv && s.Basic.Env != config.ProductEnv && s.Basic.Env != config.OldProductEnv {
 		logrus.Fatalln("environment must be development or production, config env: development or env: production")
 	} else if s.Basic.Env == config.OldProductEnv {
