@@ -361,6 +361,15 @@ func (s *Server) parseConfig() (err error) {
 		return err
 	}
 
+	if s.Basic.Env == "" {
+		s.Basic.Env = config.DevelopEnv
+		logrus.Info("environment not set, default set as development")
+	}
+
+	if s.Basic.DbEngine == "" {
+		s.Basic.DbEngine = "none"
+	}
+
 	if s.Basic.Env != config.DevelopEnv && s.Basic.Env != config.ProductEnv && s.Basic.Env != config.OldProductEnv {
 		logrus.Fatalln("environment must be development or production, config env: development or env: production")
 	} else if s.Basic.Env == config.OldProductEnv {
