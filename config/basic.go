@@ -32,7 +32,7 @@ func (s *Basic) UnmarshalYAML(value *yaml.Node) (err error) {
 	s.IgnoreUrlCase = true
 	s.HashSecret = "a238974b2378c39021d23g43"
 	s.Env = ProductEnv
-	s.DbEngine = "mysql"
+	s.DbEngine = "none"
 	s.EnableKeepAlive = true
 	type plain Basic
 	return value.Decode((*plain)(s))

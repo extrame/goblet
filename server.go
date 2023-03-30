@@ -193,7 +193,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 			log.Fatalln("connect error:", err)
 		}
 	} else {
-		log.Fatalln(err)
+		logrus.WithError(err).Fatalln("read config file error")
 	}
 	s.enableDbCache()
 	if s.errFunc == nil {
@@ -362,7 +362,7 @@ func (s *Server) parseConfig() (err error) {
 	}
 
 	if s.Basic.Env != config.DevelopEnv && s.Basic.Env != config.ProductEnv && s.Basic.Env != config.OldProductEnv {
-		logrus.Fatalln("environment must be development or production")
+		logrus.Fatalln("environment must be development or production, config env: development or env: production")
 	} else if s.Basic.Env == config.OldProductEnv {
 		s.Basic.Env = config.ProductEnv
 		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
