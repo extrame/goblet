@@ -352,10 +352,10 @@ func (h *HttpRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface
 	for k, v := range funcs {
 		funcMap[k] = v
 	}
-	h.layout.Funcs(funcMap)
 	h.yield.Funcs(funcMap)
 
 	if h.layout != nil {
+		h.layout.Funcs(funcMap)
 		temp, _ := h.layout.Clone()
 		return temp.Execute(wr, data)
 	} else if h.yield != nil {

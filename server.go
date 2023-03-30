@@ -154,13 +154,9 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		}
 		if lv, ok := plugin.(LoginInfoStorer); ok {
 			s.loginSaver = lv
-		} else {
-			s.loginSaver = new(CookieLoginInfoStorer)
 		}
 		if lv, ok := plugin.(Configer); ok {
 			s.configer = lv
-		} else {
-			s.configer = new(YamlConfiger)
 		}
 		if dv, ok := plugin.(DelimSetter); ok {
 			var delimis = dv.SetDelim()
@@ -169,6 +165,12 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	}
 	if s.saver == nil {
 		s.saver = new(LocalSaver)
+	}
+	if s.configer == nil {
+		s.configer = new(YamlConfiger)
+	}
+	if s.loginSaver == nil {
+		s.loginSaver = new(CookieLoginInfoStorer)
 	}
 	s.pres = make(map[string][]reflect.Value)
 	s.filler = make(map[string]FormFillFn)
