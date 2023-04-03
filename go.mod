@@ -10,7 +10,7 @@ require (
 	github.com/extrame/go-random v0.0.0-20160517052123-1d8679eca4e2
 	github.com/extrame/go-toml-config v0.0.0-20190318035753-a516bbef5346
 	github.com/extrame/smtpoverttl v0.0.0-20140504083549-9b082db561b3
-	github.com/extrame/unmarshall v0.0.0-20221024014939-f6d96c3189e6
+	github.com/extrame/unmarshall v0.0.0-20230403085324-ec6cdc0a7068
 	github.com/garyburd/redigo v1.6.2
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/goccy/go-json v0.9.4 // indirect
