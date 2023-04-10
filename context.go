@@ -529,6 +529,13 @@ func (c *Context) Form() url.Values {
 	return c.request.Form
 }
 
+func (c *Context) PostForm() url.Values {
+	if c.request.PostForm == nil {
+		c.request.ParseMultipartForm(defaultMaxMemory)
+	}
+	return c.request.PostForm
+}
+
 func (c *Context) FormValue(key string) string {
 	return c.request.FormValue(key)
 }
