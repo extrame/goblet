@@ -99,10 +99,17 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 		ValueGetter: func(tag string) []string {
 			values := (*map[string][]string)(&cx.request.Form)
 			if values != nil {
-				if results, ok := (*values)[tag]; !ok {
-					//get the value of [Tag] from [tag](lower case), it maybe a problem TODO
-					return (*values)[strings.ToLower(tag)]
-				} else {
+				var lower = strings.ToLower(tag)
+				if results, ok := (*values)[tag]; ok {
+					return results
+				}
+				if results, ok := (*values)[lower]; ok {
+					return results
+				}
+				if results, ok := (*values)[tag+"[]"]; ok {
+					return results
+				}
+				if results, ok := (*values)[lower+"[]"]; ok {
 					return results
 				}
 			}
