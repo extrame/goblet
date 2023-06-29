@@ -118,7 +118,10 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 		Tag:          "goblet",
 		MaxLength:    maxlength,
 		TagConcatter: concatPrefix,
-		AutoFill:     autofill,
+		BaseName: func(path string, prefix string) string {
+			return strings.Split(strings.TrimPrefix(path, prefix+"["), "]")[0]
+		},
+		AutoFill: autofill,
 	}
 
 	for typ, fn := range cx.Server.filler {
@@ -181,6 +184,9 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 			return sub
 		},
 		TagConcatter: concatPrefix,
+		BaseName: func(path string, prefix string) string {
+			return strings.Split(strings.TrimPrefix(path, prefix+"["), "]")[0]
+		},
 		FillForSpecifiledType: map[string]func(id string) (reflect.Value, error){
 			"github.com/extrame/goblet.File": func(id string) (reflect.Value, error) {
 				var file File

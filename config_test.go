@@ -108,6 +108,9 @@ func TestConfigSubArray(t *testing.T) {
 		TagConcatter: func(prefix string, tag string) string {
 			return prefix + "." + tag
 		},
+		BaseName: func(path string, prefix string) string {
+			return strings.Split(strings.TrimPrefix(path, prefix+"["), "]")[0]
+		},
 		AutoFill: true,
 	}
 	u.Unmarshall(&obj)
