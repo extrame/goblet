@@ -21,7 +21,7 @@ func (p *PageRedirector) Get(ctx *goblet.Context) error {
 	if p.matcher.MatchString("/" + ctx.Suffix()) {
 		var target = p.target
 		if p.withOriginalAsQuery {
-			target += "?original=" + ctx.Suffix()
+			target += "?original=/" + ctx.Suffix()
 		}
 		ctx.RedirectTo(target)
 	}
