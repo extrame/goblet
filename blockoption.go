@@ -13,8 +13,14 @@ import (
 type Route byte
 type Render byte
 type Layout byte
+
+//Controller which only match full path eg. a SingleController with name Test will just match /test, not /test/1
 type SingleController byte
+
+//Controller which match full path according to RESTful rules, eg. a RestController with name Test will match /test and /test/1
 type RestController byte
+
+//Controller which match full path and path with any suffix, eg. a GroupController with name Test will match /test and /test/1 and /test/a/b/c
 type GroupController byte
 type ErrorRender byte
 type AutoHide byte
@@ -519,23 +525,36 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 		for i := 0; i < valtype.NumField(); i++ {
 			t := valtype.Field(i)
 
-			if t.Type.Name() == "Layout" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+			if t.Type.PkgPath() != "github.com/extrame/goblet" {
+				continue
+			}
+
+			if t.Type.Name() == "Layout" {
 				basic.layout = string(t.Tag)
 				continue
 			}
-			if t.Type.Name() == "SingleController" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+			if t.Type.Name() == "SingleController" {
 				basic.typ = "single"
 				continue
 			}
 
-			if t.Type.Name() == "RestController" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+			if t.Type.Name() == "RestController" {
 				basic.typ = "rest"
+				continue
+			}
+
+			if t.Type.Name() == "AutoHide" {
+				basic.hide = true
+				continue
+			}
+			if t.Type.Name() == "ErrorRender" {
+				basic.errRender = string(t.Tag)
 				continue
 			}
 
 			tags := strings.Split(string(t.Tag), ",")
 
-			if t.Type.Name() == "GroupController" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+			if t.Type.Name() == "GroupController" {
 				basic.typ = "group"
 				for _, v := range tags {
 					vs := strings.Split(v, "=")
@@ -548,22 +567,15 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 				continue
 			}
 
-			if t.Type.Name() == "Route" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+			if t.Type.Name() == "Route" {
 				basic.routing = tags
 				if len(tags) > 0 {
 					basic.htmlRenderFileOrDir = strings.TrimLeft(tags[0], "/")
 				}
 				continue
 			}
-			if t.Type.Name() == "AutoHide" && t.Type.PkgPath() == "github.com/extrame/goblet" {
-				basic.hide = true
-				continue
-			}
-			if t.Type.Name() == "ErrorRender" && t.Type.PkgPath() == "github.com/extrame/goblet" {
-				basic.errRender = string(t.Tag)
-				continue
-			}
-			if t.Type.Name() == "Render" && t.Type.PkgPath() == "github.com/extrame/goblet" {
+
+			if t.Type.Name() == "Render" {
 				basic.render = make([]string, len(tags))
 				for k, v := range tags {
 					vs := strings.Split(v, "=")

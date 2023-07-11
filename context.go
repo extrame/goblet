@@ -340,9 +340,11 @@ func getMapFromValue(obj reflect.Value, fields []string) map[string]interface{} 
 }
 
 func (c *Context) RespondOK() {
-	c.status_code = http.StatusOK
-	if c.Server.okFunc != nil {
-		c.Server.okFunc(c)
+	if !c.already_writed {
+		c.status_code = http.StatusOK
+		if c.Server.okFunc != nil {
+			c.Server.okFunc(c)
+		}
 	}
 }
 
@@ -443,7 +445,7 @@ func (c *Context) RestRedirectToRead(id interface{}) {
 
 func (c *Context) RedirectTo(url string) {
 	c.writer.Header().Set("Location", url)
-	c.writer.WriteHeader(302)
+	c.writer.WriteHeader(301)
 	c.format = "raw"
 	c.already_writed = true
 }
