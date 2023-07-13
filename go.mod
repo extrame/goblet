@@ -3,12 +3,14 @@ module github.com/extrame/goblet
 go 1.15
 
 require (
+	github.com/SermoDigital/jose v0.9.1 // indirect
 	github.com/boltdb/bolt v1.3.1
 	github.com/denisenkom/go-mssqldb v0.12.0
 	github.com/denverdino/aliyungo v0.0.0-20210222084345-ddfe3452f5e8
 	github.com/extrame/go-bower v0.0.0-20150602065443-bcc81c71c9b3
 	github.com/extrame/go-random v0.0.0-20160517052123-1d8679eca4e2
 	github.com/extrame/go-toml-config v0.0.0-20190318035753-a516bbef5346
+	github.com/extrame/jose v0.0.0-20230713040001-a8d6daaf8143 // indirect
 	github.com/extrame/smtpoverttl v0.0.0-20140504083549-9b082db561b3
 	github.com/extrame/unmarshall v0.0.0-20230629031606-ced0ffa5388c
 	github.com/garyburd/redigo v1.6.2
