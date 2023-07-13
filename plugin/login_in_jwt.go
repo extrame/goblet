@@ -32,6 +32,8 @@ func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
 		return errors.New("NOT VALID SIGNING METHOD:" + j.Alg)
 	}
 
+	j.method = m
+
 	return nil
 }
 
