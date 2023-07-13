@@ -12,7 +12,7 @@ import (
 )
 
 //New create a new LoginAsJwt plugin, secret is the secret key for jwt, idKey is the key for id in jwt
-func Jwt() *_JwtLoginPlugin {
+func JWT() *_JwtLoginPlugin {
 	return &_JwtLoginPlugin{}
 }
 
@@ -36,7 +36,7 @@ func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
 }
 
 func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, name string, id string, timeduration ...time.Duration) {
-	var claims jws.Claims
+	var claims = make(jws.Claims)
 	claims.Set(name, id)
 	j := jws.NewJWT(claims, l.method)
 	j.Claims().SetIssuer(l.Issuer)
