@@ -90,14 +90,22 @@ func (s *Server) SaveInPublic(path string, f io.Reader) error {
 	return s.saver.Save(fullPath, f)
 }
 
-func (s *Server) DelFileInPrivate(path string) error {
+func (s *Server) DelFileInPrivate(path string, force ...bool) error {
 	fullPath := filepath.Join(s.Basic.WwwRoot, path)
-	return os.Remove(fullPath)
+	var _force = false
+	if len(force) > 0 {
+		_force = force[0]
+	}
+	return s.saver.Delete(fullPath, _force)
 }
 
-func (s *Server) DelFileInPublic(path string) error {
+func (s *Server) DelFileInPublic(path string, force ...bool) error {
 	fullPath := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path)
-	return s.saver.Delete(fullPath)
+	var _force = false
+	if len(force) > 0 {
+		_force = force[0]
+	}
+	return s.saver.Delete(fullPath, _force)
 }
 
 //将文件保存在私有目录，不可以使用http访问到
@@ -108,7 +116,7 @@ func (s *Server) SaveInPrivate(path string, f io.Reader) error {
 
 type Saver interface {
 	Save(fullpath string, f io.Reader) error
-	Delete(fullpath string) error
+	Delete(fullpath string, force bool) error
 }
 
 type LocalSaver struct {
@@ -127,6 +135,9 @@ func (l *LocalSaver) Save(path string, f io.Reader) error {
 	return err
 }
 
-func (l *LocalSaver) Delete(path string) error {
+func (l *LocalSaver) Delete(path string, force bool) error {
+	if force {
+		return os.RemoveAll(path)
+	}
 	return os.Remove(path)
 }
