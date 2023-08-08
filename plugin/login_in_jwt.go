@@ -17,11 +17,13 @@ func JWT() *_JwtLoginPlugin {
 }
 
 type _JwtLoginPlugin struct {
-	Secret string
-	secret []byte
-	method crypto.SigningMethod
-	Issuer string
-	Alg    string
+	Secret   string
+	secret   []byte
+	method   crypto.SigningMethod
+	Issuer   string
+	Alg      string
+	Duration string
+	duration time.Duration
 }
 
 func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
@@ -31,6 +33,13 @@ func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
 	m := jws.GetSigningMethod(j.Alg)
 	if m == nil {
 		return errors.New("NOT VALID SIGNING METHOD:" + j.Alg)
+	}
+
+	duration, err := time.ParseDuration(j.Duration)
+	if err != nil {
+		j.duration = 24 * time.Hour
+	} else {
+		j.duration = duration
 	}
 
 	j.method = m
@@ -44,9 +53,11 @@ func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, name string, id string
 	claims.Set(name, id)
 	j := jws.NewJWT(claims, l.method)
 	j.Claims().SetIssuer(l.Issuer)
-	var d = 24 * time.Hour
+	var d time.Duration
 	if len(timeduration) > 0 {
 		d = timeduration[0]
+	} else {
+		d = l.duration
 	}
 
 	j.Claims().SetExpiration(time.Now().Add(d))
