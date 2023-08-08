@@ -50,7 +50,7 @@ func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
 
 func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, name string, id string, timeduration ...time.Duration) {
 	var claims = make(jws.Claims)
-	claims.Set(name, id)
+	claims.Set(name+"Id", id)
 	j := jws.NewJWT(claims, l.method)
 	j.Claims().SetIssuer(l.Issuer)
 	var d time.Duration
@@ -75,7 +75,7 @@ func (l *_JwtLoginPlugin) GetLoginIdAs(ctx *goblet.Context, key string) (string,
 		if err == nil {
 			err = token.Validate(l.secret)
 			if err == nil {
-				return token.Claims().Get(key).(string), nil
+				return token.Claims().Get(key + "Id").(string), nil
 			}
 		}
 	}
