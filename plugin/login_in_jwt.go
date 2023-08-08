@@ -44,7 +44,12 @@ func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, name string, id string
 	claims.Set(name, id)
 	j := jws.NewJWT(claims, l.method)
 	j.Claims().SetIssuer(l.Issuer)
+	var d = 24 * time.Hour
+	if len(timeduration) > 0 {
+		d = timeduration[0]
+	}
 
+	j.Claims().SetExpiration(time.Now().Add(d))
 	b, err := j.Serialize(l.secret)
 	if err == nil {
 		ctx.SetHeader("Authorization", fmt.Sprintf("Bearer %s", string(b)))
