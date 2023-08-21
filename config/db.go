@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"xorm.io/xorm"
+	"xorm.io/xorm/names"
 )
 
 var NoDbDriver = errors.New("no db driver for this server")
@@ -20,6 +21,7 @@ type Db struct {
 	Port       int    `yaml:"port"`
 	TO         int    `yaml:"connect_timeout"`
 	KaInterval int    `yaml:"ka_interval"`
+	Prefix     string `yaml:"prefix"`
 }
 
 func (d *Db) New(engine string) (db *xorm.Engine, err error) {
@@ -44,7 +46,13 @@ func (d *Db) New(engine string) (db *xorm.Engine, err error) {
 		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,oci8,mssql,sqlite3,sqlite,none]", engine)
 	}
 	logrus.WithField("db type", engine).WithField("url", q).Infoln("connect to DB")
-	return xorm.NewEngine(engine, q)
+	db, err = xorm.NewEngine(engine, q)
+	if err == nil {
+		if d.Prefix != "" {
+			db.SetTableMapper(names.NewPrefixMapper(names.SnakeMapper{}, d.Prefix))
+		}
+	}
+	return db, err
 }
 
 func (s *Db) UnmarshalYAML(value *yaml.Node) (err error) {
