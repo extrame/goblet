@@ -20,6 +20,8 @@ type SingleController byte
 //Controller which match full path according to RESTful rules, eg. a RestController with name Test will match /test and /test/1
 type RestController byte
 
+type Html5RouterController byte
+
 //Controller which match full path and path with any suffix, eg. a GroupController with name Test will match /test and /test/1 and /test/a/b/c
 type GroupController byte
 type ErrorRender byte
@@ -502,6 +504,25 @@ func (h *_staticBlockOption) String() string {
 	return fmt.Sprintf("Static(%s)", h.name)
 }
 
+type Html5RouterOption struct {
+	BasicBlockOption
+}
+
+func (c *Html5RouterOption) MatchSuffix(suffix string) bool {
+	return true
+}
+
+func (c *Html5RouterOption) Parse(ctx *Context) error {
+	ctx.method = "index"
+	ctx.forceFormat = "html"
+	ctx.layout = "default"
+	return nil
+}
+
+func (h *Html5RouterOption) String() string {
+	return fmt.Sprintf("Html5Router(%s)", h.name)
+}
+
 func (s *Server) prepareOption(block interface{}) BlockOption {
 
 	var basic BasicBlockOption
@@ -540,6 +561,11 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 
 			if t.Type.Name() == "RestController" {
 				basic.typ = "rest"
+				continue
+			}
+
+			if t.Type.Name() == "Html5RouterController" {
+				basic.typ = "html5_router"
 				continue
 			}
 
@@ -618,6 +644,8 @@ func newBlock(basic BasicBlockOption, block interface{}, ignoreCase bool) BlockO
 		return &RestBlockOption{basic}
 	case "group":
 		return &groupBlockOption{basic, ignoreCase}
+	case "html5_router":
+		return &Html5RouterOption{basic}
 	}
 
 	for i := 0; i < basic.block.Type().NumMethod(); i++ {
