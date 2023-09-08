@@ -32,6 +32,7 @@ func (p *Html5Router) Get(ctx *goblet.Context) error {
 
 matched:
 	ctx.RenderAs("index")
+	ctx.UseRender("html")
 	ctx.SetLayout("default")
 	return nil
 }

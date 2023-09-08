@@ -37,7 +37,7 @@ func (p *_JSONPlugin) RespondError(ctx *goblet.Context, err error, context ...st
 	if p.ResponseOriginalError {
 		ctx.AddRespond("Error", err)
 	} else if je, ok := err.(JsonErrorRender); ok && je.RespondAsJson() {
-		ctx.AddRespond("Error", err)
+		ctx.Respond(err)
 	} else {
 		ctx.AddRespond("Error", err.Error())
 	}
