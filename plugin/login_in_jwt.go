@@ -11,7 +11,7 @@ import (
 	"github.com/extrame/jose/jws"
 )
 
-//New create a new LoginAsJwt plugin, secret is the secret key for jwt, idKey is the key for id in jwt
+// New create a new LoginAsJwt plugin, secret is the secret key for jwt, idKey is the key for id in jwt
 func JWT() *_JwtLoginPlugin {
 	return &_JwtLoginPlugin{}
 }
@@ -75,11 +75,15 @@ func (l *_JwtLoginPlugin) GetLoginIdAs(ctx *goblet.Context, key string) (string,
 		if err == nil {
 			err = token.Validate(l.secret)
 			if err == nil {
-				return token.Claims().Get(key + "Id").(string), nil
+				var token = token.Claims().Get(key + "Id")
+				if token == nil {
+					return "", errors.New("NOT EXISTED LOGIN INFO: " + auth)
+				}
+				return token.(string), nil
 			}
 		}
 	}
-	return "", errors.New("NOT VALID LOGIN INFO:" + auth)
+	return "", errors.New("NOT VALID LOGIN INFO: " + auth)
 }
 
 func (l *_JwtLoginPlugin) DeleteLoginAs(ctx *goblet.Context, key string) error {
