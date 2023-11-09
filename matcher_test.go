@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -30,4 +31,9 @@ func TestAttrMap(t *testing.T) {
 	if !lctx.HasAttr("test", "test1") {
 		t.Error("should has attr test1")
 	}
+}
+
+func TestCompareFloatAndInt(t *testing.T) {
+	var result = compareStringAndNumber(float64(1), 1)
+	fmt.Println("result is", result)
 }

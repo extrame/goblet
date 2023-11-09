@@ -21,13 +21,13 @@ func (l *LoginContext) HasAttr(key string, content interface{}) bool {
 	}
 	if v, ok := l.Attrs[key]; ok {
 		//use reflect to test v is slice
-		if v == content {
+		if compareStringAndNumber(v, content) {
 			return true
 		}
 		rv := reflect.ValueOf(v)
 		if rv.Kind() == reflect.Slice {
 			for i := 0; i < rv.Len(); i++ {
-				if rv.Index(i).Interface() == content {
+				if compareStringAndNumber(rv.Index(i).Interface(), content) {
 					return true
 				}
 			}
@@ -38,6 +38,14 @@ func (l *LoginContext) HasAttr(key string, content interface{}) bool {
 		}
 	}
 	return false
+}
+
+func compareStringAndNumber(v interface{}, content interface{}) bool {
+	if v == content {
+		return true
+	}
+	var rc = reflect.ValueOf(content)
+	return rc.Convert(reflect.TypeOf(v)).Interface() == v
 }
 
 type LoginInfoSetter func(*LoginContext)
