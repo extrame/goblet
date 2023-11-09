@@ -48,26 +48,26 @@ func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
 	return nil
 }
 
-func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, name string, id string, timeduration ...time.Duration) {
+func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginContext) {
 	var claims = make(jws.Claims)
-	claims.Set(name+"Id", id)
+	claims.Set(lctx.Name+"Id", lctx.Id)
 	j := jws.NewJWT(claims, l.method)
 	j.Claims().SetIssuer(l.Issuer)
-	var d time.Duration
-	if len(timeduration) > 0 {
-		d = timeduration[0]
-	} else {
-		d = l.duration
+	j.Claims().SetExpiration(*lctx.Deadline)
+
+	if lctx.Attrs != nil {
+		for k, v := range lctx.Attrs {
+			j.Claims().Set(k, v)
+		}
 	}
 
-	j.Claims().SetExpiration(time.Now().Add(d))
 	b, err := j.Serialize(l.secret)
 	if err == nil {
 		ctx.SetHeader("Authorization", fmt.Sprintf("Bearer %s", string(b)))
 	}
 }
 
-func (l *_JwtLoginPlugin) GetLoginIdAs(ctx *goblet.Context, key string) (string, error) {
+func (l *_JwtLoginPlugin) GetLoginIdAs(ctx *goblet.Context, key string) (*goblet.LoginContext, error) {
 	auth := ctx.ReqHeader().Get("Authorization")
 	if auth != "" {
 		auth = strings.TrimPrefix(auth, "Bearer ")
@@ -75,15 +75,26 @@ func (l *_JwtLoginPlugin) GetLoginIdAs(ctx *goblet.Context, key string) (string,
 		if err == nil {
 			err = token.Validate(l.secret)
 			if err == nil {
-				var token = token.Claims().Get(key + "Id")
-				if token == nil {
-					return "", errors.New("NOT EXISTED LOGIN INFO: " + auth)
+				var id = token.Claims().Get(key + "Id")
+				if id == nil {
+					return nil, errors.New("NOT EXISTED LOGIN INFO: " + auth)
 				}
-				return token.(string), nil
+				var result = &goblet.LoginContext{
+					Name: key,
+					Id:   id.(string),
+				}
+
+				for k, v := range token.Claims() {
+					if k != key+"Id" && k != "exp" && k != "nbf" && k != "iat" {
+						result.Attrs[k] = v
+					}
+				}
+
+				return result, nil
 			}
 		}
 	}
-	return "", errors.New("NOT VALID LOGIN INFO: " + auth)
+	return nil, errors.New("NOT VALID LOGIN INFO: " + auth)
 }
 
 func (l *_JwtLoginPlugin) DeleteLoginAs(ctx *goblet.Context, key string) error {

@@ -40,7 +40,7 @@ type ControllerNeedInitAndReturnError interface {
 	Init(*Server) error
 }
 
-//Server 服务器类型
+// Server 服务器类型
 type Server struct {
 	ConfigFile string
 
@@ -103,7 +103,7 @@ func (s *Server) SetDefaultError(fn func(*Context, error, ...string)) {
 // 	Page() (int, interface{})
 // }
 
-//Organize 进行服务器环境的初始化配置，初始化所有plugin，对于plugin的所有操作，在Organize之后都可以视为已经初始化
+// Organize 进行服务器环境的初始化配置，初始化所有plugin，对于plugin的所有操作，在Organize之后都可以视为已经初始化
 func (s *Server) Organize(name string, plugins []interface{}) {
 	var err error
 	var dbPwdPlugin DbPwdPlugin
@@ -214,7 +214,7 @@ func (s *Server) connectDB() (err error) {
 	return err
 }
 
-//ControlBy
+// ControlBy
 // Use Member of struct of type goblet.Router to redefine the path
 func (s *Server) ControlBy(block interface{}) {
 	cfg := s.prepareOption(block)
@@ -273,7 +273,7 @@ func (s *Server) Env() string {
 	return s.Basic.Env
 }
 
-//Debug 当服务器环境为调试环境时，执行相应的匿名函数，用于编写调试环境专用的代码块
+// Debug 当服务器环境为调试环境时，执行相应的匿名函数，用于编写调试环境专用的代码块
 func (s *Server) Debug(fn func()) {
 	if s.Env() == config.DevelopEnv {
 		fn()
@@ -327,7 +327,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//GetPlugin 获得对应名称的插件
+// GetPlugin 获得对应名称的插件
 func (s *Server) GetPlugin(key string) NewPlugin {
 	return s.plugins[key]
 }
@@ -391,7 +391,7 @@ func (s *Server) parseConfig() (err error) {
 	return
 }
 
-//Hash 获得一个字符串的加密版本
+// Hash 获得一个字符串的加密版本
 func (s *Server) Hash(str string) string {
 	hash := sha1.New()
 	hash.Write([]byte(str))
@@ -399,7 +399,7 @@ func (s *Server) Hash(str string) string {
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
-//PublicDir 获得服务器对应的公共文件夹的地址
+// PublicDir 获得服务器对应的公共文件夹的地址
 func (s *Server) PublicDir() string {
 	return s.Basic.PublicDir
 }
@@ -415,7 +415,7 @@ func (s *Server) GetDelims() []string {
 	return s.delims
 }
 
-//Run 运营一个服务器
+// Run 运营一个服务器
 func (s *Server) Run() error {
 	if s.Basic.Version == "datetime" {
 		s.Basic.Version = fmt.Sprintf("%d", time.Now().Unix())

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/extrame/goblet"
 )
@@ -14,21 +13,25 @@ var LoginInHead = new(_loginInHead)
 type _loginInHead struct {
 }
 
-func (l *_loginInHead) AddLoginAs(ctx *goblet.Context, name string, id string, timeduration ...time.Duration) {
-	var hashValue = ctx.Server.Hash(id)
-	ctx.SetHeader("Authorization", fmt.Sprintf("Basic %s %s %s", name, id, hashValue))
+func (l *_loginInHead) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginContext) {
+	var hashValue = ctx.Server.Hash(lctx.Id)
+	ctx.SetHeader("Authorization", fmt.Sprintf("Basic %s:%s:%s", lctx.Name, lctx.Id, hashValue))
 }
-func (l *_loginInHead) GetLoginIdAs(ctx *goblet.Context, key string) (string, error) {
+func (l *_loginInHead) GetLoginIdAs(ctx *goblet.Context, key string) (*goblet.LoginContext, error) {
 	auth := ctx.ReqHeader().Get("Authorization")
-	if auth != "" {
-		parts := strings.Split(auth, " ")
-		if len(parts) == 4 {
-			if parts[0] == "Basic" && parts[1] == key && parts[3] == ctx.Server.Hash(parts[2]) {
-				return parts[2], nil
+	if auth != "" && strings.HasPrefix(auth, "Basic ") {
+		auth = strings.TrimPrefix(auth, "Basic ")
+		parts := strings.Split(auth, ":")
+		if len(parts) == 3 {
+			if parts[0] == key && parts[2] == ctx.Server.Hash(parts[1]) {
+				return &goblet.LoginContext{
+					Name: key,
+					Id:   parts[1],
+				}, nil
 			}
 		}
 	}
-	return "", errors.New("NOT VALID LOGIN INFO:" + auth)
+	return nil, errors.New("NOT VALID LOGIN INFO:" + auth)
 }
 
 func (l *_loginInHead) DeleteLoginAs(ctx *goblet.Context, key string) error {

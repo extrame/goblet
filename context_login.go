@@ -12,13 +12,25 @@ func (c *Context) GetLoginId() (string, bool) {
 
 func (c *Context) GetLoginIdAs(name string) (string, bool) {
 	cookie, err := c.Server.loginSaver.GetLoginIdAs(c, name)
-	if cookie != "" && err == nil {
-		return cookie, true
+	if cookie != nil && err == nil {
+		return cookie.Name, true
 	}
 	return "", false
 }
 
-func (c *Context) AddLoginIdAs(id interface{}, name string, timeduration ...time.Duration) {
+func (c *Context) GetLoginInfo() (*LoginContext, bool) {
+	return c.GetLoginAttrsAs(USERCOOKIENAME)
+}
+
+func (c *Context) GetLoginAttrsAs(name string) (*LoginContext, bool) {
+	cookie, err := c.Server.loginSaver.GetLoginIdAs(c, name)
+	if cookie != nil && err == nil {
+		return cookie, true
+	}
+	return nil, false
+}
+
+func (c *Context) AddLoginIdAs(id interface{}, name string, setter ...LoginInfoSetter) {
 	if name == "" {
 		name = "user"
 	}
@@ -33,15 +45,26 @@ func (c *Context) AddLoginIdAs(id interface{}, name string, timeduration ...time
 	case int64:
 		userid = strconv.FormatInt(rid, 10)
 	}
-	if timeduration == nil {
-		c.Server.loginSaver.AddLoginAs(c, name, userid)
-	} else {
-		c.Server.loginSaver.AddLoginAs(c, name, userid, timeduration[0])
+
+	lctx := &LoginContext{
+		Name: name,
+		Id:   userid,
 	}
+
+	for _, s := range setter {
+		s(lctx)
+	}
+
+	if lctx.Deadline == nil {
+		deadline := time.Now().AddDate(0, 0, 1)
+		lctx.Deadline = &deadline
+	}
+
+	c.Server.loginSaver.AddLoginAs(c, lctx)
 
 }
 
-func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
+func (c *Context) AddLoginId(id interface{}, setter ...LoginInfoSetter) {
 	var userid string
 	switch rid := id.(type) {
 	case string:
@@ -55,20 +78,16 @@ func (c *Context) AddLoginId(id interface{}, timeduration ...time.Duration) {
 	default:
 		userid = fmt.Sprintf("%s", id)
 	}
-	if timeduration == nil {
-		c.Server.loginSaver.AddLoginAs(c, "user", userid)
-	} else {
-		c.Server.loginSaver.AddLoginAs(c, "user", userid, timeduration[0])
-	}
+	c.AddLoginIdAs(userid, "user", setter...)
 
 }
 
-//Delete the login cookie saved
+// Delete the login cookie saved
 func (c *Context) DelLogin() error {
 	return c.DelLoginAs("user")
 }
 
-//Delete the login cookie as specified name
+// Delete the login cookie as specified name
 func (c *Context) DelLoginAs(name string) error {
 	return c.Server.loginSaver.DeleteLoginAs(c, name)
 }
