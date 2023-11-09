@@ -29,6 +29,8 @@ func (d *Db) New(engine string) (db *xorm.Engine, err error) {
 	var q string
 	if engine == "mysql" {
 		q = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", d.User, d.Pwd, d.Host, d.Port, d.Name)
+	} else if engine == "postgres" {
+		q = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", d.Host, d.Port, d.User, d.Pwd, d.Name)
 	} else if engine == "oci8" {
 		q = fmt.Sprintf("%s/%s@%s:%d/%s", d.User, d.Pwd, d.Host, d.Port, d.Name)
 	} else if engine == "mssql" {
