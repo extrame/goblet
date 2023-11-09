@@ -23,3 +23,11 @@ func TestMatchSimpleController(t *testing.T) {
 		t.Error("matched should be Html(TestController), but got", matched)
 	}
 }
+
+func TestAttrMap(t *testing.T) {
+	var lctx = &LoginContext{}
+	WithAttribute("test", []string{"test1"})(lctx)
+	if !lctx.HasAttr("test", "test1") {
+		t.Error("should has attr test1")
+	}
+}

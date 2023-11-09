@@ -19,10 +19,10 @@ func (c *Context) GetLoginIdAs(name string) (string, bool) {
 }
 
 func (c *Context) GetLoginInfo() (*LoginContext, bool) {
-	return c.GetLoginAttrsAs(USERCOOKIENAME)
+	return c.GetLoginInfoAs(USERCOOKIENAME)
 }
 
-func (c *Context) GetLoginAttrsAs(name string) (*LoginContext, bool) {
+func (c *Context) GetLoginInfoAs(name string) (*LoginContext, bool) {
 	cookie, err := c.Server.loginSaver.GetLoginIdAs(c, name)
 	if cookie != nil && err == nil {
 		return cookie, true

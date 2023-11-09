@@ -2,6 +2,7 @@ package goblet
 
 import (
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -14,12 +15,46 @@ type LoginContext struct {
 	Attrs    map[string]interface{}
 }
 
+func (l *LoginContext) HasAttr(key string, content interface{}) bool {
+	if l.Attrs == nil {
+		return false
+	}
+	if v, ok := l.Attrs[key]; ok {
+		//use reflect to test v is slice
+		if v == content {
+			return true
+		}
+		rv := reflect.ValueOf(v)
+		if rv.Kind() == reflect.Slice {
+			for i := 0; i < rv.Len(); i++ {
+				if rv.Index(i).Interface() == content {
+					return true
+				}
+			}
+		} else if rv.Kind() == reflect.Map {
+			if rv.MapIndex(reflect.ValueOf(content)).IsValid() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 type LoginInfoSetter func(*LoginContext)
 
 func WithDuration(t time.Duration) LoginInfoSetter {
 	return func(ctx *LoginContext) {
 		t := time.Now().Add(t)
 		ctx.Deadline = &t
+	}
+}
+
+func WithAttribute(key string, value interface{}) LoginInfoSetter {
+	return func(ctx *LoginContext) {
+		if ctx.Attrs == nil {
+			ctx.Attrs = make(map[string]interface{})
+		}
+		ctx.Attrs[key] = value
 	}
 }
 
