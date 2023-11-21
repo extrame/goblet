@@ -13,7 +13,7 @@ func (c *Context) GetLoginId() (string, bool) {
 func (c *Context) GetLoginIdAs(name string) (string, bool) {
 	cookie, err := c.Server.loginSaver.GetLoginIdAs(c, name)
 	if cookie != nil && err == nil {
-		return cookie.Name, true
+		return cookie.Id, true
 	}
 	return "", false
 }
