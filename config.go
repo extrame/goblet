@@ -3,7 +3,9 @@ package goblet
 import (
 	"fmt"
 
+	"github.com/creasty/defaults"
 	myyaml "github.com/extrame/unmarshall/yaml"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -37,6 +39,10 @@ func fetch(node *yaml.Node) map[string]string {
 }
 
 func (s *Server) AddConfig(name string, obj interface{}) error {
+	err := defaults.Set(obj)
+	if err != nil {
+		logrus.Debug(err)
+	}
 	node, _ := myyaml.GetChildNode(s.cfg, name)
 	return myyaml.UnmarshalNode(node, obj, "goblet")
 }
