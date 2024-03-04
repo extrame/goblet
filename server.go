@@ -329,6 +329,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) ServeFile(w http.ResponseWriter, r *http.Request, file string) {
 	w.Header().Del("Pragma")
+	w.Header().Del("Cache-Control")
 	w.Header().Add("Cache-Control", "max-age=31536000")
 
 	http.ServeFile(w, r, file)
