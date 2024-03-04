@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 )
 
-//File the input file type, if you want to response a file, just response(*os.File)
+// File the input file type, if you want to response a file, just response(*os.File)
 type File struct {
 	//Name the filename uploaded with file
 	Name string
 	//Path the filepath after saved in server
 	Path   string
-	Header textproto.MIMEHeader
-	rc     multipart.File `xorm:"-"`
+	Header textproto.MIMEHeader `json:"-"`
+	rc     multipart.File       `xorm:"-"`
 }
 
 func (f *File) Read(p []byte) (n int, err error) {
@@ -84,7 +84,7 @@ func Open(path string) (f *File, err error) {
 	return
 }
 
-//将文件保存在公开目录，可以使用http访问到
+// 将文件保存在公开目录，可以使用http访问到
 func (s *Server) SaveInPublic(path string, f io.Reader) error {
 	fullPath := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path)
 	return s.saver.Save(fullPath, f)
@@ -108,7 +108,7 @@ func (s *Server) DelFileInPublic(path string, force ...bool) error {
 	return s.saver.Delete(fullPath, _force)
 }
 
-//将文件保存在私有目录，不可以使用http访问到
+// 将文件保存在私有目录，不可以使用http访问到
 func (s *Server) SaveInPrivate(path string, f io.Reader) error {
 	fullPath := filepath.Join(s.Basic.WwwRoot, path)
 	return s.saver.Save(fullPath, f)

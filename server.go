@@ -312,7 +312,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			logrus.Debugln("use static file name return by dynamic", geE.Method)
 			file := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method)
 			if _, err := os.Stat(file); !os.IsNotExist(err) {
-				http.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method))
+				s.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method))
 				return
 			}
 		}
@@ -321,10 +321,17 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			path = r.URL.Path
 		}
-		http.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path))
+		s.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path))
 	} else if err != nil {
 		s.wrapError(w, err, false)
 	}
+}
+
+func (s *Server) ServeFile(w http.ResponseWriter, r *http.Request, file string) {
+	w.Header().Del("Pragma")
+	w.Header().Add("Cache-Control", "max-age=31536000")
+
+	http.ServeFile(w, r, file)
 }
 
 // GetPlugin 获得对应名称的插件

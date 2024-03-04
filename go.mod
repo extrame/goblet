@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/boltdb/bolt v1.3.1
+	github.com/creasty/defaults v1.7.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.12.0
 	github.com/denverdino/aliyungo v0.0.0-20210222084345-ddfe3452f5e8
 	github.com/extrame/go-random v0.0.0-20160517052123-1d8679eca4e2
