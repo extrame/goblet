@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/extrame/goblet/render"
 	"github.com/sirupsen/logrus"
@@ -55,7 +56,7 @@ func (c *Context) handleData() {
 
 }
 
-//GetRender,返回渲染类型,该返回需要判断是否允许相关渲染类型，如果不需要判断，请使用Format函数
+// GetRender,返回渲染类型,该返回需要判断是否允许相关渲染类型，如果不需要判断，请使用Format函数
 func (cx *Context) GetRender() (render string, err error) {
 	renders := cx.option.GetRender()
 	if cx.forceFormat != "" {
@@ -132,9 +133,23 @@ func (c *Context) StrFormValue(key string) string {
 	return c.request.FormValue(key)
 }
 
-func (c *Context) EnableCache() {
-	c.writer.Header().Del("Cache-Control")
+// EnableCache 手工启用缓存，如果不传递时间参数，则默认Last-Modified为当前时间,Cache-Control为一年
+// 如果传递一个时间参数，则Last-Modified为该时间，Cache-Control为一年，
+// 如果传递两个时间参数，则Last-Modified为第一个时间，Cache-Control为第二个时间和第一个时间的差值
+func (c *Context) EnableCache(times ...time.Time) {
 	c.writer.Header().Del("Pragma")
+	var durationSeconds = 31536000
+	var lastModified time.Time
+	if len(times) == 0 {
+		lastModified = time.Now()
+	} else {
+		lastModified = times[0]
+		if len(times) > 1 {
+			durationSeconds = int(times[1].Sub(times[0]).Seconds())
+		}
+	}
+	c.writer.Header().Set("Last-Modified", lastModified.Format(time.RFC1123))
+	c.writer.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d, public, immutable", durationSeconds))
 }
 
 func (c *Context) render() (err error) {
@@ -247,10 +262,10 @@ func (c *Context) render() (err error) {
 	return nil
 }
 
-//Respond with multi data, data will tread as a key-value map
-//for example:
-//AddRespond("key1","value1",key2","value2")
-//You can use AddRespond multi time in controller
+// Respond with multi data, data will tread as a key-value map
+// for example:
+// AddRespond("key1","value1",key2","value2")
+// You can use AddRespond multi time in controller
 func (c *Context) AddRespond(datas ...interface{}) {
 	if len(datas) > 1 {
 		if c.responseMap == nil {
@@ -273,10 +288,10 @@ func (c *Context) RespondReader(reader io.Reader) {
 	c.already_writed = true
 }
 
-//Respond 向用户返回内容，三种数据会进行特别处理：
-//error类型：标记状态为内部错误
-//[]byte类型：使用raw进行内容渲染，即原样输出，不进行json等格式转化
-//reader:使用raw进行内容渲染，即原样从输入中读取输出，不进行json等格式转化
+// Respond 向用户返回内容，三种数据会进行特别处理：
+// error类型：标记状态为内部错误
+// []byte类型：使用raw进行内容渲染，即原样输出，不进行json等格式转化
+// reader:使用raw进行内容渲染，即原样从输入中读取输出，不进行json等格式转化
 func (c *Context) Respond(data interface{}) {
 	switch td := data.(type) {
 	case error:
@@ -334,7 +349,7 @@ func (c *Context) RespondOK() {
 	}
 }
 
-//RespondError 返回错误，如果错误为空，返回成功
+// RespondError 返回错误，如果错误为空，返回成功
 func (c *Context) RespondError(err error, context ...string) {
 	if c.Server.Env() == DevelopEnv {
 		logrus.Info("error is respond:", err)
@@ -346,13 +361,13 @@ func (c *Context) RespondError(err error, context ...string) {
 	}
 }
 
-//Reset the context renders
+// Reset the context renders
 func (c *Context) UseRender(render string) {
 	c.forceFormat = render
 	c.AllowRender("raw")
 }
 
-//AllowRender Allow some temporary render
+// AllowRender Allow some temporary render
 func (c *Context) AllowRender(renders ...string) {
 	c.tempRenders = renders
 }
@@ -415,7 +430,7 @@ func (c *Context) ResetDB() error {
 	return c.Server.connectDB()
 }
 
-//RenderAs 设置渲染的模型文件，注意和UseRender的区别，需要修改json/html等用UseRender
+// RenderAs 设置渲染的模型文件，注意和UseRender的区别，需要修改json/html等用UseRender
 func (c *Context) RenderAs(name string) {
 	c.method = name
 }
@@ -436,17 +451,17 @@ func (c *Context) RedirectTo(url string) {
 	c.already_writed = true
 }
 
-///////////for renders/////////////
+// /////////for renders/////////////
 func (c *Context) BlockOptionType() string {
 	return c.option.String()
 }
 
-//返回当前的Method，json/html等
+// 返回当前的Method，json/html等
 func (c *Context) Method() string {
 	return c.method
 }
 
-//返回用户请求的Method, GET/POST/HEAD等
+// 返回用户请求的Method, GET/POST/HEAD等
 func (c *Context) ReqMethod() string {
 	return c.request.Method
 }
@@ -475,9 +490,9 @@ func (r *RemoteAddr) Network() string {
 	return "tcp"
 }
 
-//该方法返回对端连接地址，返回有两种情况，如果头部没有X-Forwarded-For，表示是直接从客户端直接连接的。
-//此时，返回的addr，Network()方法返回“tcp"。如果头部有X-Forwarded-For，表示是从负载均衡跳转过来的。
-//此时，返回的addr，Network()方法返回“ip”
+// 该方法返回对端连接地址，返回有两种情况，如果头部没有X-Forwarded-For，表示是直接从客户端直接连接的。
+// 此时，返回的addr，Network()方法返回“tcp"。如果头部有X-Forwarded-For，表示是从负载均衡跳转过来的。
+// 此时，返回的addr，Network()方法返回“ip”
 func (c *Context) RemoteAddr() net.Addr {
 	addr := new(RemoteAddr)
 	addr.str = c.request.RemoteAddr
@@ -502,8 +517,8 @@ func (c *Context) RemoteIP() (net.IP, error) {
 	}
 }
 
-//返回对端地址，请注意，如果是负载均衡过来的请求，会直接返回负载均衡地址，不会重新获取客户端地址，如果要
-//获取这种情况下的客户端正式IP，请调用 RemoteAddr方法
+// 返回对端地址，请注意，如果是负载均衡过来的请求，会直接返回负载均衡地址，不会重新获取客户端地址，如果要
+// 获取这种情况下的客户端正式IP，请调用 RemoteAddr方法
 func (c *Context) FromAddr() net.Addr {
 	addr := new(RemoteAddr)
 	addr.str = c.request.RemoteAddr
@@ -553,32 +568,32 @@ func (c *Context) PathToURL(path string) (*url.URL, error) {
 	}
 }
 
-//Version 返回用户配置的代码版本
+// Version 返回用户配置的代码版本
 func (c *Context) Version() string {
 	return c.Server.Basic.Version
 }
 
-//ReqURL 返回用户请求的URL
+// ReqURL 返回用户请求的URL
 func (c *Context) ReqURL() *url.URL {
 	return c.request.URL
 }
 
-//ReqHost 返回用户请求的host
+// ReqHost 返回用户请求的host
 func (c *Context) ReqHost() string {
 	return c.request.Host
 }
 
-//ReqHeader 返回用户请求的Header
+// ReqHeader 返回用户请求的Header
 func (c *Context) ReqHeader() http.Header {
 	return c.request.Header
 }
 
-//UserAgent 返回用户Agent
+// UserAgent 返回用户Agent
 func (c *Context) UserAgent() string {
 	return c.request.UserAgent()
 }
 
-//BasicAuth 返回Basic Auth
+// BasicAuth 返回Basic Auth
 func (c *Context) BasicAuth() (string, string, bool) {
 	return c.request.BasicAuth()
 }
