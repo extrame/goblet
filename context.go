@@ -133,20 +133,19 @@ func (c *Context) StrFormValue(key string) string {
 	return c.request.FormValue(key)
 }
 
+// EnableCache 手工启用缓存，默认Last-Modified为当前时间,Cache-Control为一年
+func (c *Context) EnableCache() {
+	c.EnableCacheFrom(time.Now())
+}
+
 // EnableCache 手工启用缓存，如果不传递时间参数，则默认Last-Modified为当前时间,Cache-Control为一年
 // 如果传递一个时间参数，则Last-Modified为该时间，Cache-Control为一年，
 // 如果传递两个时间参数，则Last-Modified为第一个时间，Cache-Control为第二个时间和第一个时间的差值
-func (c *Context) EnableCache(times ...time.Time) {
+func (c *Context) EnableCacheFrom(lastModified time.Time, duration ...time.Duration) {
 	c.writer.Header().Del("Pragma")
 	var durationSeconds = 31536000
-	var lastModified time.Time
-	if len(times) == 0 {
-		lastModified = time.Now()
-	} else {
-		lastModified = times[0]
-		if len(times) > 1 {
-			durationSeconds = int(times[1].Sub(times[0]).Seconds())
-		}
+	if len(duration) > 0 {
+		durationSeconds = int(duration[0].Seconds())
 	}
 	c.writer.Header().Set("Last-Modified", lastModified.Format(time.RFC1123))
 	c.writer.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d, public, immutable", durationSeconds))
