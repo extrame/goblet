@@ -45,6 +45,8 @@ func (f *File) GetSize() int64 {
 		if err == nil {
 			return stat.Size()
 		}
+	} else {
+		return f.Size
 	}
 	return 0
 }
