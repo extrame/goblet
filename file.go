@@ -15,7 +15,8 @@ type File struct {
 	//Path the filepath after saved in server
 	Path   string
 	Header textproto.MIMEHeader `json:"-"`
-	rc     multipart.File       `xorm:"-"`
+	Size   int64
+	rc     multipart.File `xorm:"-"`
 }
 
 func (f *File) Read(p []byte) (n int, err error) {

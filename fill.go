@@ -197,6 +197,7 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 				if f, h, err = cx.request.FormFile(id); err == nil {
 					file.Name = h.Filename
 					file.Header = h.Header
+					file.Size = h.Size
 					file.rc = f
 					return reflect.ValueOf(file), err
 				} else {

@@ -331,8 +331,7 @@ func (s *Server) ServeFile(w http.ResponseWriter, r *http.Request, file string) 
 	//if not index.html, set cache-control to 1 year
 	if filepath.Base(file) != "index.html" {
 		w.Header().Del("Pragma")
-		w.Header().Del("Cache-Control")
-		w.Header().Add("Cache-Control", "max-age=31536000")
+		w.Header().Set("Cache-Control", "max-age=31536000")
 	}
 
 	http.ServeFile(w, r, file)
