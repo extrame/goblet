@@ -109,6 +109,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	var dbPwdPlugin DbPwdPlugin
 	var dbUserPlugin dbUserNamePlugin
 	s.Name = name
+	s.Renders = make(map[string]render.Render)
 	for _, plugin := range plugins {
 		if tp, ok := plugin.(NewPlugin); ok {
 			typ := reflect.ValueOf(plugin).Type()
@@ -161,6 +162,9 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		if dv, ok := plugin.(DelimSetter); ok {
 			var delimis = dv.SetDelim()
 			s.delims = delimis[:]
+		}
+		if rv, ok := plugin.(render.Render); ok {
+			s.Renders[rv.Type()] = rv
 		}
 	}
 	if s.saver == nil {
@@ -430,28 +434,36 @@ func (s *Server) Run() error {
 	if s.Basic.Version == "datetime" {
 		s.Basic.Version = fmt.Sprintf("%d", time.Now().Unix())
 	}
-	s.Renders = make(map[string]render.Render)
-	s.Renders["html"] = new(render.HtmlRender)
-	var tempFuncMap = make(template.FuncMap)
-	for _, bc := range s.initCtrl {
-		bc.Init(s)
-	}
-	for _, bc := range s.initCtrlNew {
-		err := bc.Init(s)
-		if err != nil {
-			return err
+	// s.Renders = make(map[string]render.Render)
+	if s.Renders["html"] == nil {
+		s.Renders["html"] = new(render.HtmlRender)
+		var tempFuncMap = make(template.FuncMap)
+		for _, bc := range s.initCtrl {
+			bc.Init(s)
 		}
-	}
-	for _, v := range s.funcs {
-		tempFunc := func() int {
-			return 0
+		for _, bc := range s.initCtrlNew {
+			err := bc.Init(s)
+			if err != nil {
+				return err
+			}
 		}
-		tempFuncMap[v.Name] = tempFunc
+		for _, v := range s.funcs {
+			tempFunc := func() int {
+				return 0
+			}
+			tempFuncMap[v.Name] = tempFunc
+		}
+		s.Renders["html"].Init(s, tempFuncMap)
 	}
-	s.Renders["html"].Init(s, tempFuncMap)
-	s.Renders["json"] = new(render.JsonRender)
-	s.Renders["raw"] = new(render.RawRender)
-	s.Renders["xml"] = new(render.XmlRender)
+	if s.Renders["json"] == nil {
+		s.Renders["json"] = new(render.JsonRender)
+	}
+	if s.Renders["raw"] == nil {
+		s.Renders["raw"] = new(render.RawRender)
+	}
+	if s.Renders["xml"] == nil {
+		s.Renders["xml"] = new(render.XmlRender)
+	}
 	logrus.WithField("port", s.Basic.Port).Infoln("Listening")
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.Basic.Port),

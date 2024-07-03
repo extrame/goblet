@@ -9,6 +9,10 @@ import (
 type JsonRender struct {
 }
 
+func (j *JsonRender) Type() string {
+	return "json"
+}
+
 func (j *JsonRender) PrepareInstance(c RenderContext) (RenderInstance, error) {
 	if cb := c.Callback(); cb != "" {
 		return &JsonCbRenderInstance{Cb: cb}, nil

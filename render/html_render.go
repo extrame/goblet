@@ -37,6 +37,10 @@ type HtmlRender struct {
 	delims    []string
 }
 
+func (h *HtmlRender) Type() string {
+	return "html"
+}
+
 func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance, err error) {
 	var layout, yield *template.Template
 

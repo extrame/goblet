@@ -11,6 +11,10 @@ import (
 
 type RawRender int8
 
+func (r *RawRender) Type() string {
+	return "raw"
+}
+
 func (r *RawRender) PrepareInstance(c RenderContext) (RenderInstance, error) {
 	return new(RawRenderInstance), nil
 }
@@ -20,7 +24,7 @@ func (r *RawRender) Init(s RenderServer, funcs template.FuncMap) {
 
 type RawRenderInstance int8
 
-//interface to respond file with customerized name and size
+// interface to respond file with customerized name and size
 type RawFile interface {
 	io.Reader
 	io.Seeker
