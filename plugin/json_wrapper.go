@@ -58,7 +58,7 @@ func (j *jsonRenderWrapper) PrepareInstance(c render.RenderContext) (render.Rend
 }
 
 func (p *jsonRenderWrapper) RespendOk(ctx *goblet.Context) {
-	ctx.AddRespond("Success", true)
+	ctx.Respond(nil)
 }
 
 func (p *jsonRenderWrapper) RespondError(ctx *goblet.Context, err error, context ...string) {
@@ -82,7 +82,7 @@ func (j *jsonRenderWrapper) Init(s render.RenderServer, funcs template.FuncMap) 
 type jsonRenderInstance int8
 
 type StandardErrorOrData struct {
-	Data interface{} `json:"data"`
+	Data interface{} `json:"data,omitempty"`
 	Msg  string      `json:"msg"`
 	Code int         `json:"code"`
 }
@@ -123,4 +123,11 @@ func (r *jsonCbRenderInstance) Render(wr io.Writer, hwr render.HeadWriter, data 
 
 func StdError(code int, msg string) error {
 	return &StandardErrorOrData{Data: nil, Msg: msg, Code: code}
+}
+
+func WrapError(code int, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &StandardErrorOrData{Data: nil, Msg: err.Error(), Code: code}
 }
