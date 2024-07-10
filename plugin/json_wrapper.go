@@ -94,9 +94,9 @@ func (s *StandardErrorOrData) Error() string {
 func (r *jsonRenderInstance) Render(wr io.Writer, hwr render.HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
 	hwr.Header().Add("Content-Type", "application/json; charset=utf-8")
-	hwr.WriteHeader(status)
+	hwr.WriteHeader(200)
 	if err, ok := data.(*StandardErrorOrData); !ok {
-		data = StandardErrorOrData{Data: data, Msg: "success", Code: 0}
+		data = StandardErrorOrData{Data: data, Msg: "success", Code: status}
 	} else {
 		data = err
 	}
@@ -113,9 +113,9 @@ type jsonCbRenderInstance struct {
 
 func (r *jsonCbRenderInstance) Render(wr io.Writer, hwr render.HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
-	hwr.WriteHeader(status)
+	hwr.WriteHeader(200)
 	if err, ok := data.(*StandardErrorOrData); !ok {
-		data = StandardErrorOrData{Data: data, Msg: "success", Code: 0}
+		data = StandardErrorOrData{Data: data, Msg: "success", Code: status}
 	} else {
 		data = err
 	}
