@@ -95,8 +95,12 @@ func (r *jsonRenderInstance) Render(wr io.Writer, hwr render.HeadWriter, data in
 	var v []byte
 	hwr.Header().Add("Content-Type", "application/json; charset=utf-8")
 	hwr.WriteHeader(status)
-	var standData = StandardErrorOrData{Data: data, Msg: "success", Code: 0}
-	v, err = json.Marshal(&standData)
+	if err, ok := data.(*StandardErrorOrData); !ok {
+		data = StandardErrorOrData{Data: data, Msg: "success", Code: 0}
+	} else {
+		data = err
+	}
+	v, err = json.Marshal(&data)
 	if err == nil {
 		wr.Write(v)
 	}
@@ -110,8 +114,12 @@ type jsonCbRenderInstance struct {
 func (r *jsonCbRenderInstance) Render(wr io.Writer, hwr render.HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
 	var v []byte
 	hwr.WriteHeader(status)
-	var standData = StandardErrorOrData{Data: data, Msg: "success", Code: 0}
-	v, err = json.Marshal(&standData)
+	if err, ok := data.(*StandardErrorOrData); !ok {
+		data = StandardErrorOrData{Data: data, Msg: "success", Code: 0}
+	} else {
+		data = err
+	}
+	v, err = json.Marshal(&data)
 	if err == nil {
 		wr.Write([]byte(r.Cb))
 		wr.Write([]byte("("))
