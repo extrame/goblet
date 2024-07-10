@@ -69,7 +69,7 @@ func (p *jsonRenderWrapper) RespondError(ctx *goblet.Context, err error, context
 	if !ok {
 		standardData = &StandardErrorOrData{Data: nil, Msg: err.Error(), Code: errCode}
 	}
-	ctx.Respond(&standardData)
+	ctx.Respond(standardData)
 }
 
 func (p *jsonRenderWrapper) DefaultRender() string {
