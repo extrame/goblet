@@ -14,13 +14,13 @@ type Route byte
 type Render byte
 type Layout byte
 
-//Controller which only match full path eg. a SingleController with name Test will just match /test, not /test/1
+// Controller which only match full path eg. a SingleController with name Test will just match /test, not /test/1
 type SingleController byte
 
-//Controller which match full path according to RESTful rules, eg. a RestController with name Test will match /test and /test/1
+// Controller which match full path according to RESTful rules, eg. a RestController with name Test will match /test and /test/1
 type RestController byte
 
-//Controller which match full path and path with any suffix, eg. a GroupController with name Test will match /test and /test/1 and /test/a/b/c
+// Controller which match full path and path with any suffix, eg. a GroupController with name Test will match /test and /test/1 and /test/a/b/c
 type GroupController byte
 type ErrorRender byte
 type AutoHide byte
@@ -275,32 +275,13 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 		} else {
 			method = g.block.MethodByName(args[0])
 		}
-		if !method.IsValid() {
-			if name = ctx.request.URL.Query().Get("method"); name == "" {
-				name = ctx.request.Method
-			}
-			name = strings.ToLower(name)
-			switch name {
-			case "options":
-				isOptions = GetOptionAndHasOption
-				method = g.block.MethodByName("Options")
-				if method.IsValid() {
-					allowdMethods = append(allowdMethods, "OPTIONS")
-				} else {
-					isOptions = GetOptionButJustHasPost
-					method = g.block.MethodByName("Post")
-				}
-			case "post":
-				method = g.block.MethodByName("Post")
-			case "get":
-				method = g.block.MethodByName("Get")
-			}
-		} else {
+		if method.IsValid() {
 			if len(args) > 1 {
 				ctx.suffix = strings.Join(args[1:], "/")
 			} else {
 				ctx.suffix = ""
 			}
+			goto next
 		}
 	}
 	if !method.IsValid() {
@@ -311,6 +292,7 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 		switch name {
 		case "options":
 			method = g.block.MethodByName("Options")
+			name = "options"
 			if method.IsValid() {
 				isOptions = GetOptionAndHasOption
 				allowdMethods = append(allowdMethods, "OPTIONS")
@@ -320,10 +302,14 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 			}
 		case "post":
 			method = g.block.MethodByName("Post")
+			name = "post"
 		case "get":
 			method = g.block.MethodByName("Get")
+			name = "get"
 		}
 	}
+
+next:
 	if isOptions > 0 {
 		for i := len(allowdMethods); i > 0; i-- {
 			ctx.SetHeader("Allow", allowdMethods[i-1])
