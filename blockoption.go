@@ -66,6 +66,7 @@ type BasicBlockOption struct {
 	name                string
 	errRender           string
 	hide                bool
+	methods             map[string]reflect.Value
 }
 
 func (h *BasicBlockOption) String() string {
@@ -73,7 +74,7 @@ func (h *BasicBlockOption) String() string {
 }
 
 type HtmlBlockOption struct {
-	BasicBlockOption
+	*BasicBlockOption
 }
 
 func (h *HtmlBlockOption) String() string {
@@ -133,7 +134,7 @@ func (b *BasicBlockOption) ErrorRender() string {
 }
 
 type RestBlockOption struct {
-	BasicBlockOption
+	*BasicBlockOption
 }
 
 func (r *RestBlockOption) renderAsRead(id string, ctx *Context) error {
@@ -212,7 +213,6 @@ func (r *BasicBlockOption) tryPre(m string, ctx *Context) bool {
 				return false
 			}
 		}
-
 	}
 	return true
 }
@@ -230,7 +230,7 @@ func (h *RestBlockOption) String() string {
 }
 
 type groupBlockOption struct {
-	BasicBlockOption
+	*BasicBlockOption
 	ignoreCase bool
 }
 
@@ -250,11 +250,12 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 	var method reflect.Value
 	var name string
 
-	const GetOptionButJustHasPost, GetOptionAndHasOption = 1, 2
+	const GetOptionButJustHasNormalMethod, GetOptionAndHasOption = 1, 2
 
 	isOptions := 0
 	var allowdMethods = []string{
-		"POST",
+		"Post",
+		"Get",
 	}
 
 	if len(ctx.suffix) > 1 {
@@ -262,20 +263,16 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 
 		args := strings.Split(name, "/")
 
-		typ := g.block.Type()
-
+		var methodNameRequired = args[0]
 		if g.ignoreCase {
-			for i := 0; i < g.block.NumMethod(); i++ {
-				m := typ.Method(i)
-				if strings.ToLower(m.Name) == strings.ToLower(args[0]) {
-					name = strings.ToLower(args[0])
-					method = g.block.Method(i)
-				}
-			}
-		} else {
-			method = g.block.MethodByName(args[0])
+			methodNameRequired = strings.ToLower(methodNameRequired)
 		}
-		if method.IsValid() {
+
+		// typ := g.block.Type()
+
+		var ok bool
+		method, ok = g.methods[methodNameRequired]
+		if ok && method.IsValid() {
 			if len(args) > 1 {
 				ctx.suffix = strings.Join(args[1:], "/")
 			} else {
@@ -295,30 +292,44 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 			name = "options"
 			if method.IsValid() {
 				isOptions = GetOptionAndHasOption
-				allowdMethods = append(allowdMethods, "OPTIONS")
+				allowdMethods = append(allowdMethods, "Options")
 			} else {
-				isOptions = GetOptionButJustHasPost
-				method = g.block.MethodByName("Post")
+				isOptions = GetOptionButJustHasNormalMethod
+				method = g.block.MethodByName("Post") //for test valid or not
 			}
 		case "post":
 			method = g.block.MethodByName("Post")
-			name = "post"
 		case "get":
 			method = g.block.MethodByName("Get")
-			name = "get"
 		}
 	}
 
 next:
-	if isOptions > 0 {
-		for i := len(allowdMethods); i > 0; i-- {
-			ctx.SetHeader("Allow", allowdMethods[i-1])
+	if isOptions == GetOptionButJustHasNormalMethod {
+		// transform to upper case
+		var upperMethods = make([]string, len(allowdMethods))
+		for i, v := range allowdMethods {
+			upperMethods[i] = strings.ToUpper(v)
 		}
+		ctx.SetHeader("Allow", strings.Join(upperMethods, ", "))
+		var found = false
+		for _, v := range allowdMethods {
+			method := g.block.MethodByName(v)
+			if method.IsValid() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return ge.NOSUCHROUTER("")
+		}
+		if g.tryPre("options", ctx) {
+			ctx.RespondOK()
+		}
+		return nil
 	}
 	if !method.IsValid() {
 		return ge.NOSUCHROUTER("")
-	} else if isOptions == GetOptionButJustHasPost {
-		ctx.RespondOK()
 	} else {
 		ctx.method = name
 
@@ -466,7 +477,7 @@ func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) e
 }
 
 type _staticBlockOption struct {
-	BasicBlockOption
+	*BasicBlockOption
 }
 
 func (c *_staticBlockOption) MatchSuffix(suffix string) bool {
@@ -494,7 +505,8 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 	basic.block = reflect.ValueOf(block)
 
 	var val reflect.Value
-	var valtype reflect.Type
+	var valtypeOrigin, valtype reflect.Type
+	valtypeOrigin = basic.block.Type()
 
 	if basic.block.Kind() == reflect.Ptr {
 		val = basic.block.Elem()
@@ -573,6 +585,16 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 				continue
 			}
 		}
+		// parse methods and store in map
+		basic.methods = make(map[string]reflect.Value)
+		for i := 0; i < valtypeOrigin.NumMethod(); i++ {
+			mtd := valtypeOrigin.Method(i)
+			if ignoreCase {
+				basic.methods[strings.ToLower(mtd.Name)] = basic.block.Method(i)
+			} else {
+				basic.methods[mtd.Name] = basic.block.Method(i)
+			}
+		}
 	}
 
 	if len(basic.routing) == 0 {
@@ -593,10 +615,10 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 
 	logrus.Errorf("[%T]fork on %v", block, basic.routing)
 
-	return newBlock(basic, block, ignoreCase)
+	return newBlock(&basic, block, ignoreCase)
 }
 
-func newBlock(basic BasicBlockOption, block interface{}, ignoreCase bool) BlockOption {
+func newBlock(basic *BasicBlockOption, block interface{}, ignoreCase bool) BlockOption {
 	switch basic.typ {
 	case "single":
 		return &HtmlBlockOption{basic}

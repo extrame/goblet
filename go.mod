@@ -11,7 +11,7 @@ require (
 	github.com/extrame/go-toml-config v0.0.0-20190318035753-a516bbef5346
 	github.com/extrame/jose v0.0.0-20230713040001-a8d6daaf8143
 	github.com/extrame/smtpoverttl v0.0.0-20140504083549-9b082db561b3
-	github.com/extrame/unmarshall v0.0.0-20230926005309-53add110f6cb
+	github.com/extrame/unmarshall v0.0.0-20240819024100-fb66078bbd05
 	github.com/garyburd/redigo v1.6.2
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/goccy/go-json v0.9.4 // indirect
