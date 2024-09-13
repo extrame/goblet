@@ -64,7 +64,7 @@ func (c *Context) AddLoginIdAs(id interface{}, name string, setter ...LoginInfoS
 
 }
 
-func (c *Context) AddLoginId(id interface{}, setter ...LoginInfoSetter) {
+func (c *Context) AddLoginId(id interface{}, setter ...LoginInfoSetter) string {
 	var userid string
 	switch rid := id.(type) {
 	case string:
@@ -78,7 +78,7 @@ func (c *Context) AddLoginId(id interface{}, setter ...LoginInfoSetter) {
 	default:
 		userid = fmt.Sprintf("%s", id)
 	}
-	c.AddLoginIdAs(userid, "user", setter...)
+	return c.AddLoginIdAs(userid, "user", setter...)
 
 }
 
