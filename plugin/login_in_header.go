@@ -13,9 +13,11 @@ var LoginInHead = new(_loginInHead)
 type _loginInHead struct {
 }
 
-func (l *_loginInHead) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginContext) {
+func (l *_loginInHead) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginContext) string {
 	var hashValue = ctx.Server.Hash(lctx.Id)
-	ctx.SetHeader("Authorization", fmt.Sprintf("Basic %s:%s:%s", lctx.Name, lctx.Id, hashValue))
+	var token = fmt.Sprintf("Basic %s:%s:%s", lctx.Name, lctx.Id, hashValue)
+	ctx.SetHeader("Authorization", token)
+	return token
 }
 func (l *_loginInHead) GetLoginIdAs(ctx *goblet.Context, key string) (*goblet.LoginContext, error) {
 	auth := ctx.ReqHeader().Get("Authorization")

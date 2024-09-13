@@ -67,14 +67,14 @@ func WithAttribute(key string, value interface{}) LoginInfoSetter {
 }
 
 type LoginInfoStorer interface {
-	AddLoginAs(ctx *Context, lctx *LoginContext)
+	AddLoginAs(ctx *Context, lctx *LoginContext) string
 	GetLoginIdAs(ctx *Context, key string) (*LoginContext, error)
 	DeleteLoginAs(ctx *Context, key string) error
 }
 
 type CookieLoginInfoStorer struct{}
 
-func (c *CookieLoginInfoStorer) AddLoginAs(ctx *Context, lctx *LoginContext) {
+func (c *CookieLoginInfoStorer) AddLoginAs(ctx *Context, lctx *LoginContext) string {
 
 	cookie := new(http.Cookie)
 	cookie.Name = lctx.Name + "Id"
@@ -86,6 +86,7 @@ func (c *CookieLoginInfoStorer) AddLoginAs(ctx *Context, lctx *LoginContext) {
 		logrus.Error("Cookie Login Info Storer not support attrs, please consider use session or jwt")
 	}
 	ctx.AddSignedCookie(cookie)
+	return cookie.Value
 }
 
 func (c *CookieLoginInfoStorer) GetLoginIdAs(ctx *Context, key string) (*LoginContext, error) {

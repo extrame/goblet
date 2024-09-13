@@ -48,7 +48,7 @@ func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
 	return nil
 }
 
-func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginContext) {
+func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginContext) string {
 	var claims = make(jws.Claims)
 	claims.Set(lctx.Name+"Id", lctx.Id)
 	j := jws.NewJWT(claims, l.method)
@@ -62,9 +62,12 @@ func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginCont
 	}
 
 	b, err := j.Serialize(l.secret)
+	var token string
 	if err == nil {
-		ctx.SetHeader("Authorization", fmt.Sprintf("Bearer %s", string(b)))
+		token = fmt.Sprintf("Bearer %s", string(b))
+		ctx.SetHeader("Authorization", token)
 	}
+	return token
 }
 
 func (l *_JwtLoginPlugin) GetLoginIdAs(ctx *goblet.Context, key string) (*goblet.LoginContext, error) {

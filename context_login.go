@@ -30,7 +30,7 @@ func (c *Context) GetLoginInfoAs(name string) (*LoginContext, bool) {
 	return nil, false
 }
 
-func (c *Context) AddLoginIdAs(id interface{}, name string, setter ...LoginInfoSetter) {
+func (c *Context) AddLoginIdAs(id interface{}, name string, setter ...LoginInfoSetter) string {
 	if name == "" {
 		name = "user"
 	}
@@ -60,7 +60,7 @@ func (c *Context) AddLoginIdAs(id interface{}, name string, setter ...LoginInfoS
 		lctx.Deadline = &deadline
 	}
 
-	c.Server.loginSaver.AddLoginAs(c, lctx)
+	return c.Server.loginSaver.AddLoginAs(c, lctx)
 
 }
 

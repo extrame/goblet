@@ -38,13 +38,19 @@ func fetch(node *yaml.Node) map[string]string {
 	return fetched
 }
 
-func (s *Server) AddConfig(name string, obj interface{}) error {
+func (s *Server) AddConfig(name string, obj interface{}, tagName ...string) error {
 	err := defaults.Set(obj)
 	if err != nil {
 		logrus.Debug(err)
 	}
 	node, _ := myyaml.GetChildNode(s.cfg, name)
-	return myyaml.UnmarshalNode(node, obj, "goblet")
+	var _tagName string
+	if len(tagName) > 0 {
+		_tagName = tagName[0]
+	} else {
+		_tagName = "goblet"
+	}
+	return myyaml.UnmarshalNode(node, obj, _tagName)
 }
 
 func (s *Server) getCfg(name string) *yaml.Node {
