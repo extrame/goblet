@@ -263,15 +263,15 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 
 		args := strings.Split(name, "/")
 
-		var methodNameRequired = args[0]
+		name = args[0]
 		if g.ignoreCase {
-			methodNameRequired = strings.ToLower(methodNameRequired)
+			name = strings.ToLower(name)
 		}
 
 		// typ := g.block.Type()
 
 		var ok bool
-		method, ok = g.methods[methodNameRequired]
+		method, ok = g.methods[name]
 		if ok && method.IsValid() {
 			if len(args) > 1 {
 				ctx.suffix = strings.Join(args[1:], "/")
