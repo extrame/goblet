@@ -12,6 +12,7 @@ import (
 
 // StandardJsonWrapper return a standard json wrapper
 // StandardJsonWrapper 返回一个标准的json包装器
+// 使用方法： 调用plugin.StandardJsonWrapper()作为参数传入Organize函数
 // successCode: the code of success
 // successMsg: the message of success
 func StandardJsonWrapper(arguments ...StandardJsonWrapperSetter) render.Render {
@@ -96,7 +97,11 @@ func (r *jsonRenderInstance) Render(wr io.Writer, hwr render.HeadWriter, data in
 	hwr.Header().Add("Content-Type", "application/json; charset=utf-8")
 	hwr.WriteHeader(200)
 	if err, ok := data.(*StandardErrorOrData); !ok {
-		data = StandardErrorOrData{Data: data, Msg: "success", Code: status}
+		if raw, ok := data.(DataNotWrapper); ok && raw.ShouldNotWrap() {
+			data = raw
+		} else {
+			data = StandardErrorOrData{Data: data, Msg: "success", Code: status}
+		}
 	} else {
 		data = err
 	}
@@ -138,4 +143,9 @@ func WrapError(code int, err error) error {
 		return nil
 	}
 	return &StandardErrorOrData{Data: nil, Msg: err.Error(), Code: code}
+}
+
+type DataNotWrapper interface {
+	// ShouldNotWrap 是否不应该被包装
+	ShouldNotWrap() bool
 }
