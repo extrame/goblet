@@ -16,7 +16,9 @@ type router struct {
 }
 
 func (r *router) init() {
-	r.anchor = &anchor{0, "/", "", []*anchor{}, &_staticBlockOption{}}
+	r.anchor = &anchor{0, "/", "", []*anchor{}, &_staticBlockOption{
+		&BasicBlockOption{},
+	}}
 }
 
 func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err error) {
@@ -98,7 +100,7 @@ func (r *router) addRoute(path string, opt BlockOption) {
 	r.anchor.add(path, opt)
 }
 
-//---------------------anchors---------------
+// ---------------------anchors---------------
 type anchor struct {
 	loc      int
 	char     string
