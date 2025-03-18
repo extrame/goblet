@@ -3,16 +3,14 @@ package goblet
 import (
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"mime/multipart"
-	"net/url"
 	"reflect"
 	"strings"
 
-	"github.com/extrame/unmarshall"
-	"github.com/sirupsen/logrus"
+	"github.com/go-playground/form/v4"
 )
 
 type FormFillFn func(content string) (interface{}, error)
@@ -58,166 +56,231 @@ func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool)
 		return err
 	}
 	if err = xml.Unmarshal(cx.fill_bts, v); err != nil {
-		logrus.Errorf("[Fill Error]Request:%s,Err:%s\n", string(cx.fill_bts), err.Error())
+		slog.Error("Failed to unmarshal XML request",
+			"request", string(cx.fill_bts),
+			"error", err)
 	}
 	return err
 }
 
-// a form-enc decoder for request body
-type FormRequestDecoder struct{}
+// FormRequestDecoder handles application/x-www-form-urlencoded data
+type FormRequestDecoder struct {
+	decoder *form.Decoder
+}
+
+func NewFormRequestDecoder() *FormRequestDecoder {
+	decoder := form.NewDecoder()
+
+	// 注册自定义类型转换器
+	decoder.RegisterCustomTypeFunc(func(vals []string) (interface{}, error) {
+		if len(vals) > 0 {
+			return vals[0], nil
+		}
+		return "", nil
+	}, "")
+
+	return &FormRequestDecoder{decoder: decoder}
+}
 
 type FileGetter func(string) (multipart.File, *multipart.FileHeader, error)
 
 func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	if cx.request.Form == nil {
-		cx.request.ParseForm()
+	// 解析表单数据
+	if err := cx.request.ParseForm(); err != nil {
+		return fmt.Errorf("parsing form: %w", err)
 	}
 
-	var maxlength = 0
-	for k, _ := range cx.request.Form {
-		if len(k) > maxlength {
-			maxlength = len(k)
+	// 使用 form 包解码基本字段
+	if err := d.decoder.Decode(v, cx.request.Form); err != nil {
+		return fmt.Errorf("decoding form: %w", err)
+	}
+
+	// 处理自定义类型
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct {
+		return nil
+	}
+
+	// 遍历结构体字段，处理自定义类型
+	typ := val.Type()
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		if !field.CanSet() {
+			continue
 		}
-	}
 
-	var unmarshaller = unmarshall.Unmarshaller{
-		Values: func() map[string][]string {
-			return cx.request.Form
-		},
-		ValuesGetter: func(prefix string) url.Values {
-			values := (*map[string][]string)(&cx.request.Form)
-			var sub = make(url.Values)
-			if values != nil {
-				for k, v := range *values {
-					if strings.HasPrefix(k, prefix+"[") {
-						sub[k] = v
-					}
+		typeStr := field.Type().String()
+		if filler, ok := cx.Server.filler[typeStr]; ok {
+			tag := typ.Field(i).Tag.Get("goblet")
+			if tag == "" {
+				continue
+			}
+
+			values := cx.request.Form[tag]
+			if len(values) > 0 {
+				if obj, err := filler(values[0]); err == nil {
+					field.Set(reflect.ValueOf(obj))
 				}
 			}
-			return sub
-		},
-		ValueGetter: func(tag string) []string {
-			values := (*map[string][]string)(&cx.request.Form)
-			if values != nil {
-				var lower = strings.ToLower(tag)
-				if results, ok := (*values)[tag]; ok {
-					return results
-				}
-				if results, ok := (*values)[lower]; ok {
-					return results
-				}
-				if results, ok := (*values)[tag+"[]"]; ok {
-					return results
-				}
-				if results, ok := (*values)[lower+"[]"]; ok {
-					return results
-				}
-			}
-			return []string{}
-		},
-		Tag:          "goblet",
-		DefaultTag:   "default",
-		MaxLength:    maxlength,
-		TagConcatter: concatPrefix,
-		BaseName: func(path string, prefix string) string {
-			return strings.Split(strings.TrimPrefix(path, prefix+"["), "]")[0]
-		},
-		AutoFill: autofill,
-	}
-
-	for typ, fn := range cx.Server.filler {
-		if unmarshaller.FillForSpecifiledType == nil {
-			unmarshaller.FillForSpecifiledType = make(map[string]func(id string) (reflect.Value, error))
-		}
-		unmarshaller.FillForSpecifiledType[typ] = func(content string) (reflect.Value, error) {
-			obj, err := fn(content)
-			return reflect.ValueOf(obj), err
 		}
 	}
 
-	return unmarshaller.Unmarshall(v)
+	return nil
 }
 
-// a form-enc decoder for request body
-type MultiFormRequestDecoder struct{}
+// MultiFormRequestDecoder handles multipart/form-data
+type MultiFormRequestDecoder struct {
+	decoder *form.Decoder
+}
+
+func NewMultiFormRequestDecoder() *MultiFormRequestDecoder {
+	decoder := form.NewDecoder()
+	decoder.RegisterCustomTypeFunc(func(vals []string) (interface{}, error) {
+		if len(vals) > 0 {
+			return vals[0], nil
+		}
+		return "", nil
+	}, "")
+
+	return &MultiFormRequestDecoder{decoder: decoder}
+}
 
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	err := cx.request.ParseMultipartForm(32 << 20)
-	if err != nil {
-		return err
+	// 解析多部分表单数据，设置32MB的最大内存
+	if err := cx.request.ParseMultipartForm(32 << 20); err != nil {
+		return fmt.Errorf("parsing multipart form: %w", err)
 	}
-	values := (map[string][]string)(cx.request.Form)
+
 	if cx.request.MultipartForm == nil {
-		return errors.New("MultipartForm is empty")
+		return fmt.Errorf("multipart form is empty")
 	}
-	var maxlength = 0
 
-	for k, v := range cx.request.MultipartForm.Value {
-		values[k] = v
-		if len(k) > maxlength {
-			maxlength = len(k)
+	// 使用 form 包解码基本字段
+	if err := d.decoder.Decode(v, cx.request.MultipartForm.Value); err != nil {
+		return fmt.Errorf("decoding multipart form: %w", err)
+	}
+
+	// 处理文件和自定义类型
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	if val.Kind() != reflect.Struct {
+		return nil
+	}
+
+	// 遍历结构体字段
+	typ := val.Type()
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		if !field.CanSet() {
+			continue
 		}
-	}
 
-	for k, _ := range cx.request.MultipartForm.File {
-		if len(k) > maxlength {
-			maxlength = len(k)
+		// 获取字段类型和标签
+		typeStr := field.Type().String()
+		structField := typ.Field(i)
+		tag := structField.Tag.Get("form")
+		fieldName := structField.Name
+		if tag != "" {
+			fieldName = tag
 		}
-	}
+		lowerFieldName := strings.ToLower(fieldName)
 
-	var unmarshaller = unmarshall.Unmarshaller{
-		Values: func() map[string][]string {
-			return values
-		},
-		MaxLength: maxlength,
-		ValueGetter: func(tag string) []string {
-			return values[tag]
-		},
-		ValuesGetter: func(prefix string) url.Values {
-			var sub = make(url.Values)
-			if values != nil {
-				for k, v := range values {
-					if strings.HasPrefix(k, prefix+"[") {
-						sub[k] = v
+		// 处理 goblet.File 类型
+		if typeStr == "github.com/extrame/goblet.File" {
+			// 处理单个文件
+			if field.Kind() != reflect.Slice {
+				// 尝试使用原始字段名
+				file, header, err := cx.request.FormFile(fieldName)
+				if err != nil {
+					// 如果找不到，尝试使用全小写字段名
+					file, header, err = cx.request.FormFile(lowerFieldName)
+					if err != nil {
+						slog.Debug("No file found for field",
+							"original_field", fieldName,
+							"lowercase_field", lowerFieldName,
+							"error", err)
+						continue
 					}
 				}
-			}
-			return sub
-		},
-		TagConcatter: concatPrefix,
-		BaseName: func(path string, prefix string) string {
-			return strings.Split(strings.TrimPrefix(path, prefix+"["), "]")[0]
-		},
-		FillForSpecifiledType: map[string]func(id string) (reflect.Value, error){
-			"github.com/extrame/goblet.File": func(id string) (reflect.Value, error) {
-				var file File
-				var err error
-				var f multipart.File
-				var h *multipart.FileHeader
-				if f, h, err = cx.request.FormFile(id); err == nil {
-					file.Name = h.Filename
-					file.Header = h.Header
-					file.Size = h.Size
-					file.rc = f
-					return reflect.ValueOf(file), err
-				} else {
-					return reflect.ValueOf(nil), err
-				}
-			},
-		},
-		AutoFill:   autofill,
-		Tag:        "goblet",
-		DefaultTag: "default",
-	}
 
-	for typ, fn := range cx.Server.multiFiller {
-		unmarshaller.FillForSpecifiledType[typ] = func(id string) (reflect.Value, error) {
-			obj, err := fn(cx, id)
-			return reflect.ValueOf(obj), err
+				gobletFile := File{
+					Name:   header.Filename,
+					Header: header.Header,
+					Size:   header.Size,
+					rc:     file,
+				}
+				field.Set(reflect.ValueOf(gobletFile))
+				continue
+			}
+
+			// 处理文件数组
+			var files []*multipart.FileHeader
+			// 先尝试原始字段名
+			if f := cx.request.MultipartForm.File[fieldName]; len(f) > 0 {
+				files = f
+			} else {
+				// 如果找不到，尝试全小写字段名
+				if f := cx.request.MultipartForm.File[lowerFieldName]; len(f) > 0 {
+					files = f
+				}
+			}
+
+			if len(files) > 0 {
+				// 创建文件切片
+				sliceType := reflect.SliceOf(field.Type().Elem())
+				fileSlice := reflect.MakeSlice(sliceType, len(files), len(files))
+
+				// 处理每个文件
+				for j, fileHeader := range files {
+					file, err := fileHeader.Open()
+					if err != nil {
+						slog.Error("Failed to open file",
+							"filename", fileHeader.Filename,
+							"error", err)
+						continue
+					}
+
+					gobletFile := File{
+						Name:   fileHeader.Filename,
+						Header: fileHeader.Header,
+						Size:   fileHeader.Size,
+						rc:     file,
+					}
+					fileSlice.Index(j).Set(reflect.ValueOf(gobletFile))
+				}
+				field.Set(fileSlice)
+			}
+			continue
+		}
+
+		// 处理自定义类型
+		if filler, ok := cx.Server.multiFiller[typeStr]; ok {
+			// 先尝试使用原始字段名
+			if obj, err := filler(cx, fieldName); err == nil {
+				field.Set(reflect.ValueOf(obj))
+			} else {
+				// 如果失败，尝试使用全小写字段名
+				if obj, err := filler(cx, lowerFieldName); err == nil {
+					field.Set(reflect.ValueOf(obj))
+				} else {
+					slog.Debug("Failed to fill custom type",
+						"type", typeStr,
+						"original_field", fieldName,
+						"lowercase_field", lowerFieldName,
+						"error", err)
+				}
+			}
 		}
 	}
 
-	return unmarshaller.Unmarshall(v)
+	return nil
 }
 
 // map of Content-Type -> RequestDecoders
@@ -225,9 +288,9 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 	"application/json":                  new(JsonRequestDecoder),
 	"application/xml":                   new(XmlRequestDecoder),
 	"text/xml":                          new(XmlRequestDecoder),
-	"application/x-www-form-urlencoded": new(FormRequestDecoder),
-	"text/plain":                        new(FormRequestDecoder),
-	"multipart/form-data":               new(MultiFormRequestDecoder),
+	"application/x-www-form-urlencoded": NewFormRequestDecoder(),
+	"text/plain":                        NewFormRequestDecoder(),
+	"multipart/form-data":               NewMultiFormRequestDecoder(),
 }
 
 // goweb.Context Helper function to fill a variable with the contents

@@ -16,6 +16,7 @@ import (
 
 	"github.com/extrame/goblet/render"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 var USERCOOKIENAME = "user"
@@ -54,6 +55,10 @@ func (c *Context) ShowHidden() {
 
 func (c *Context) handleData() {
 
+}
+
+func (c *Context) DB() *gorm.DB {
+	return c.Server.db
 }
 
 // GetRender,返回渲染类型,该返回需要判断是否允许相关渲染类型，如果不需要判断，请使用Format函数

@@ -1,12 +1,9 @@
 package goblet
 
-import (
-	"xorm.io/xorm"
-)
+import "gorm.io/gorm"
 
-var DB *xorm.Engine
+var dialectorCreators = make(map[string]func(string) gorm.Dialector)
 
-func ResetDB() error {
-	DB.Close()
-	return DefaultServer.connectDB()
+func RegisterDB(name string, fn func(string) gorm.Dialector) {
+	dialectorCreators[name] = fn
 }

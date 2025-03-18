@@ -4,7 +4,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"html/template"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,9 +15,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"xorm.io/xorm/caches"
-
-	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
@@ -71,6 +70,7 @@ type Server struct {
 	loginSaver    LoginInfoStorer
 	configer      Configer
 	delims        []string
+	db            *gorm.DB
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -191,13 +191,15 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		err = s.connectDB()
 		if err == nil {
 			if s.Basic.Env == config.DevelopEnv {
-				DB.ShowSQL(true)
+				s.db.Config.Logger = logger.Default.LogMode(logger.Info)
 			}
 		} else if err != config.NoDbDriver {
-			log.Fatalln("connect error:", err)
+			slog.Error("Failed to connect to database", "error", err)
+			os.Exit(1)
 		}
 	} else {
-		logrus.WithError(err).Fatalln("read config file error")
+		slog.Error("Failed to read config file", "error", err)
+		os.Exit(1)
 	}
 	s.enableDbCache()
 	if s.errFunc == nil {
@@ -214,7 +216,11 @@ func (s *Server) isSilence(u string) bool {
 }
 
 func (s *Server) connectDB() (err error) {
-	DB, err = s.Db.New(s.Basic.DbEngine)
+	dialectorCreator, ok := dialectorCreators[s.Basic.DbEngine]
+	if !ok {
+		return config.NoDbDriver
+	}
+	s.db, err = s.Db.New(s.Basic.DbEngine, dialectorCreator)
 	return err
 }
 
@@ -266,9 +272,10 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 	}
 
 	if sync {
-		err = DB.Sync2(models)
+		err = s.db.AutoMigrate(models)
 		if err != nil {
-			logrus.Fatalln("sync error:", err)
+			slog.Error("Failed to sync database model", "error", err)
+			os.Exit(1)
 		}
 	}
 }
@@ -313,7 +320,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var path string
 		if geE.Method != "" {
 			//dynamic return a method which should used as static render
-			logrus.Debugln("use static file name return by dynamic", geE.Method)
+			slog.Debug("Using static file from dynamic response",
+				"method", geE.Method)
 			file := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method)
 			if _, err := os.Stat(file); !os.IsNotExist(err) {
 				s.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method))
@@ -350,6 +358,32 @@ func (s *Server) SetConfigSuffix(suffix string) {
 	s.cfgFileSuffix = suffix
 }
 
+// getCfg 从 YAML 配置中获取指定键名的配置节点
+// 返回一个可以用于解码的 yaml.Node
+func (s *Server) getCfg(key string) *yaml.Node {
+	// 确保配置已加载
+	if s.cfg == nil || s.cfg.Kind != yaml.DocumentNode {
+		return &yaml.Node{Kind: yaml.ScalarNode}
+	}
+
+	// 获取根节点（通常是一个映射节点）
+	root := s.cfg.Content[0]
+	if root.Kind != yaml.MappingNode {
+		return &yaml.Node{Kind: yaml.ScalarNode}
+	}
+
+	// 遍历映射节点的键值对
+	for i := 0; i < len(root.Content); i += 2 {
+		// Content 数组中，偶数索引是键，奇数索引是值
+		if root.Content[i].Value == key {
+			return root.Content[i+1]
+		}
+	}
+
+	// 如果没有找到对应的键，返回一个空的标量节点
+	return &yaml.Node{Kind: yaml.ScalarNode}
+}
+
 func (s *Server) parseConfig() (err error) {
 	reader, err := s.configer.GetConfigSource(s)
 	if err == nil {
@@ -377,7 +411,7 @@ func (s *Server) parseConfig() (err error) {
 
 	if s.Basic.Env == "" {
 		s.Basic.Env = config.DevelopEnv
-		logrus.Info("environment not set, default set as development")
+		slog.Info("Environment not set, using development as default")
 	}
 
 	if s.Basic.DbEngine == "" {
@@ -389,17 +423,22 @@ func (s *Server) parseConfig() (err error) {
 	}
 
 	if s.Basic.Env != config.DevelopEnv && s.Basic.Env != config.ProductEnv && s.Basic.Env != config.OldProductEnv {
-		logrus.Fatalln("environment must be development or production, config env: development or env: production")
+		slog.Error("Invalid environment setting",
+			"message", "Environment must be development or production",
+			"valid_values", []string{"development", "production"})
+		os.Exit(1)
 	} else if s.Basic.Env == config.OldProductEnv {
 		s.Basic.Env = config.ProductEnv
-		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
+		slog.Warn("Deprecated environment value",
+			"message", "Use 'production' instead of 'product'")
 	}
-	if s.Basic.Env == config.DevelopEnv {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
+	// Note: slog level should be set globally when initializing the application
 	for _, plugin := range s.plugins {
 		if err = plugin.AddCfgAndInit(s); err != nil {
-			logrus.Fatalf("add plugin config error in (%T) with error (%s)", plugin, err)
+			slog.Error("Failed to initialize plugin",
+				"plugin_type", fmt.Sprintf("%T", plugin),
+				"error", err)
+			os.Exit(1)
 		}
 	}
 	return
@@ -419,14 +458,49 @@ func (s *Server) PublicDir() string {
 }
 
 func (s *Server) enableDbCache() {
+	// GORM doesn't have built-in caching system
+	// If caching is needed, consider using a separate caching layer
+	// such as Redis or implementing a custom caching middleware
 	if s.Cache.Enable {
-		cacher := caches.NewLRUCacher(caches.NewMemoryStore(), s.Cache.Amount)
-		DB.SetDefaultCacher(cacher)
+		slog.Info("GORM database caching not available",
+			"message", "Consider using a separate caching layer such as Redis")
 	}
 }
 
 func (s *Server) GetDelims() []string {
 	return s.delims
+}
+
+// AddConfig 从服务器配置中获取指定名称的配置节点，并反序列化到提供的对象中
+// name: 配置节点的名称
+// obj: 接收配置的对象指针
+// 返回错误信息，如果反序列化成功则返回 nil
+func (s *Server) AddConfig(name string, obj interface{}) error {
+	// 检查参数
+	if name == "" {
+		return fmt.Errorf("config name cannot be empty")
+	}
+	if obj == nil {
+		return fmt.Errorf("target object cannot be nil")
+	}
+
+	// 检查配置是否已加载
+	if s.cfg == nil {
+		return fmt.Errorf("server config not initialized")
+	}
+
+	// 获取对应名称的配置节点
+	cfgNode := s.getCfg(name)
+	if cfgNode.Kind == yaml.ScalarNode && cfgNode.Value == "" {
+		return fmt.Errorf("config node '%s' not found", name)
+	}
+
+	// 反序列化配置到对象
+	if err := cfgNode.Decode(obj); err != nil {
+		return fmt.Errorf("failed to decode config '%s': %w", name, err)
+	}
+
+	return nil
 }
 
 // Run 运营一个服务器
@@ -464,7 +538,7 @@ func (s *Server) Run() error {
 	if s.Renders["xml"] == nil {
 		s.Renders["xml"] = new(render.XmlRender)
 	}
-	logrus.WithField("port", s.Basic.Port).Infoln("Listening")
+	slog.Info("Server starting", "port", s.Basic.Port)
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.Basic.Port),
 		Handler:      s,
@@ -478,6 +552,8 @@ func (s *Server) Run() error {
 	} else {
 		err = srv.ListenAndServe()
 	}
-	logrus.Println(err)
+	if err != nil {
+		slog.Error("Server error", "error", err)
+	}
 	return err
 }

@@ -16,7 +16,7 @@ type File struct {
 	Path   string
 	Header textproto.MIMEHeader `json:"-"`
 	Size   int64
-	rc     multipart.File `xorm:"-"`
+	rc     multipart.File
 }
 
 func (f *File) Read(p []byte) (n int, err error) {

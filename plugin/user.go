@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/extrame/goblet"
+	"gorm.io/gorm"
 )
 
 type User struct {
@@ -13,10 +14,10 @@ type User struct {
 }
 
 type UserModule struct {
-	Id      int64
-	Name    string `xorm:"unique" goblet:"name"`
-	Pwd     string `goblet:"pwd,md5"`
-	Permits map[string]bool
+	Id      int64           `gorm:"primaryKey"`
+	Name    string          `gorm:"uniqueIndex" goblet:"name"`
+	Pwd     string          `goblet:"pwd,md5"`
+	Permits map[string]bool `gorm:"serializer:json"`
 }
 
 func (u *UserModule) TableName() string {
@@ -26,30 +27,34 @@ func (u *UserModule) TableName() string {
 func (u *User) UpdateMany(cx *goblet.Context) {
 	rec := new(UserModule)
 	cx.Fill(rec)
-	var err error
 	if rec.Name != "" && rec.Pwd != "" {
-		var has bool
-		if has, err = goblet.DB.Where("name = ? and pwd = ?", rec.Name, rec.Pwd).Get(rec); err == nil && has {
+		result := cx.DB().Where("name = ? AND pwd = ?", rec.Name, rec.Pwd).First(rec)
+		if result.Error == nil {
 			cx.AddLoginId(rec.Id)
 			cx.RespondOK()
-		} else {
+		} else if result.Error == gorm.ErrRecordNotFound {
 			cx.RespondWithStatus("用户名或密码错误", http.StatusForbidden)
+		} else {
+			cx.RespondWithStatus("数据库错误", http.StatusInternalServerError)
 		}
 	} else {
 		cx.RespondWithStatus("用户名或密码为空", http.StatusForbidden)
 	}
-
 }
 
 func (u *User) Create(cx *goblet.Context) {
 	rec := new(UserModule)
+	cx.Fill(rec)
 	if rec.Name != "" && rec.Pwd != "" {
-		if _, err := goblet.DB.Insert(rec); err != nil {
-			cx.AddRespond("err", err)
+		result := cx.DB().Create(rec)
+		if result.Error != nil {
+			cx.AddRespond("err", result.Error)
 			cx.RespondStatus(http.StatusBadRequest)
 		} else {
 			cx.AddRespond("user", rec)
 		}
+	} else {
+		cx.RespondWithStatus("用户名或密码为空", http.StatusBadRequest)
 	}
 }
 
@@ -57,10 +62,12 @@ func (u *User) New(cx *goblet.Context) {
 	if len(u.CreateOnlyByPermits) > 0 {
 		var user UserModule
 		if id, has := cx.GetLoginId(); has {
-			if has, err := goblet.DB.ID(id).Get(&user); err == nil && has {
+			result := cx.DB().First(&user, id)
+			if result.Error == nil {
 				for _, permit := range u.CreateOnlyByPermits {
 					if _, ok := user.Permits[permit]; ok {
 						cx.RespondOK()
+						return
 					}
 				}
 			}
