@@ -48,8 +48,9 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 	}
 
 	if anch == nil {
+		lastSlash := strings.LastIndex(r.URL.Path, "/")
 		suff := strings.LastIndex(r.URL.Path, ".")
-		if suff > 0 && suff < len(r.URL.Path) {
+		if suff > 0 && suff < len(r.URL.Path) && suff > lastSlash {
 			format = r.URL.Path[suff+1:]
 			main = r.URL.Path[:suff]
 		} else {
