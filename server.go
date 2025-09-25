@@ -208,12 +208,12 @@ func (s *Server) connectDB() (*gorm.DB, error) {
 // controller - 需要添加到服务器中的控制器接口
 //
 // 函数逻辑：
-// 1. 通过 prepareOption 函数将控制器转换为配置信息
+// 1. 通过 wrapController 函数将控制器转换为配置信息
 // 2. 如果控制器实现了 ControllerNeedInit 接口，则将其添加到初始化控制器列表中
 // 3. 如果控制器实现了 ControllerNeedInitAndReturnError 接口，则将其添加到新的初始化控制器列表中
 // 4. 将配置信息添加到路由表中
 func (s *Server) ControlBy(controller interface{}) {
-	cfg := s.prepareOption(controller)
+	cfg := s.wrapController(controller)
 	if bc, ok := controller.(ControllerNeedInit); ok {
 		s.initCtrl = append(s.initCtrl, bc)
 	}
@@ -283,7 +283,7 @@ func (s *Server) WwwRoot() string {
 
 func (s *Server) GetServerPathByCtrl(ctrl interface{}) []string {
 	root := s.WwwRoot()
-	cfg := s.prepareOption(ctrl)
+	cfg := s.wrapController(ctrl)
 	var paths = make([]string, len(cfg.GetRouting()))
 	for i, r := range cfg.GetRouting() {
 		paths[i] = filepath.Join(root, r)
@@ -445,4 +445,8 @@ func (s *Server) Run() error {
 	}
 	logrus.Println(err)
 	return err
+}
+
+func (s *Server) GetDefaultRender() string {
+	return s.defaultRender
 }

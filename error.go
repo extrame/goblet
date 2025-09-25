@@ -40,23 +40,3 @@ func (s *Server) wrapError(w http.ResponseWriter, err interface{}, withStack boo
 		w.Write([]byte("</body>"))
 	}
 }
-
-type internalInterruptedError struct {
-	reason string
-}
-
-func (e *internalInterruptedError) Error() string {
-	return e.reason
-}
-
-// Interrupted creates a new interrupted error with custom message, interrupted error will make
-// goblet stop processing and return the error to client, like in any Pre function
-func Interrupted(reason string) error {
-	return &internalInterruptedError{
-		reason: reason,
-	}
-}
-
-func (ctx *Context) WrapError(err error, info string) error {
-	return fmt.Errorf("[%s]err:%s", info, err)
-}

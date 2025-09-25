@@ -9,6 +9,7 @@ import (
 
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
+	"github.com/extrame/goblet/internal/ctrl"
 	"github.com/pkg/errors"
 )
 
@@ -17,9 +18,7 @@ type router struct {
 }
 
 func (r *router) init() {
-	r.anchor = &anchor{0, "/", "", []*anchor{}, &_staticBlockOption{
-		&BasicBlockOption{},
-	}}
+	r.anchor = &anchor{0, "/", "", []*anchor{}, ctrl.NewStatic()}
 }
 
 func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err error) {
@@ -95,13 +94,13 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 	return ge.NOSUCHROUTER("")
 }
 
-func (r *router) add(opt BlockOption) {
+func (r *router) add(opt ctrl.Wrapper) {
 	for _, v := range opt.GetRouting() {
 		r.addRoute(v, opt)
 	}
 }
 
-func (r *router) addRoute(path string, opt BlockOption) {
+func (r *router) addRoute(path string, opt ctrl.Wrapper) {
 	r.anchor.add(path, opt)
 }
 
@@ -111,10 +110,10 @@ type anchor struct {
 	char     string
 	prefix   string
 	branches []*anchor
-	opt      BlockOption
+	opt      ctrl.Wrapper
 }
 
-func (a *anchor) add(path string, opt BlockOption) bool {
+func (a *anchor) add(path string, opt ctrl.Wrapper) bool {
 	if len(path) > a.loc {
 		var full_stored_path = a.prefix + a.char
 		if path[a.loc-len(a.prefix):a.loc+1] == full_stored_path {

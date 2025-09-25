@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/extrame/goblet/internal/ctrl"
 	"github.com/extrame/goblet/render"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -29,7 +30,7 @@ type Context struct {
 	Server  *Server
 	request *http.Request
 	writer  http.ResponseWriter
-	option  BlockOption
+	option  ctrl.Wrapper
 	DB      *gorm.DB // 数据库连接
 	//默认请求类型：HTML
 	suffix          string
@@ -56,6 +57,11 @@ func (c *Context) ShowHidden() {
 
 func (c *Context) handleData() {
 
+}
+
+func (c *Context) SetForceFormat(format, layout string) {
+	c.forceFormat = format
+	c.layout = layout
 }
 
 // GetRender,返回渲染类型,该返回需要判断是否允许相关渲染类型，如果不需要判断，请使用Format函数
@@ -317,6 +323,22 @@ func (c *Context) RespondReader(reader io.Reader) {
 	c.already_writed = true
 }
 
+func (c *Context) Env() string {
+	return c.Server.Env()
+}
+
+func (c *Context) NotRendered() bool {
+	return !c.already_writed && c.response == nil && c.responseMap == nil
+}
+
+func (c *Context) SetSuffix(suf string) {
+	c.suffix = suf
+}
+
+func (c *Context) GetPre(key string) []reflect.Value {
+	return c.Server.pres[key]
+}
+
 // Respond 向用户返回内容，三种数据会进行特别处理：
 // error类型：标记状态为内部错误
 // []byte类型：使用raw进行内容渲染，即原样输出，不进行json等格式转化
@@ -460,14 +482,14 @@ func (c *Context) RenderAs(name string) {
 	c.method = name
 }
 
-func (c *Context) RestRedirectToRead(id interface{}) {
-	switch rid := id.(type) {
-	case string:
-		c.option.(*RestBlockOption).renderAsRead(rid, c)
-	case int64:
-		c.option.(*RestBlockOption).renderAsRead(strconv.FormatInt(rid, 10), c)
-	}
-}
+// func (c *Context) RestRedirectToRead(id interface{}) {
+// 	switch rid := id.(type) {
+// 	case string:
+// 		c.option.(*restController).renderAsRead(rid, c)
+// 	case int64:
+// 		c.option.(*restController).renderAsRead(strconv.FormatInt(rid, 10), c)
+// 	}
+// }
 
 func (c *Context) RedirectTo(url string) {
 	c.writer.Header().Set("Location", url)
@@ -488,7 +510,12 @@ func (c *Context) Method() string {
 
 // 返回用户请求的Method, GET/POST/HEAD等
 func (c *Context) ReqMethod() string {
-	return c.request.Method
+	var method string
+	if method = c.request.URL.Query().Get("method"); method == "" {
+		method = c.request.Method
+	}
+	method = strings.ToUpper(method)
+	return method
 }
 
 func (c *Context) StatusCode() int {
@@ -621,4 +648,8 @@ func (c *Context) UserAgent() string {
 // BasicAuth 返回Basic Auth
 func (c *Context) BasicAuth() (string, string, bool) {
 	return c.request.BasicAuth()
+}
+
+func (ctx *Context) WrapError(err error, info string) error {
+	return fmt.Errorf("[%s]err:%s", info, err)
 }
