@@ -107,6 +107,9 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	var dbUserPlugin dbUserNamePlugin
 	s.Name = name
 	s.Renders = make(map[string]render.Render)
+
+	plugins = append([]interface{}{new(_JSONPlugin)}, plugins...)
+
 	for _, plugin := range plugins {
 		if tp, ok := plugin.(NewPlugin); ok {
 			typ := reflect.ValueOf(plugin).Type()
@@ -198,12 +201,6 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		logrus.WithError(err).Fatalln("read config file error")
 	}
 	s.enableDbCache()
-	if s.errFunc == nil {
-		s.errFunc = defaultErrFunc
-	}
-	if s.defaultRender == "" {
-		s.defaultRender = "json"
-	}
 }
 
 func (s *Server) isSilence(u string) bool {
