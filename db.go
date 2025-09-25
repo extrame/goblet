@@ -1,12 +1,16 @@
 package goblet
 
 import (
-	"xorm.io/xorm"
+	"gorm.io/gorm"
 )
 
-var DB *xorm.Engine
+var DB *gorm.DB
 
 func ResetDB() error {
-	DB.Close()
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return err
+	}
+	sqlDB.Close()
 	return DefaultServer.connectDB()
 }

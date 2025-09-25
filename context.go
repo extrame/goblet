@@ -16,6 +16,7 @@ import (
 
 	"github.com/extrame/goblet/render"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 var USERCOOKIENAME = "user"
@@ -29,6 +30,7 @@ type Context struct {
 	request *http.Request
 	writer  http.ResponseWriter
 	option  BlockOption
+	DB      *gorm.DB // 数据库连接
 	//默认请求类型：HTML
 	suffix          string
 	format          string
@@ -423,10 +425,6 @@ func (c *Context) Layout() string {
 	} else {
 		return c.option.Layout()
 	}
-}
-
-func (c *Context) ResetDB() error {
-	return c.Server.connectDB()
 }
 
 // RenderAs 设置渲染的模型文件，注意和UseRender的区别，需要修改json/html等用UseRender

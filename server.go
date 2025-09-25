@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"xorm.io/xorm/caches"
+	"gorm.io/gorm"
 
 	"github.com/sirupsen/logrus"
 
@@ -188,10 +188,11 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		if dbUserPlugin != nil {
 			s.Db.User = dbUserPlugin.SetName(s.Db.User)
 		}
-		err = s.connectDB()
+		db, err := s.connectDB()
 		if err == nil {
+			DB = db
 			if s.Basic.Env == config.DevelopEnv {
-				DB.ShowSQL(true)
+				db.Debug()
 			}
 		} else if err != config.NoDbDriver {
 			log.Fatalln("connect error:", err)
@@ -213,9 +214,8 @@ func (s *Server) isSilence(u string) bool {
 	return ok && si
 }
 
-func (s *Server) connectDB() (err error) {
-	DB, err = s.Db.New(s.Basic.DbEngine)
-	return err
+func (s *Server) connectDB() (*gorm.DB, error) {
+	return s.Db.New(s.Basic.DbEngine)
 }
 
 // ControlBy
@@ -257,8 +257,6 @@ func (s *Server) Pre(fn interface{}, conds ...string) {
 }
 
 func (s *Server) AddModel(models interface{}, syncs ...bool) {
-	var err error
-
 	var sync = true
 
 	if len(syncs) > 0 {
@@ -266,9 +264,9 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 	}
 
 	if sync {
-		err = DB.Sync2(models)
+		err := DB.AutoMigrate(models)
 		if err != nil {
-			logrus.Fatalln("sync error:", err)
+			logrus.Fatalln("migrate error:", err)
 		}
 	}
 }
@@ -419,10 +417,7 @@ func (s *Server) PublicDir() string {
 }
 
 func (s *Server) enableDbCache() {
-	if s.Cache.Enable {
-		cacher := caches.NewLRUCacher(caches.NewMemoryStore(), s.Cache.Amount)
-		DB.SetDefaultCacher(cacher)
-	}
+	// GORM 内置了缓存机制，这里可以留空或根据需求实现
 }
 
 func (s *Server) GetDelims() []string {

@@ -7,8 +7,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
-	"xorm.io/xorm"
-	"xorm.io/xorm/names"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/driver/sqlserver"
+	"gorm.io/gorm"
 )
 
 var NoDbDriver = errors.New("no db driver for this server")
@@ -24,37 +27,40 @@ type Db struct {
 	Prefix     string `yaml:"prefix"`
 }
 
-func (d *Db) New(engine string) (db *xorm.Engine, err error) {
+func (d *Db) New(engine string) (db *gorm.DB, err error) {
+	var dialector gorm.Dialector
 
-	var q string
-	if engine == "mysql" {
-		q = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", d.User, d.Pwd, d.Host, d.Port, d.Name)
-	} else if engine == "postgres" {
-		q = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", d.Host, d.Port, d.User, d.Pwd, d.Name)
-	} else if engine == "oci8" {
-		q = fmt.Sprintf("%s/%s@%s:%d/%s", d.User, d.Pwd, d.Host, d.Port, d.Name)
-	} else if engine == "mssql" {
-		q = fmt.Sprintf("Server=%s;Database=%s;User ID=%s;Password=%s;connection timeout=%d;keepAlive=%d", d.Host, d.Name, d.User, d.Pwd, d.TO, d.KaInterval)
-	} else if engine == "sqlite3" || engine == "sqlite" {
-		if info, err := os.Stat(d.Host + ".db"); err == nil {
-			if info.IsDir() {
-				return nil, fmt.Errorf("If you want to use sqlite3, please set db.host as rw file")
-			}
+	switch engine {
+	case "mysql":
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			d.User, d.Pwd, d.Host, d.Port, d.Name)
+		dialector = mysql.Open(dsn)
+	case "postgres":
+		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+			d.Host, d.Port, d.User, d.Pwd, d.Name)
+		dialector = postgres.Open(dsn)
+	case "sqlite3", "sqlite":
+		if info, err := os.Stat(d.Host + ".db"); err == nil && info.IsDir() {
+			return nil, fmt.Errorf("if you want to use sqlite3, please set db.host as rw file")
 		}
-		q = d.Host + ".db"
-	} else if engine == "none" {
+		dialector = sqlite.Open(d.Host + ".db")
+	case "mssql":
+		dsn := fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s&connection+timeout=%d",
+			d.User, d.Pwd, d.Host, d.Port, d.Name, d.TO)
+		dialector = sqlserver.Open(dsn)
+	case "none":
 		return nil, NoDbDriver
-	} else {
-		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,oci8,mssql,sqlite3,sqlite,none]", engine)
+	default:
+		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,postgres,mssql,sqlite3,sqlite,none]", engine)
 	}
-	logrus.WithField("db type", engine).WithField("url", q).Infoln("connect to DB")
-	db, err = xorm.NewEngine(engine, q)
-	if err == nil {
-		if d.Prefix != "" {
-			db.SetTableMapper(names.NewPrefixMapper(names.SnakeMapper{}, d.Prefix))
-		}
+
+	logrus.WithField("db type", engine).Infoln("connecting to DB")
+	db, err = gorm.Open(dialector, &gorm.Config{})
+	if err != nil {
+		return nil, err
 	}
-	return db, err
+
+	return db, nil
 }
 
 func (s *Db) UnmarshalYAML(value *yaml.Node) (err error) {
