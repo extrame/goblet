@@ -208,9 +208,11 @@ func (r *BasicBlockOption) tryPre(m string, ctx *Context) bool {
 	if pc, ok := ctx.Server.pres[key]; ok {
 		for _, fn := range pc {
 			results, _ := callMethod(fn, ctx)
-			if err, ok := results[0].Interface().(error); ok && err != nil {
-				if err != Interrupted {
-					ctx.RespondError(err)
+			var result = results[0].Interface()
+			if result != nil {
+				switch tr := result.(type) {
+				case *internalInterruptedError:
+					ctx.RespondError(tr)
 				}
 				return false
 			}
@@ -340,20 +342,6 @@ next:
 			return checkResult(results, typ, ctx)
 		}
 
-		// key := strings.ToLower(g.name + "-" + name)
-		// if pc, ok := ctx.Server.pres[key]; ok {
-		// 	results := callMethod(pc, ctx)
-		// 	// pc.Call([]reflect.Value{arg})
-		// 	if err, ok := results[0].Interface().(error); ok && err != nil {
-		// 		if err != Interrupted {
-		// 			ctx.RespondError(err)
-		// 		}
-		// 		return nil
-		// 	}
-		// } else {
-		// 	// method.Call([]reflect.Value{arg})
-		// 	callMethod(method, ctx)
-		// }
 	}
 	return nil
 
@@ -617,7 +605,7 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 		basic.layout = "default"
 	}
 
-	slog.Error("fork error", "block_type", fmt.Sprintf("%T", block), "routing", basic.routing)
+	slog.Error("add routing", "ctrl", fmt.Sprintf("%T", block), "routing", basic.routing)
 
 	return newBlock(&basic, block, ignoreCase)
 }
