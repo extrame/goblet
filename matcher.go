@@ -5,6 +5,6 @@ func TestMatcher(url string, ctrls ...interface{}) (string, string) {
 	for _, ctrl := range ctrls {
 		testServer.ControlBy(ctrl)
 	}
-	anchor, suffix := testServer.router.anchor.match(url, len(url))
-	return anchor.opt.String(), suffix
+	anchor, suffix := testServer.router.anchor.Match(url, len(url))
+	return anchor.Opt.String(), suffix
 }

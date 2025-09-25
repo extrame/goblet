@@ -41,24 +41,33 @@ func (g *Group) Parse(ctx Context) error {
 	if len(suffix) > 1 {
 		name = suffix[1:]
 
-		args := strings.Split(name, "/")
+		// args := strings.Split(name, "/")
 
-		name = args[0]
-		if g.IgnoreCase {
-			name = strings.ToLower(name)
-		}
+		// name = args[0]
+		// if g.IgnoreCase {
+		// 	name = strings.ToLower(name)
+		// }
 
-		// typ := g.block.Type()
+		// // typ := g.block.Type()
 
-		var ok bool
-		method, ok = g.methods[name]
-		if ok && method.IsValid() {
-			if len(args) > 1 {
-				ctx.SetSuffix(strings.Join(args[1:], "/"))
-			} else {
-				ctx.SetSuffix("")
+		// var ok bool
+		// method, ok = g.methods[name]
+		// if ok && method.IsValid() {
+		// 	if len(args) > 1 {
+		// 		ctx.SetSuffix(strings.Join(args[1:], "/"))
+		// 	} else {
+		// 		ctx.SetSuffix("")
+		// 	}
+		// 	goto next
+		// }
+		matched, suffix := g.methods.Match(suffix, len(suffix))
+
+		if matched != nil {
+			var method = matched.Opt.(*MethodCaller)
+			if method.IsValid() {
+				ctx.SetSuffix(suffix)
+				goto next
 			}
-			goto next
 		}
 	}
 	if !method.IsValid() {

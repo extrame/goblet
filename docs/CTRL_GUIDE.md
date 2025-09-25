@@ -73,3 +73,15 @@ func checkLogin(ctx *goblet.Context) error {
 ### 定义特殊错误类型：
 
 1. goblet.Interrupted(reason)：该错误类型会中断请求处理，直接返回错误信息给客户端，不会执行后续的业务逻辑。
+
+
+## 路径匹配
+
+### 路径参数
+
+在路由定义中，可以使用 `:param` 的形式来捕获URL中的动态部分作为参数。例如：
+
+```go
+type MyController struct {
+    goblet.Route `path:"/mycontroller/:id"`
+}

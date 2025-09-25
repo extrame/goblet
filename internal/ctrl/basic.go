@@ -9,10 +9,27 @@ import (
 
 	"github.com/extrame/goblet/config"
 	"github.com/extrame/goblet/internal/errors"
+	"github.com/extrame/goblet/internal/matcher"
 )
 
 type Server interface {
 	GetDefaultRender() string
+}
+
+type MethodCaller struct {
+	fn reflect.Value
+}
+
+func (m *MethodCaller) MatchSuffix(string) bool {
+	return true
+}
+
+func (m *MethodCaller) String() string {
+	return fmt.Sprintf("%v", m.fn)
+}
+
+func (m *MethodCaller) IsValid() bool {
+	return m.fn.IsValid()
 }
 
 func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase bool) {
@@ -98,14 +115,18 @@ func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase boo
 			}
 		}
 		// parse methods and store in map
-		basic.methods = make(map[string]reflect.Value)
+		basic.methods = matcher.Root(nil)
 		for i := 0; i < valtypeOrigin.NumMethod(); i++ {
 			mtd := valtypeOrigin.Method(i)
+			hyphenName := toHyphenCase(mtd.Name)
+			hyphenName = strings.ReplaceAll(hyphenName, "_", "/")
+
 			if ignoreCase {
-				basic.methods[strings.ToLower(mtd.Name)] = basic.block.Method(i)
-			} else {
-				basic.methods[mtd.Name] = basic.block.Method(i)
+				hyphenName = strings.ToLower(hyphenName)
 			}
+			basic.methods.Add(hyphenName, &MethodCaller{
+				fn: basic.block.Method(i),
+			})
 		}
 	}
 
@@ -138,7 +159,7 @@ type Basic struct {
 	Name                string
 	errRender           string
 	hide                bool
-	methods             map[string]reflect.Value
+	methods             *matcher.UrlMatcher
 }
 
 func (b *Basic) Layout() string {
@@ -194,6 +215,18 @@ func (r *Basic) tryPre(m string, ctx Context) bool {
 
 func (h *Basic) String() string {
 	return fmt.Sprintf("Basic(%s)", h.Name)
+}
+
+// toHyphenCase 将驼峰命名转换为连字符格式，例如：AaaBbb -> aaa-bbb
+func toHyphenCase(s string) string {
+	var result []rune
+	for i, r := range s {
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			result = append(result, '-')
+		}
+		result = append(result, r)
+	}
+	return string(result)
 }
 
 func (r *Basic) callMethodForBlock(methodName string, ctx Context) error {
