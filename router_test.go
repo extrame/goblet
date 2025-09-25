@@ -9,13 +9,24 @@ import (
 
 func TestAnchor(t *testing.T) {
 	anchor := &anchor{0, "/", "", []*anchor{}, &ctrl.Html{}}
-	anchor.add("/", &ctrl.Group{})
-	anchor.add("/stat/days", &ctrl.Group{})
+	anchor.add("/", &ctrl.Group{&ctrl.Basic{Name: "root"}, true})
+	anchor.add("/stat/days", &ctrl.Group{&ctrl.Basic{Name: "days"}, true})
 	anchor.add("/sc", &ctrl.Html{})
 	anchor.add("/sec", &ctrl.Html{&ctrl.Basic{Name: "right"}})
+	//match 3 letters so root will be matched
 	a, _ := anchor.match("/stat/days/2018-04-19.json", 3)
-	t.Logf("%T,%v\n", a.opt, a.opt)
+	if a.opt.String() != "Group(root) with ignore case" {
+		t.Error("Group not match, got ", a.opt.String())
+	}
+	//match 15 letters so days will be matched
+	c, _ := anchor.match("/stat/days/2018-04-19.json", 15)
+	if c.opt.String() != "Group(days) with ignore case" {
+		t.Error("Group not match, got ", c.opt.String())
+	}
 	b, _ := anchor.match("/sec", 4)
+	if b.opt.String() != "Html(right)" {
+		t.Error("Html not match, got ", b.opt.String())
+	}
 	t.Logf("%T,%v\n", b.opt, b.opt)
 }
 
