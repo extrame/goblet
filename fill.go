@@ -3,15 +3,14 @@ package goblet
 import (
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"mime/multipart"
 	"net/url"
 	"reflect"
 	"strings"
 
-	"github.com/extrame/unmarshall"
+	"github.com/creasty/defaults"
+	"github.com/gorilla/schema"
 	"github.com/sirupsen/logrus"
 )
 
@@ -64,160 +63,119 @@ func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool)
 }
 
 // a form-enc decoder for request body
-type FormRequestDecoder struct{}
+type FormRequestDecoder struct {
+	decoder *schema.Decoder
+}
 
-type FileGetter func(string) (multipart.File, *multipart.FileHeader, error)
+func NewFormRequestDecoder() *FormRequestDecoder {
+	decoder := schema.NewDecoder()
+	decoder.SetAliasTag("form") // 使用form标签
+	decoder.IgnoreUnknownKeys(true)
+	return &FormRequestDecoder{decoder: decoder}
+}
 
 func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
 	if cx.request.Form == nil {
-		cx.request.ParseForm()
-	}
-
-	var maxlength = 0
-	for k, _ := range cx.request.Form {
-		if len(k) > maxlength {
-			maxlength = len(k)
+		if err := cx.request.ParseForm(); err != nil {
+			return err
 		}
 	}
 
-	var unmarshaller = unmarshall.Unmarshaller{
-		Values: func() map[string][]string {
-			return cx.request.Form
-		},
-		ValuesGetter: func(prefix string) url.Values {
-			values := (*map[string][]string)(&cx.request.Form)
-			var sub = make(url.Values)
-			if values != nil {
-				for k, v := range *values {
-					if strings.HasPrefix(k, prefix+"[") {
-						sub[k] = v
+	// 处理特殊类型
+	if len(cx.Server.filler) > 0 {
+		rv := reflect.ValueOf(v)
+		if rv.Kind() == reflect.Ptr {
+			rv = rv.Elem()
+		}
+		if rv.Kind() == reflect.Struct {
+			for i := 0; i < rv.NumField(); i++ {
+				field := rv.Type().Field(i)
+				if typ, ok := field.Tag.Lookup("form"); ok {
+					if fn, exists := cx.Server.filler[typ]; exists {
+						values := cx.request.Form[field.Name]
+						if len(values) > 0 {
+							obj, err := fn(values[0])
+							if err != nil {
+								return err
+							}
+							rv.Field(i).Set(reflect.ValueOf(obj))
+						}
 					}
 				}
 			}
-			return sub
-		},
-		ValueGetter: func(tag string) []string {
-			values := (*map[string][]string)(&cx.request.Form)
-			if values != nil {
-				var lower = strings.ToLower(tag)
-				if results, ok := (*values)[tag]; ok {
-					return results
-				}
-				if results, ok := (*values)[lower]; ok {
-					return results
-				}
-				if results, ok := (*values)[tag+"[]"]; ok {
-					return results
-				}
-				if results, ok := (*values)[lower+"[]"]; ok {
-					return results
-				}
-			}
-			return []string{}
-		},
-		Tag:          "goblet",
-		DefaultTag:   "default",
-		MaxLength:    maxlength,
-		TagConcatter: concatPrefix,
-		BaseName: func(path string, prefix string) string {
-			return strings.Split(strings.TrimPrefix(path, prefix+"["), "]")[0]
-		},
-		AutoFill: autofill,
-	}
-
-	for typ, fn := range cx.Server.filler {
-		if unmarshaller.FillForSpecifiledType == nil {
-			unmarshaller.FillForSpecifiledType = make(map[string]func(id string) (reflect.Value, error))
-		}
-		unmarshaller.FillForSpecifiledType[typ] = func(content string) (reflect.Value, error) {
-			obj, err := fn(content)
-			return reflect.ValueOf(obj), err
 		}
 	}
 
-	return unmarshaller.Unmarshall(v)
+	return d.decoder.Decode(v, cx.request.Form)
 }
 
 // a form-enc decoder for request body
-type MultiFormRequestDecoder struct{}
+type MultiFormRequestDecoder struct {
+	decoder *schema.Decoder
+}
+
+func NewMultiFormRequestDecoder() *MultiFormRequestDecoder {
+	decoder := schema.NewDecoder()
+	decoder.SetAliasTag("form")
+	decoder.IgnoreUnknownKeys(true)
+	return &MultiFormRequestDecoder{decoder: decoder}
+}
 
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	err := cx.request.ParseMultipartForm(32 << 20)
-	if err != nil {
+	if err := cx.request.ParseMultipartForm(32 << 20); err != nil {
 		return err
 	}
-	values := (map[string][]string)(cx.request.Form)
-	if cx.request.MultipartForm == nil {
-		return errors.New("MultipartForm is empty")
-	}
-	var maxlength = 0
 
+	// 合并表单值
+	values := make(url.Values)
 	for k, v := range cx.request.MultipartForm.Value {
 		values[k] = v
-		if len(k) > maxlength {
-			maxlength = len(k)
+	}
+	for k, v := range cx.request.Form {
+		values[k] = v
+	}
+
+	// 处理文件上传
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	if rv.Kind() == reflect.Struct {
+		for i := 0; i < rv.NumField(); i++ {
+			field := rv.Type().Field(i)
+			if field.Type.String() == "github.com/extrame/goblet.File" {
+				if file, _, err := cx.request.FormFile(field.Name); err == nil {
+					fileObj := File{
+						rc:     file,
+						Name:   field.Name,
+						Size:   0, // 需要从header获取
+						Header: make(map[string][]string),
+					}
+					rv.Field(i).Set(reflect.ValueOf(fileObj))
+				}
+			}
 		}
 	}
 
-	for k, _ := range cx.request.MultipartForm.File {
-		if len(k) > maxlength {
-			maxlength = len(k)
-		}
-	}
-
-	var unmarshaller = unmarshall.Unmarshaller{
-		Values: func() map[string][]string {
-			return values
-		},
-		MaxLength: maxlength,
-		ValueGetter: func(tag string) []string {
-			return values[tag]
-		},
-		ValuesGetter: func(prefix string) url.Values {
-			var sub = make(url.Values)
-			if values != nil {
-				for k, v := range values {
-					if strings.HasPrefix(k, prefix+"[") {
-						sub[k] = v
+	// 处理特殊类型
+	if len(cx.Server.multiFiller) > 0 {
+		if rv.Kind() == reflect.Struct {
+			for i := 0; i < rv.NumField(); i++ {
+				field := rv.Type().Field(i)
+				if typ, ok := field.Tag.Lookup("form"); ok {
+					if fn, exists := cx.Server.multiFiller[typ]; exists {
+						obj, err := fn(cx, field.Name)
+						if err != nil {
+							return err
+						}
+						rv.Field(i).Set(reflect.ValueOf(obj))
 					}
 				}
 			}
-			return sub
-		},
-		TagConcatter: concatPrefix,
-		BaseName: func(path string, prefix string) string {
-			return strings.Split(strings.TrimPrefix(path, prefix+"["), "]")[0]
-		},
-		FillForSpecifiledType: map[string]func(id string) (reflect.Value, error){
-			"github.com/extrame/goblet.File": func(id string) (reflect.Value, error) {
-				var file File
-				var err error
-				var f multipart.File
-				var h *multipart.FileHeader
-				if f, h, err = cx.request.FormFile(id); err == nil {
-					file.Name = h.Filename
-					file.Header = h.Header
-					file.Size = h.Size
-					file.rc = f
-					return reflect.ValueOf(file), err
-				} else {
-					return reflect.ValueOf(nil), err
-				}
-			},
-		},
-		AutoFill:   autofill,
-		Tag:        "goblet",
-		DefaultTag: "default",
-	}
-
-	for typ, fn := range cx.Server.multiFiller {
-		unmarshaller.FillForSpecifiledType[typ] = func(id string) (reflect.Value, error) {
-			obj, err := fn(cx, id)
-			return reflect.ValueOf(obj), err
 		}
 	}
 
-	return unmarshaller.Unmarshall(v)
+	return d.decoder.Decode(v, values)
 }
 
 // map of Content-Type -> RequestDecoders
@@ -225,9 +183,9 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 	"application/json":                  new(JsonRequestDecoder),
 	"application/xml":                   new(XmlRequestDecoder),
 	"text/xml":                          new(XmlRequestDecoder),
-	"application/x-www-form-urlencoded": new(FormRequestDecoder),
-	"text/plain":                        new(FormRequestDecoder),
-	"multipart/form-data":               new(MultiFormRequestDecoder),
+	"application/x-www-form-urlencoded": NewFormRequestDecoder(),
+	"text/plain":                        NewFormRequestDecoder(),
+	"multipart/form-data":               NewMultiFormRequestDecoder(),
 }
 
 // goweb.Context Helper function to fill a variable with the contents
@@ -270,6 +228,14 @@ func (cx *Context) FillAs(v interface{}, autofill bool, ct string) error {
 	if ok != true {
 		return fmt.Errorf("Cannot decode request for %s data", ct)
 	}
+
+	// 设置默认值
+	if autofill {
+		if err := defaults.Set(v); err != nil {
+			return err
+		}
+	}
+
 	// decode
 	err := decoder.Unmarshal(cx, v, autofill)
 	if err != nil {
@@ -278,8 +244,4 @@ func (cx *Context) FillAs(v interface{}, autofill bool, ct string) error {
 	}
 	// all clear
 	return nil
-}
-
-func concatPrefix(prefix, tag string) string {
-	return prefix + "[" + tag + "]"
 }

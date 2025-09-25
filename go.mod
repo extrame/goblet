@@ -12,6 +12,7 @@ require (
 	github.com/extrame/smtpoverttl v0.0.0-20140504083549-9b082db561b3
 	github.com/extrame/unmarshall v0.0.0-20240819024100-fb66078bbd05
 	github.com/garyburd/redigo v1.6.2
+	github.com/gorilla/schema v1.4.1
 	github.com/mvader/detect v0.0.0-20160524092137-c0c2ff5e5733
 	github.com/mvader/useragent v0.4.2-0.20160524083018-8a6137f931b1 // indirect
 	github.com/pelletier/go-toml v1.8.1 // indirect
