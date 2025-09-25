@@ -202,7 +202,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		s.errFunc = defaultErrFunc
 	}
 	if s.defaultRender == "" {
-		s.defaultRender = "html"
+		s.defaultRender = "json"
 	}
 }
 
