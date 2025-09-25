@@ -3,7 +3,6 @@ package goblet
 import (
 	"crypto/sha1"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -71,6 +70,7 @@ type Server struct {
 	loginSaver    LoginInfoStorer
 	configer      Configer
 	delims        []string
+	db            *gorm.DB
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -190,7 +190,7 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		}
 		db, err := s.connectDB()
 		if err == nil {
-			DB = db
+			s.db = db
 			if s.Basic.Env == config.DevelopEnv {
 				db.Debug()
 			}
@@ -218,14 +218,22 @@ func (s *Server) connectDB() (*gorm.DB, error) {
 	return s.Db.New(s.Basic.DbEngine)
 }
 
-// ControlBy
-// Use Member of struct of type goblet.Router to redefine the path
-func (s *Server) ControlBy(block interface{}) {
-	cfg := s.prepareOption(block)
-	if bc, ok := block.(ControllerNeedInit); ok {
+// ControlBy 函数用于将控制器添加到服务器中
+//
+// 参数：
+// controller - 需要添加到服务器中的控制器接口
+//
+// 函数逻辑：
+// 1. 通过 prepareOption 函数将控制器转换为配置信息
+// 2. 如果控制器实现了 ControllerNeedInit 接口，则将其添加到初始化控制器列表中
+// 3. 如果控制器实现了 ControllerNeedInitAndReturnError 接口，则将其添加到新的初始化控制器列表中
+// 4. 将配置信息添加到路由表中
+func (s *Server) ControlBy(controller interface{}) {
+	cfg := s.prepareOption(controller)
+	if bc, ok := controller.(ControllerNeedInit); ok {
 		s.initCtrl = append(s.initCtrl, bc)
 	}
-	if bc, ok := block.(ControllerNeedInitAndReturnError); ok {
+	if bc, ok := controller.(ControllerNeedInitAndReturnError); ok {
 		s.initCtrlNew = append(s.initCtrlNew, bc)
 	}
 	s.router.add(cfg)
@@ -264,7 +272,7 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 	}
 
 	if sync {
-		err := DB.AutoMigrate(models)
+		err := s.db.AutoMigrate(models)
 		if err != nil {
 			logrus.Fatalln("migrate error:", err)
 		}
@@ -430,34 +438,14 @@ func (s *Server) Run() error {
 		s.Basic.Version = fmt.Sprintf("%d", time.Now().Unix())
 	}
 	// s.Renders = make(map[string]render.Render)
-	if s.Renders["html"] == nil {
-		s.Renders["html"] = new(render.HtmlRender)
-		var tempFuncMap = make(template.FuncMap)
-		for _, bc := range s.initCtrl {
-			bc.Init(s)
-		}
-		for _, bc := range s.initCtrlNew {
-			err := bc.Init(s)
-			if err != nil {
-				return err
-			}
-		}
-		for _, v := range s.funcs {
-			tempFunc := func() int {
-				return 0
-			}
-			tempFuncMap[v.Name] = tempFunc
-		}
-		s.Renders["html"].Init(s, tempFuncMap)
+	// 渲染器现在通过插件注册
+	for _, bc := range s.initCtrl {
+		bc.Init(s)
 	}
-	if s.Renders["json"] == nil {
-		s.Renders["json"] = new(render.JsonRender)
-	}
-	if s.Renders["raw"] == nil {
-		s.Renders["raw"] = new(render.RawRender)
-	}
-	if s.Renders["xml"] == nil {
-		s.Renders["xml"] = new(render.XmlRender)
+	for _, bc := range s.initCtrlNew {
+		if err := bc.Init(s); err != nil {
+			return err
+		}
 	}
 	logrus.WithField("port", s.Basic.Port).Infoln("Listening")
 	srv := &http.Server{

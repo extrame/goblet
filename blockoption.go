@@ -566,10 +566,9 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 			}
 
 			if t.Type.Name() == "Route" {
-				basic.routing = tags
-				if len(tags) > 0 {
-					basic.htmlRenderFileOrDir = strings.TrimLeft(tags[0], "/")
-				}
+				var tag = t.Tag.Get("path")
+				basic.routing = []string{tag}
+				basic.htmlRenderFileOrDir = strings.TrimLeft(tag, "/")
 				continue
 			}
 

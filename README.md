@@ -27,3 +27,15 @@ After 11 years, Goblet v2 will be redesigned with the goal of providing a more m
   * Improve performance if possible.
 * 使用标准化的form，json解析库和tag标注模式
   * Use standardized form, json parsing libraries and tag annotation patterns.
+
+  # 创建一个新的项目 / Create a new project
+
+  ```golang
+  import "github.com/extrame/goblet"
+
+  func main() {
+    var server = goblet.Organize("project_name")
+    server.ControlBy(&MyController{})
+    server.Run()
+  }
+  ```
