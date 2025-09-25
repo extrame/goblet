@@ -106,6 +106,34 @@ func (c *Context) GetInfo(key string) (interface{}, bool) {
 	}
 }
 
+// GetInfoAsInt,获取指定key的值，并转换为int类型，请注意，如果值不存在，则返回0
+func (c *Context) GetInfoAsInt(key string) int {
+	if val, ok := c.infos[key]; ok {
+		switch v := val.(type) {
+		case int, int8, int16, int32, int64:
+			return int(reflect.ValueOf(v).Int())
+		case float64:
+			return int(v)
+		case string:
+			val, _ := strconv.Atoi(v)
+			return val
+		}
+	}
+	return 0
+}
+
+// GetInfoAsString,获取指定key的值，并转换为string类型，请注意，如果值不存在，则返回空字符串
+func (c *Context) GetInfoAsString(key string) string {
+	if val, ok := c.infos[key]; ok {
+		switch v := val.(type) {
+		case string:
+			return v
+		}
+		return fmt.Sprintf("%v", val)
+	}
+	return ""
+}
+
 func (c *Context) Writer() http.ResponseWriter {
 	c.already_writed = true
 	//TODO

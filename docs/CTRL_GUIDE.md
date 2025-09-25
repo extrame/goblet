@@ -51,3 +51,25 @@ func (c *MyController) Get(id int, ctx *goblet.Context) (int, error) {
     "msg": "ok"
 }
 ```
+
+## 鉴权AOP
+
+控制器可以定义Init函数，并且在其中调用server.Pre方法，将任何前置函数注册在控制函数之前执行，前置函数可以定义登录检查等逻辑
+```go
+func (c *Controller) Init(server *goblet.Server) {
+	server.Pre(checkLogin, "Func1")
+}
+
+func checkLogin(ctx *goblet.Context) error {
+	user, ok := ctx.GetLoginInfo()
+	if !ok {
+		return goblet.Interrupted("no login user")
+	}
+	ctx.AddInfo("user_id", user.Id)
+	return nil
+}
+```
+
+### 定义特殊错误类型：
+
+1. goblet.Interrupted(reason)：该错误类型会中断请求处理，直接返回错误信息给客户端，不会执行后续的业务逻辑。
