@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"strings"
 
+	"log/slog"
+
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 type router struct {
@@ -32,8 +33,9 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 	if r.URL.Path == "/" {
 		anch, suffix_url = rou.anchor.match("/index", 6)
 		if !s.isSilence(r.URL.Path) {
-			logrus.Debugln("routing /index", r.URL.Path)
+			slog.Debug("routing /index", "path", r.URL.Path)
 		}
+
 	}
 
 	context := &Context{
@@ -58,11 +60,12 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 		}
 		anch, suffix_url = rou.anchor.match(main, len(main))
 		if !s.isSilence(r.URL.Path) {
-			logrus.Infof("routing %s", r.URL.Path)
+			slog.Info("routing", "path", r.URL.Path)
 		}
 		if anch != nil {
-			logrus.Infof("(dynamic) %v", anch.opt)
+			slog.Info("dynamic routing", "options", anch.opt)
 		}
+
 	} else {
 		format = "html"
 	}
@@ -84,8 +87,9 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 			}
 		}
 		if s.Config.Basic.Env == config.DevelopEnv && err != nil && !s.isSilence(r.URL.Path) {
-			logrus.Infoln("Err in Dynamic :", err)
+			slog.Info("Error in dynamic routing", "error", err)
 		}
+
 		return
 	}
 	return ge.NOSUCHROUTER("")

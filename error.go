@@ -7,9 +7,10 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/extrame/go-random"
+	"log/slog"
+
+	gorandom "github.com/extrame/go-random"
 	"github.com/extrame/goblet/config"
-	"github.com/sirupsen/logrus"
 )
 
 func (s *Server) wrapError(w http.ResponseWriter, err interface{}, withStack bool) {
@@ -18,8 +19,12 @@ func (s *Server) wrapError(w http.ResponseWriter, err interface{}, withStack boo
 	}
 	if s.Env() == config.ProductEnv {
 		errKey := gorandom.RandomNumeric(10)
-		logrus.WithField("error", err).WithField("key", errKey).Errorf("Error(%T) Happened\n", err)
+		slog.Error("Error happened",
+			"error", err,
+			"key", errKey,
+			"type", fmt.Sprintf("%T", err))
 		if withStack {
+
 			log.Print(string(debug.Stack()))
 		}
 		html := fmt.Sprintf(`<body><h4>Internal Error(%s)</h4><br/>The Random Key is %s</body>`, errKey, errKey)

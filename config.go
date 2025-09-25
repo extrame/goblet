@@ -3,9 +3,10 @@ package goblet
 import (
 	"fmt"
 
+	"log/slog"
+
 	"github.com/creasty/defaults"
 	myyaml "github.com/extrame/unmarshall/yaml"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,7 +42,8 @@ func fetch(node *yaml.Node) map[string]string {
 func (s *Server) AddConfig(name string, obj interface{}, tagName ...string) error {
 	err := defaults.Set(obj)
 	if err != nil {
-		logrus.Debug(err)
+		slog.Debug("config error", "error", err)
+
 	}
 	node, _ := myyaml.GetChildNode(s.cfg, name)
 	var _tagName string

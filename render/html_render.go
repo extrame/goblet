@@ -15,10 +15,11 @@ import (
 	"strings"
 	"sync"
 
+	"log/slog"
+
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
 	"github.com/mvader/detect"
-	"github.com/sirupsen/logrus"
 )
 
 var renderLock sync.Mutex
@@ -141,7 +142,8 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 		var codePath = strconv.Itoa(status_code) + h.suffix
 		yield, err = h.getTemplate(model_root, codePath, filepath.Join(path))
 		if err != nil {
-			logrus.Debugln("Find Err Code Fail, ", err)
+			slog.Debug("Find Err Code Fail", "error", err)
+
 			return nil, ge.NOSUCHROUTER(codePath)
 		}
 	}
@@ -178,7 +180,8 @@ func (h *HtmlRender) PrepareInstance(ctx RenderContext) (instance RenderInstance
 			if ce.Code == ge.ERROR_CheckedAndStillNotExists {
 				return nil, ge.NOSUCHROUTER(ce.Method)
 			} else {
-				logrus.Debugf("parse Template missing for %v", ctx)
+				slog.Debug("parse Template missing", "context", ctx)
+
 				return nil, err
 			}
 		}
@@ -229,15 +232,18 @@ func (h *HtmlRender) Init(s RenderServer, funcs template.FuncMap) {
 
 func (h *HtmlRender) initHelperTemplate(parent *template.Template, dir string) {
 	// parent.New("")
-	logrus.Debug("init template in ", h.dir, dir, "helper")
+	slog.Debug("init template", "dir", h.dir, "subdir", dir, "type", "helper")
+
 	//scan for the helpers
 	filepath.Walk(filepath.Join(h.dir, dir, "helper"), func(path string, info os.FileInfo, err error) error {
 		if err == nil && (!info.IsDir()) && strings.HasSuffix(info.Name(), h.suffix) {
 			name := strings.TrimSuffix(info.Name(), h.suffix)
-			logrus.Infof("Parse helper:%s(%s)", name, path)
+			slog.Info("Parse helper", "name", name, "path", path)
+
 			e := parseFileWithName(parent, name, path)
 			if e != nil {
-				logrus.Infof("ERROR template.ParseFile: %v", e)
+				slog.Error("template.ParseFile error", "error", e)
+
 			}
 		}
 		return nil
@@ -284,7 +290,8 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		_, checked := h.notExists.Load(name)
 		if !checked {
 			//如果没检查过，打印日志，如果是原来检查不存在的，任何模式都跳过打日志
-			logrus.Debugln("try to parse template of", name)
+			slog.Debug("try to parse template", "name", name)
+
 		} else if h.saveTemp {
 			// saveTemp 产品模式，不再重复检查
 			return nil, ge.CheckedAndStillNotExists(file)
@@ -295,7 +302,8 @@ func (h *HtmlRender) getTemplate(root *template.Template, args ...string) (*temp
 		} else {
 			if os.IsNotExist(err) {
 				if !checked {
-					logrus.Debugf("template for (%s) is missing", file)
+					slog.Debug("template is missing", "file", file)
+
 					h.notExists.Store(name, true)
 					return nil, ge.NOSUCHROUTER(file)
 				}
@@ -325,7 +333,8 @@ func (h *HttpRenderInstance) Render(wr io.Writer, hwr HeadWriter, data interface
 				err = temp.Execute(wr, data)
 			}
 			if err != nil {
-				logrus.Error("[in yield]%v%T", err, err)
+				slog.Error("yield error", "error", err, "type", fmt.Sprintf("%T", err))
+
 			}
 			// return safe html here since we are rendering our own template
 			return html, err

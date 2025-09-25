@@ -14,9 +14,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
-
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 
 	"github.com/extrame/goblet/config"
 	ge "github.com/extrame/goblet/error"
@@ -68,15 +67,6 @@ type Server struct {
 	configer      Configer
 	delims        []string
 	DB            *gorm.DB
-}
-
-var defaultErrFunc = func(c *Context, err error, context ...string) {
-	c.responseMap = nil
-	msg := err.Error()
-	if len(context) > 0 {
-		msg = "[" + strings.Join(context, "|") + "]" + msg
-	}
-	c.RespondWithStatus(msg, http.StatusBadRequest)
 }
 
 func (s *Server) SetDefaultOk(fn func(*Context)) {
@@ -425,7 +415,12 @@ func (s *Server) Run() error {
 	if s.Config.Basic.Version == "datetime" {
 		s.Config.Basic.Version = fmt.Sprintf("%d", time.Now().Unix())
 	}
-	// 渲染器现在通过插件注册
+	if s.Renders["json"] == nil {
+		s.Renders["json"] = new(render.JsonRender)
+	}
+	if s.Renders["raw"] == nil {
+		s.Renders["raw"] = new(render.RawRender)
+	}
 	for _, bc := range s.initCtrl {
 		bc.Init(s)
 	}

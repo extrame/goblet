@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sirupsen/logrus"
+	"log/slog"
+
 	"gopkg.in/yaml.v3"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -54,7 +56,8 @@ func (d *Db) New(engine string) (db *gorm.DB, err error) {
 		return nil, fmt.Errorf("unsupported db type:%s,supported:[mysql,postgres,mssql,sqlite3,sqlite,none]", engine)
 	}
 
-	logrus.WithField("db type", engine).Infoln("connecting to DB")
+	slog.Info("connecting to DB", "db_type", engine)
+
 	db, err = gorm.Open(dialector, &gorm.Config{})
 	if err != nil {
 		return nil, err

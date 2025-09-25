@@ -2,12 +2,14 @@ package goblet
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
 
+	"log/slog"
+
 	ge "github.com/extrame/goblet/error"
-	"github.com/sirupsen/logrus"
 )
 
 type Route byte
@@ -439,7 +441,8 @@ func callMethod(method reflect.Value, ctx *Context) ([]reflect.Value, reflect.Ty
 		}
 
 		if err := ctx.Fill(newV.Interface()); err != nil {
-			logrus.Errorln("parse arguments error", err)
+			slog.Error("parse arguments error", "error", err)
+
 		}
 		if typArg.Kind() == reflect.Ptr {
 			rvArgs[i] = newV
@@ -457,10 +460,12 @@ func (r *BasicBlockOption) callMethodForBlock(methodName string, ctx *Context) e
 	if !method.IsValid() {
 		var err = fmt.Errorf("you have no method named (%s)", methodName)
 		if ctx.Server.Env() == ProductEnv {
-			logrus.Infof(err.Error())
+			slog.Info("block option error", "error", err)
 		} else {
-			logrus.Fatalf(err.Error())
+			slog.Error("block option fatal error", "error", err)
+			os.Exit(1)
 		}
+
 		return err
 	} else {
 		if r.tryPre(methodName, ctx) {
@@ -612,7 +617,7 @@ func (s *Server) prepareOption(block interface{}) BlockOption {
 		basic.layout = "default"
 	}
 
-	logrus.Errorf("[%T]fork on %v", block, basic.routing)
+	slog.Error("fork error", "block_type", fmt.Sprintf("%T", block), "routing", basic.routing)
 
 	return newBlock(&basic, block, ignoreCase)
 }

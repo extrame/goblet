@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 type LoginContext struct {
@@ -83,7 +83,8 @@ func (c *CookieLoginInfoStorer) AddLoginAs(ctx *Context, lctx *LoginContext) str
 	cookie.Path = "/"
 	cookie.RawExpires = lctx.Deadline.Format(time.UnixDate)
 	if lctx.Attrs != nil {
-		logrus.Error("Cookie Login Info Storer not support attrs, please consider use session or jwt")
+		slog.Error("Cookie Login Info Storer not support attrs, please consider use session or jwt")
+
 	}
 	ctx.AddSignedCookie(cookie)
 	return cookie.Value

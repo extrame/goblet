@@ -9,9 +9,10 @@ import (
 	"reflect"
 	"strings"
 
+	"log/slog"
+
 	"github.com/creasty/defaults"
 	"github.com/gorilla/schema"
-	"github.com/sirupsen/logrus"
 )
 
 type FormFillFn func(content string) (interface{}, error)
@@ -57,7 +58,7 @@ func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool)
 		return err
 	}
 	if err = xml.Unmarshal(cx.fill_bts, v); err != nil {
-		logrus.Errorf("[Fill Error]Request:%s,Err:%s\n", string(cx.fill_bts), err.Error())
+		slog.Error("[Fill Error]", "request", string(cx.fill_bts), "error", err)
 	}
 	return err
 }
