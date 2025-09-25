@@ -567,7 +567,7 @@ func (c *Context) PathToURL(path string) (*url.URL, error) {
 
 // Version 返回用户配置的代码版本
 func (c *Context) Version() string {
-	return c.Server.Basic.Version
+	return c.Server.Config.Basic.Version
 }
 
 // ReqURL 返回用户请求的URL

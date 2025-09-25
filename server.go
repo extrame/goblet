@@ -43,10 +43,7 @@ type ControllerNeedInitAndReturnError interface {
 type Server struct {
 	ConfigFile string
 
-	Basic   config.Basic
-	Cache   config.Cache
-	Log     config.Log
-	Db      config.Db
+	Config  config.Config
 	router  router
 	Renders map[string]render.Render
 
@@ -70,7 +67,7 @@ type Server struct {
 	loginSaver    LoginInfoStorer
 	configer      Configer
 	delims        []string
-	db            *gorm.DB
+	DB            *gorm.DB
 }
 
 var defaultErrFunc = func(c *Context, err error, context ...string) {
@@ -183,15 +180,15 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		s.router.init()
 		s.funcs = make([]Fn, 0)
 		if dbPwdPlugin != nil {
-			s.Db.Pwd = dbPwdPlugin.SetPwd(s.Db.Pwd)
+			s.Config.Db.Pwd = dbPwdPlugin.SetPwd(s.Config.Db.Pwd)
 		}
 		if dbUserPlugin != nil {
-			s.Db.User = dbUserPlugin.SetName(s.Db.User)
+			s.Config.Db.User = dbUserPlugin.SetName(s.Config.Db.User)
 		}
 		db, err := s.connectDB()
 		if err == nil {
-			s.db = db
-			if s.Basic.Env == config.DevelopEnv {
+			s.DB = db
+			if s.Config.Basic.Env == config.DevelopEnv {
 				db.Debug()
 			}
 		} else if err != config.NoDbDriver {
@@ -215,7 +212,7 @@ func (s *Server) isSilence(u string) bool {
 }
 
 func (s *Server) connectDB() (*gorm.DB, error) {
-	return s.Db.New(s.Basic.DbEngine)
+	return s.Config.Db.New(s.Config.Basic.DbEngine)
 }
 
 // ControlBy 函数用于将控制器添加到服务器中
@@ -272,7 +269,7 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 	}
 
 	if sync {
-		err := s.db.AutoMigrate(models)
+		err := s.DB.AutoMigrate(models)
 		if err != nil {
 			logrus.Fatalln("migrate error:", err)
 		}
@@ -280,7 +277,7 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 }
 
 func (s *Server) Env() string {
-	return s.Basic.Env
+	return s.Config.Basic.Env
 }
 
 // Debug 当服务器环境为调试环境时，执行相应的匿名函数，用于编写调试环境专用的代码块
@@ -291,10 +288,10 @@ func (s *Server) Debug(fn func()) {
 }
 
 func (s *Server) WwwRoot() string {
-	if abs, err := filepath.Abs(s.Basic.WwwRoot); err == nil {
+	if abs, err := filepath.Abs(s.Config.Basic.WwwRoot); err == nil {
 		return abs
 	}
-	return s.Basic.WwwRoot
+	return s.Config.Basic.WwwRoot
 }
 
 func (s *Server) GetServerPathByCtrl(ctrl interface{}) []string {
@@ -320,9 +317,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if geE.Method != "" {
 			//dynamic return a method which should used as static render
 			logrus.Debugln("use static file name return by dynamic", geE.Method)
-			file := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method)
+			file := filepath.Join(s.Config.Basic.WwwRoot, s.PublicDir(), geE.Method)
 			if _, err := os.Stat(file); !os.IsNotExist(err) {
-				s.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method))
+				s.ServeFile(w, r, filepath.Join(s.Config.Basic.WwwRoot, s.PublicDir(), geE.Method))
 				return
 			}
 		}
@@ -331,7 +328,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			path = r.URL.Path
 		}
-		s.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path))
+		s.ServeFile(w, r, filepath.Join(s.Config.Basic.WwwRoot, s.PublicDir(), path))
 	} else if err != nil {
 		s.wrapError(w, err, false)
 	}
@@ -363,15 +360,9 @@ func (s *Server) parseConfig() (err error) {
 		s.cfg = new(yaml.Node)
 		err = yaml.NewDecoder(reader).Decode(s.cfg)
 		if err == nil {
-			if err = s.getCfg("basic").Decode(&s.Basic); err == nil {
-				s.Db.Name = s.Name
-				if err = s.getCfg(s.Basic.DbEngine).Decode(&s.Db); err == nil {
-					if s.Db.Host == "" {
-						s.Db.Host = s.Name
-					}
-					if err = s.getCfg("cache").Decode(&s.Cache); err == nil {
-						s.getCfg("log").Decode(&s.Log)
-					}
+			if err = s.getCfg("").Decode(&s.Config); err == nil {
+				if s.Config.Db.Host == "" {
+					s.Config.Db.Host = s.Name
 				}
 			}
 		}
@@ -381,26 +372,26 @@ func (s *Server) parseConfig() (err error) {
 		return err
 	}
 
-	if s.Basic.Env == "" {
-		s.Basic.Env = config.DevelopEnv
+	if s.Config.Basic.Env == "" {
+		s.Config.Basic.Env = config.DevelopEnv
 		logrus.Info("environment not set, default set as development")
 	}
 
-	if s.Basic.DbEngine == "" {
-		s.Basic.DbEngine = "none"
+	if s.Config.Basic.DbEngine == "" {
+		s.Config.Basic.DbEngine = "none"
 	}
 
-	if s.Basic.Port == 0 {
-		s.Basic.Port = 8080
+	if s.Config.Basic.Port == 0 {
+		s.Config.Basic.Port = 8080
 	}
 
-	if s.Basic.Env != config.DevelopEnv && s.Basic.Env != config.ProductEnv && s.Basic.Env != config.OldProductEnv {
+	if s.Config.Basic.Env != config.DevelopEnv && s.Config.Basic.Env != config.ProductEnv && s.Config.Basic.Env != config.OldProductEnv {
 		logrus.Fatalln("environment must be development or production, config env: development or env: production")
-	} else if s.Basic.Env == config.OldProductEnv {
-		s.Basic.Env = config.ProductEnv
+	} else if s.Config.Basic.Env == config.OldProductEnv {
+		s.Config.Basic.Env = config.ProductEnv
 		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
 	}
-	if s.Basic.Env == config.DevelopEnv {
+	if s.Config.Basic.Env == config.DevelopEnv {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 	for _, plugin := range s.plugins {
@@ -415,13 +406,13 @@ func (s *Server) parseConfig() (err error) {
 func (s *Server) Hash(str string) string {
 	hash := sha1.New()
 	hash.Write([]byte(str))
-	hash.Write([]byte(s.Basic.HashSecret))
+	hash.Write([]byte(s.Config.Basic.HashSecret))
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 // PublicDir 获得服务器对应的公共文件夹的地址
 func (s *Server) PublicDir() string {
-	return s.Basic.PublicDir
+	return s.Config.Basic.PublicDir
 }
 
 func (s *Server) enableDbCache() {
@@ -434,10 +425,9 @@ func (s *Server) GetDelims() []string {
 
 // Run 运营一个服务器
 func (s *Server) Run() error {
-	if s.Basic.Version == "datetime" {
-		s.Basic.Version = fmt.Sprintf("%d", time.Now().Unix())
+	if s.Config.Basic.Version == "datetime" {
+		s.Config.Basic.Version = fmt.Sprintf("%d", time.Now().Unix())
 	}
-	// s.Renders = make(map[string]render.Render)
 	// 渲染器现在通过插件注册
 	for _, bc := range s.initCtrl {
 		bc.Init(s)
@@ -447,17 +437,17 @@ func (s *Server) Run() error {
 			return err
 		}
 	}
-	logrus.WithField("port", s.Basic.Port).Infoln("Listening")
+	logrus.WithField("port", s.Config.Basic.Port).Infoln("Listening")
 	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", s.Basic.Port),
+		Addr:         fmt.Sprintf(":%d", s.Config.Basic.Port),
 		Handler:      s,
-		WriteTimeout: time.Second * time.Duration(s.Basic.WriteT0),
-		ReadTimeout:  time.Second * time.Duration(s.Basic.ReadT0),
+		WriteTimeout: time.Second * time.Duration(s.Config.Basic.WriteT0),
+		ReadTimeout:  time.Second * time.Duration(s.Config.Basic.ReadT0),
 	}
-	srv.SetKeepAlivesEnabled(s.Basic.EnableKeepAlive)
+	srv.SetKeepAlivesEnabled(s.Config.Basic.EnableKeepAlive)
 	var err error
-	if s.Basic.HttpsEnable {
-		err = srv.ListenAndServeTLS(s.Basic.HttpsCertFile, s.Basic.HttpsKey)
+	if s.Config.Basic.HttpsEnable {
+		err = srv.ListenAndServeTLS(s.Config.Basic.HttpsCertFile, s.Config.Basic.HttpsKey)
 	} else {
 		err = srv.ListenAndServe()
 	}

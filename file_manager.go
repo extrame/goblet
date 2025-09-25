@@ -18,7 +18,7 @@ const (
 )
 
 func (cx *Context) SaveFileAt(path ...string) *filerSaver {
-	path = append([]string{cx.Server.Basic.UploadsDir}, path...)
+	path = append([]string{cx.Server.Config.Basic.UploadsDir}, path...)
 	return &filerSaver{filepath.Join(path...), setName, cx.request, "", nil}
 }
 
@@ -40,7 +40,7 @@ func (f *filerSaver) NameBy(fn func(string) (string, error)) *filerSaver {
 	return f
 }
 
-//Execute the file save process and return the result
+// Execute the file save process and return the result
 func (f *filerSaver) Exec() (path string, status int, err error) {
 	// bug  if the path's stat is not ok, try make this dir.
 	if _, err := os.Stat(f.path); err != nil {
