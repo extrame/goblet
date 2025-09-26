@@ -35,7 +35,7 @@ func (m *MethodCaller) IsValid() bool {
 func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase bool) {
 	basic = &Basic{}
 	basic.block = reflect.ValueOf(ctrl)
-
+	ignoreCase = true
 	var val reflect.Value
 	var valtypeOrigin, valtype reflect.Type
 	valtypeOrigin = basic.block.Type()

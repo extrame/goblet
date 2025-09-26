@@ -98,7 +98,12 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 	s.Name = name
 	s.Renders = make(map[string]render.Render)
 
-	plugins = append([]interface{}{new(_JSONPlugin)}, plugins...)
+	var wrapper = &jsonRenderWrapper{
+		successCode: 200,
+		successMsg:  "success",
+	}
+
+	plugins = append(plugins, wrapper)
 
 	for _, plugin := range plugins {
 		if tp, ok := plugin.(NewPlugin); ok {
@@ -155,6 +160,15 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 		}
 		if rv, ok := plugin.(render.Render); ok {
 			s.Renders[rv.Type()] = rv
+		}
+		if rv, ok := plugin.(render.Render); ok {
+			s.Renders[rv.Type()] = rv
+		}
+		if rv, ok := plugin.(JsonRenderCodeSetter); ok {
+			wrapper.successCode = rv.RespondJsonWithSuccessCode()
+		}
+		if rv, ok := plugin.(JsonRenderSuccessMsgSetter); ok {
+			wrapper.successMsg = rv.RespondJsonWithSuccessMsg()
 		}
 	}
 	if s.saver == nil {

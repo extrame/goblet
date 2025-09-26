@@ -1,42 +1,126 @@
 package goblet
 
-// _JSONPlugin JSONPlugin make server default respond data as data instead of as html.
-type _JSONPlugin struct {
-	//some error is object and use Error() to response string, this attribute can use to control
-	//whether we response Error as String by call Error() or just resonse Error Obbject
-	ResponseOriginalError bool
+import (
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"io"
+
+	"github.com/extrame/goblet/render"
+)
+
+type JsonRenderCodeSetter interface {
+	RespondJsonWithSuccessCode() int
 }
 
-type JsonErrorRender interface {
-	RespondAsJson() bool
+type JsonRenderSuccessMsgSetter interface {
+	RespondJsonWithSuccessMsg() string
 }
 
-// JsonError mark a type as an error which should be used as Json, you can implement a type with RespondAsJson() bool function and respond true
-// or just inherbit JsonError type
-type JsonError struct {
+type jsonRenderWrapper struct {
+	successCode int
+	successMsg  string
 }
 
-func (j JsonError) RespondAsJson() bool {
-	return true
-}
-
-func (p *_JSONPlugin) RespendOk(ctx *Context) {
-	ctx.AddRespond("Success", true)
-}
-
-func (p *_JSONPlugin) RespondError(ctx *Context, err error, context ...string) {
-	if p.ResponseOriginalError {
-		ctx.AddRespond("Error", err)
-	} else if je, ok := err.(JsonErrorRender); ok && je.RespondAsJson() {
-		ctx.Respond(err)
-	} else {
-		ctx.AddRespond("Error", err.Error())
-	}
-	if len(context) > 0 {
-		ctx.AddRespond("Context", context)
-	}
-}
-
-func (p *_JSONPlugin) DefaultRender() string {
+func (j *jsonRenderWrapper) Type() string {
 	return "json"
+}
+
+func (j *jsonRenderWrapper) PrepareInstance(c render.RenderContext) (render.RenderInstance, error) {
+	if cb := c.Callback(); cb != "" {
+		return &jsonCbRenderInstance{Cb: cb}, nil
+	}
+	return new(jsonRenderInstance), nil
+}
+
+func (p *jsonRenderWrapper) RespendOk(ctx *Context) {
+	ctx.Respond(nil)
+}
+
+func (p *jsonRenderWrapper) RespondError(ctx *Context, err error, context ...string) {
+	var errCode = 500
+	var standardData *StandardErrorOrData
+	var ok bool
+	standardData, ok = err.(*StandardErrorOrData)
+	if !ok {
+		standardData = &StandardErrorOrData{Data: nil, Msg: err.Error(), Code: errCode}
+	}
+	ctx.Respond(standardData)
+}
+
+func (p *jsonRenderWrapper) DefaultRender() string {
+	return "json"
+}
+
+func (j *jsonRenderWrapper) Init(s render.RenderServer, funcs template.FuncMap) {
+}
+
+type jsonRenderInstance int8
+
+type StandardErrorOrData struct {
+	Data interface{} `json:"data,omitempty"`
+	Msg  string      `json:"msg"`
+	Code int         `json:"code"`
+}
+
+func (s *StandardErrorOrData) Error() string {
+	return fmt.Sprintf("Code: %d, Msg: %s", s.Code, s.Msg)
+}
+
+func (r *jsonRenderInstance) Render(wr io.Writer, hwr render.HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
+	var v []byte
+	hwr.Header().Add("Content-Type", "application/json; charset=utf-8")
+	hwr.WriteHeader(200)
+	if err, ok := data.(*StandardErrorOrData); !ok {
+		if raw, ok := data.(DataNotWrapper); ok && raw.ShouldNotWrap() {
+			data = raw
+		} else {
+			data = StandardErrorOrData{Data: data, Msg: "success", Code: status}
+		}
+	} else {
+		data = err
+	}
+	v, err = json.Marshal(&data)
+	if err == nil {
+		wr.Write(v)
+	}
+	return
+}
+
+type jsonCbRenderInstance struct {
+	Cb string
+}
+
+func (r *jsonCbRenderInstance) Render(wr io.Writer, hwr render.HeadWriter, data interface{}, status int, funcs template.FuncMap) (err error) {
+	var v []byte
+	hwr.WriteHeader(200)
+	if err, ok := data.(*StandardErrorOrData); !ok {
+		data = StandardErrorOrData{Data: data, Msg: "success", Code: status}
+	} else {
+		data = err
+	}
+	v, err = json.Marshal(&data)
+	if err == nil {
+		wr.Write([]byte(r.Cb))
+		wr.Write([]byte("("))
+		wr.Write(v)
+		wr.Write([]byte(")"))
+	}
+	return
+}
+
+func StdError(code int, msg string) error {
+	return &StandardErrorOrData{Data: nil, Msg: msg, Code: code}
+}
+
+func WrapError(code int, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &StandardErrorOrData{Data: nil, Msg: err.Error(), Code: code}
+}
+
+type DataNotWrapper interface {
+	// ShouldNotWrap 是否不应该被包装
+	ShouldNotWrap() bool
 }

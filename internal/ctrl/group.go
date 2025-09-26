@@ -60,10 +60,10 @@ func (g *Group) Parse(ctx Context) error {
 		// 	}
 		// 	goto next
 		// }
-		matched, suffix := g.methods.Match(suffix, len(suffix))
+		matched, suffix := g.methods.Match(name, len(name))
 
 		if matched != nil {
-			var method = matched.Opt.(*MethodCaller)
+			method = matched.Opt.(*MethodCaller).fn
 			if method.IsValid() {
 				ctx.SetSuffix(suffix)
 				goto next
