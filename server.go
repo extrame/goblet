@@ -3,7 +3,7 @@ package goblet
 import (
 	"crypto/sha1"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 
 	"github.com/extrame/goblet/config"
@@ -199,10 +198,11 @@ func (s *Server) Organize(name string, plugins []interface{}) {
 				db.Debug()
 			}
 		} else if err != config.NoDbDriver {
-			log.Fatalln("connect error:", err)
+			slog.Error("connect error", "err", err)
 		}
 	} else {
-		logrus.WithError(err).Fatalln("read config file error")
+		slog.With(err).Error("read config file error")
+		os.Exit(1)
 	}
 	s.enableDbCache()
 }
@@ -272,7 +272,8 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 	if sync {
 		err := s.DB.AutoMigrate(models)
 		if err != nil {
-			logrus.Fatalln("migrate error:", err)
+			slog.Error("migrate error:", "error", err)
+			os.Exit(1)
 		}
 	}
 }
@@ -317,7 +318,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var path string
 		if geE.Method != "" {
 			//dynamic return a method which should used as static render
-			logrus.Debugln("use static file name return by dynamic", geE.Method)
+			slog.Debug("use static file name return by dynamic", "method", geE.Method)
 			file := filepath.Join(s.Config.Basic.WwwRoot, s.PublicDir(), geE.Method)
 			if _, err := os.Stat(file); !os.IsNotExist(err) {
 				s.ServeFile(w, r, filepath.Join(s.Config.Basic.WwwRoot, s.PublicDir(), geE.Method))
@@ -375,7 +376,7 @@ func (s *Server) parseConfig() (err error) {
 
 	if s.Config.Basic.Env == "" {
 		s.Config.Basic.Env = config.DevelopEnv
-		logrus.Info("environment not set, default set as development")
+		slog.Info("environment not set, default set as development")
 	}
 
 	if s.Config.Basic.DbEngine == "" {
@@ -387,17 +388,18 @@ func (s *Server) parseConfig() (err error) {
 	}
 
 	if s.Config.Basic.Env != config.DevelopEnv && s.Config.Basic.Env != config.ProductEnv && s.Config.Basic.Env != config.OldProductEnv {
-		logrus.Fatalln("environment must be development or production, config env: development or env: production")
+		slog.Error("environment must be development or production, config env: development or env: production")
+		os.Exit(1)
 	} else if s.Config.Basic.Env == config.OldProductEnv {
 		s.Config.Basic.Env = config.ProductEnv
 		fmt.Println("[Deprecatd]production environment must be set as 'production' instead of 'product'")
 	}
 	if s.Config.Basic.Env == config.DevelopEnv {
-		logrus.SetLevel(logrus.DebugLevel)
+		//enable debug in slog TODO
 	}
 	for _, plugin := range s.plugins {
 		if err = plugin.AddCfgAndInit(s); err != nil {
-			logrus.Fatalf("add plugin config error in (%T) with error (%s)", plugin, err)
+			slog.Error("add plugin config error", "plugin", plugin, "error", err)
 		}
 	}
 	return
@@ -443,7 +445,7 @@ func (s *Server) Run() error {
 			return err
 		}
 	}
-	logrus.WithField("port", s.Config.Basic.Port).Infoln("Listening")
+	slog.With("port", s.Config.Basic.Port).Info("Listening")
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.Config.Basic.Port),
 		Handler:      s,
@@ -457,7 +459,7 @@ func (s *Server) Run() error {
 	} else {
 		err = srv.ListenAndServe()
 	}
-	logrus.Println(err)
+	slog.Info(err.Error())
 	return err
 }
 
