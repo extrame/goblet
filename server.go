@@ -362,7 +362,7 @@ func (s *Server) parseConfig() (err error) {
 		s.cfg = new(yaml.Node)
 		err = yaml.NewDecoder(reader).Decode(s.cfg)
 		if err == nil {
-			if err = s.getCfg("").Decode(&s.Config); err == nil {
+			if err = s.cfg.Decode(&s.Config); err == nil {
 				if s.Config.Db.Host == "" {
 					s.Config.Db.Host = s.Name
 				}

@@ -14,6 +14,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 var NoDbDriver = errors.New("no db driver for this server")
@@ -57,8 +58,17 @@ func (d *Db) New(engine string) (db *gorm.DB, err error) {
 	}
 
 	slog.Info("connecting to DB", "db_type", engine)
+	// 创建Gorm配置，应用表名前缀
+	gormConfig := &gorm.Config{}
 
-	db, err = gorm.Open(dialector, &gorm.Config{})
+	// 如果设置了表名前缀，添加命名策略
+	if d.Prefix != "" {
+		gormConfig.NamingStrategy = &schema.NamingStrategy{
+			TablePrefix: d.Prefix,
+		}
+	}
+
+	db, err = gorm.Open(dialector, gormConfig)
 	if err != nil {
 		return nil, err
 	}

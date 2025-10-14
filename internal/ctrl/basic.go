@@ -124,7 +124,7 @@ func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase boo
 			if ignoreCase {
 				hyphenName = strings.ToLower(hyphenName)
 			}
-			basic.methods.Add(hyphenName, &MethodCaller{
+			basic.methods.Add("/"+hyphenName, &MethodCaller{
 				fn: basic.block.Method(i),
 			})
 		}

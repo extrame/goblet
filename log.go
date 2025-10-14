@@ -1,7 +1,7 @@
 package goblet
 
 import (
-	"log"
+	"log/slog"
 	"os"
 )
 
@@ -19,8 +19,12 @@ func (s *Server) initLog() {
 				}
 			}
 		}
-		log.Println("Change ontput to ", s.Config.Log.File)
-		log.SetOutput(LogFile)
+		slog.Info("Change log output to file", "file", s.Config.Log.File)
+		// 配置slog输出到文件
+		handler := slog.NewJSONHandler(LogFile, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		})
+		slog.SetDefault(slog.New(handler))
 	} else {
 		LogFile = os.Stderr
 	}
