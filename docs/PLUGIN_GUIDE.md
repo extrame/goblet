@@ -121,11 +121,11 @@ type LogPlugin struct {
 }
 
 func (p *LogPlugin) AddCfgAndInit(s *Server) error {
-    level, err := logrus.ParseLevel(p.Level)
+    level, err := slog.ParseLevel(p.Level)
     if err != nil {
         return err
     }
-    logrus.SetLevel(level)
+    slog.SetLogLoggerLevel(level)
     return nil
 }
 

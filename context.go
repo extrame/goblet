@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/extrame/goblet/internal/ctrl"
 	"github.com/extrame/goblet/render"
-	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -403,7 +403,7 @@ func (c *Context) RespondOK() {
 // RespondError 返回错误，如果错误为空，返回成功
 func (c *Context) RespondError(err error, context ...string) {
 	if c.Server.Env() == DevelopEnv {
-		logrus.Info("error is respond:", err)
+		slog.Info("respond error", "error", err)
 	}
 	if err != nil {
 		c.Server.errFunc(c, err, context...)
