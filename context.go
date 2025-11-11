@@ -56,6 +56,10 @@ func (c *Context) handleData() {
 
 }
 
+func (c *Context) Request() *http.Request {
+	return c.request
+}
+
 // GetRender,返回渲染类型,该返回需要判断是否允许相关渲染类型，如果不需要判断，请使用Format函数
 func (cx *Context) GetRender() (render string, err error) {
 	renders := cx.option.GetRender()
