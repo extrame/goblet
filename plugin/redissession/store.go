@@ -93,7 +93,7 @@ func getRegionId(ctx *goblet.Context) (result string, err error) {
 	case "form":
 		result = ctx.FormValue(tokenName)
 	case "header":
-		result = ctx.ReqHeader().Get(tokenName)
+		result = ctx.Request.Header.Get(tokenName)
 	default:
 		err = errors.New("Type must be cookie or form.Current is " + cookietype)
 	}

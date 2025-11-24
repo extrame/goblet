@@ -20,7 +20,7 @@ func (l *_loginInHead) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginContext
 	return token
 }
 func (l *_loginInHead) GetLoginIdAs(ctx *goblet.Context, key string) (*goblet.LoginContext, error) {
-	auth := ctx.ReqHeader().Get("Authorization")
+	auth := ctx.Request.Header.Get("Authorization")
 	if auth != "" && strings.HasPrefix(auth, "Basic ") {
 		auth = strings.TrimPrefix(auth, "Basic ")
 		parts := strings.Split(auth, ":")

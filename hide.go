@@ -16,7 +16,7 @@ func autoHide(data interface{}, ctx *Context) interface{} {
 
 	origin := reflect.ValueOf(data)
 
-	autoHideElem(origin, ctx.ReqURL().Path)
+	autoHideElem(origin, ctx.Request.URL.Path)
 
 	return origin.Interface()
 }

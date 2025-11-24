@@ -28,7 +28,7 @@ const (
 
 type Context struct {
 	Server  *Server
-	request *http.Request
+	Request *http.Request
 	writer  http.ResponseWriter
 	option  ctrl.Wrapper
 	DB      *gorm.DB // 数据库连接
@@ -177,7 +177,7 @@ func (c *Context) Writer() http.ResponseWriter {
 }
 
 func (c *Context) Callback() string {
-	return c.request.FormValue("callback")
+	return c.Request.FormValue("callback")
 }
 
 func (c *Context) Suffix() string {
@@ -189,13 +189,13 @@ func (c *Context) SetHeader(key, value string) {
 }
 
 func (c *Context) IntFormValue(key string) int64 {
-	str := c.request.FormValue(key)
+	str := c.Request.FormValue(key)
 	val, _ := strconv.ParseInt(str, 10, 64)
 	return val
 }
 
 func (c *Context) StrFormValue(key string) string {
-	return c.request.FormValue(key)
+	return c.Request.FormValue(key)
 }
 
 // EnableCache 手工启用缓存，默认Last-Modified为当前时间,Cache-Control为一年
@@ -540,8 +540,8 @@ func (c *Context) Method() string {
 // 返回用户请求的Method, GET/POST/HEAD等
 func (c *Context) ReqMethod() string {
 	var method string
-	if method = c.request.URL.Query().Get("method"); method == "" {
-		method = c.request.Method
+	if method = c.Request.URL.Query().Get("method"); method == "" {
+		method = c.Request.Method
 	}
 	method = strings.ToUpper(method)
 	return method
@@ -576,8 +576,8 @@ func (r *RemoteAddr) Network() string {
 // 此时，返回的addr，Network()方法返回“ip”
 func (c *Context) RemoteAddr() net.Addr {
 	addr := new(RemoteAddr)
-	addr.str = c.request.RemoteAddr
-	if remoteIP := c.request.Header.Get("X-Forwarded-For"); remoteIP != "" {
+	addr.str = c.Request.RemoteAddr
+	if remoteIP := c.Request.Header.Get("X-Forwarded-For"); remoteIP != "" {
 		return &net.IPAddr{
 			IP: net.ParseIP(remoteIP),
 		}
@@ -586,14 +586,14 @@ func (c *Context) RemoteAddr() net.Addr {
 }
 
 func (c *Context) RemoteIP() (net.IP, error) {
-	if remoteIP := c.request.Header.Get("X-Forwarded-For"); remoteIP != "" {
+	if remoteIP := c.Request.Header.Get("X-Forwarded-For"); remoteIP != "" {
 		return net.ParseIP(remoteIP), nil
 	} else {
-		tcp, err := net.ResolveTCPAddr("tcp", c.request.RemoteAddr)
+		tcp, err := net.ResolveTCPAddr("tcp", c.Request.RemoteAddr)
 		if err == nil {
 			return tcp.IP, nil
 		} else {
-			return nil, nil
+			return nil, err
 		}
 	}
 }
@@ -602,38 +602,38 @@ func (c *Context) RemoteIP() (net.IP, error) {
 // 获取这种情况下的客户端正式IP，请调用 RemoteAddr方法
 func (c *Context) FromAddr() net.Addr {
 	addr := new(RemoteAddr)
-	addr.str = c.request.RemoteAddr
+	addr.str = c.Request.RemoteAddr
 	return addr
 }
 
 func (c *Context) Form() url.Values {
-	if c.request.Form == nil {
-		c.request.ParseMultipartForm(defaultMaxMemory)
+	if c.Request.Form == nil {
+		c.Request.ParseMultipartForm(defaultMaxMemory)
 	}
-	return c.request.Form
+	return c.Request.Form
 }
 
 func (c *Context) PostForm() url.Values {
-	if c.request.PostForm == nil {
-		c.request.ParseMultipartForm(defaultMaxMemory)
+	if c.Request.PostForm == nil {
+		c.Request.ParseMultipartForm(defaultMaxMemory)
 	}
-	return c.request.PostForm
+	return c.Request.PostForm
 }
 
 func (c *Context) FormValue(key string) string {
-	return c.request.FormValue(key)
+	return c.Request.FormValue(key)
 }
 
 func (c *Context) Body() io.ReadCloser {
-	return c.request.Body
+	return c.Request.Body
 }
 
 func (c *Context) QueryString(key string) string {
-	return c.request.URL.Query().Get(key)
+	return c.Request.URL.Query().Get(key)
 }
 
 func (c *Context) Referer() string {
-	return c.request.Referer()
+	return c.Request.Referer()
 }
 
 func (c *Context) PathToURL(path string) (*url.URL, error) {
@@ -654,29 +654,14 @@ func (c *Context) Version() string {
 	return c.Server.Config.Basic.Version
 }
 
-// ReqURL 返回用户请求的URL
-func (c *Context) ReqURL() *url.URL {
-	return c.request.URL
-}
-
-// ReqHost 返回用户请求的host
-func (c *Context) ReqHost() string {
-	return c.request.Host
-}
-
-// ReqHeader 返回用户请求的Header
-func (c *Context) ReqHeader() http.Header {
-	return c.request.Header
-}
-
 // UserAgent 返回用户Agent
 func (c *Context) UserAgent() string {
-	return c.request.UserAgent()
+	return c.Request.UserAgent()
 }
 
 // BasicAuth 返回Basic Auth
 func (c *Context) BasicAuth() (string, string, bool) {
-	return c.request.BasicAuth()
+	return c.Request.BasicAuth()
 }
 
 func (ctx *Context) WrapError(err error, info string) error {

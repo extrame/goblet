@@ -71,7 +71,7 @@ func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginCont
 }
 
 func (l *_JwtLoginPlugin) GetLoginIdAs(ctx *goblet.Context, key string) (*goblet.LoginContext, error) {
-	auth := ctx.ReqHeader().Get("Authorization")
+	auth := ctx.Request.Header.Get("Authorization")
 	if auth != "" {
 		auth = strings.TrimPrefix(auth, "Bearer ")
 		token, err := jws.ParseJWT([]byte(auth))

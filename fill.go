@@ -38,7 +38,7 @@ type JsonRequestDecoder struct{}
 func (d *JsonRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) (err error) {
 	// read body
 	if cx.fill_bts == nil {
-		cx.fill_bts, err = ioutil.ReadAll(cx.request.Body)
+		cx.fill_bts, err = ioutil.ReadAll(cx.Request.Body)
 	}
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ type XmlRequestDecoder struct{}
 func (d *XmlRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) (err error) {
 	// read body
 	if cx.fill_bts == nil {
-		cx.fill_bts, err = ioutil.ReadAll(cx.request.Body)
+		cx.fill_bts, err = ioutil.ReadAll(cx.Request.Body)
 	}
 	if err != nil {
 		return err
@@ -76,8 +76,8 @@ func NewFormRequestDecoder() *FormRequestDecoder {
 }
 
 func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	if cx.request.Form == nil {
-		if err := cx.request.ParseForm(); err != nil {
+	if cx.Request.Form == nil {
+		if err := cx.Request.ParseForm(); err != nil {
 			return err
 		}
 	}
@@ -93,7 +93,7 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 				field := rv.Type().Field(i)
 				if typ, ok := field.Tag.Lookup("form"); ok {
 					if fn, exists := cx.Server.filler[typ]; exists {
-						values := cx.request.Form[field.Name]
+						values := cx.Request.Form[field.Name]
 						if len(values) > 0 {
 							obj, err := fn(values[0])
 							if err != nil {
@@ -107,7 +107,7 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 		}
 	}
 
-	return d.decoder.Decode(v, cx.request.Form)
+	return d.decoder.Decode(v, cx.Request.Form)
 }
 
 // a form-enc decoder for request body
@@ -123,16 +123,16 @@ func NewMultiFormRequestDecoder() *MultiFormRequestDecoder {
 }
 
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
-	if err := cx.request.ParseMultipartForm(32 << 20); err != nil {
+	if err := cx.Request.ParseMultipartForm(32 << 20); err != nil {
 		return err
 	}
 
 	// 合并表单值
 	values := make(url.Values)
-	for k, v := range cx.request.MultipartForm.Value {
+	for k, v := range cx.Request.MultipartForm.Value {
 		values[k] = v
 	}
-	for k, v := range cx.request.Form {
+	for k, v := range cx.Request.Form {
 		values[k] = v
 	}
 
@@ -145,7 +145,7 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 		for i := 0; i < rv.NumField(); i++ {
 			field := rv.Type().Field(i)
 			if field.Type.String() == "github.com/extrame/goblet.File" {
-				if file, _, err := cx.request.FormFile(field.Name); err == nil {
+				if file, _, err := cx.Request.FormFile(field.Name); err == nil {
 					fileObj := File{
 						rc:     file,
 						Name:   field.Name,
@@ -198,9 +198,9 @@ var decoders map[string]RequestDecoder = map[string]RequestDecoder{
 // if you have no other tag, please add ',' before md5
 func (cx *Context) Fill(v interface{}, fills ...bool) error {
 	// get content type
-	ct := cx.request.Header.Get("Content-Type")
+	ct := cx.Request.Header.Get("Content-Type")
 	//if method is GET, only form in url is supported
-	if cx.request.Method == "GET" {
+	if cx.Request.Method == "GET" {
 		ct = "application/x-www-form-urlencoded"
 	}
 	// default to urlencoded
