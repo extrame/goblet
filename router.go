@@ -30,9 +30,10 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 	var anch *matcher.UrlMatcher
 	var suffix_url string
 	var main, format string
+	var params map[string]string
 
 	if r.URL.Path == "/" {
-		anch, suffix_url = rou.anchor.Match("/index", 6)
+		anch, suffix_url, params = rou.anchor.Match("/index", 6)
 		if !s.isSilence(r.URL.Path) {
 			slog.Debug("routing /index", "path", r.URL.Path)
 		}
@@ -43,7 +44,7 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 		s, r, w,
 		nil, s.DB, suffix_url, format,
 		"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
-		nil, false,
+		nil, false, params,
 	}
 
 	if s.nrPlugin != nil {
@@ -59,7 +60,17 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 		} else {
 			main = r.URL.Path
 		}
-		anch, suffix_url = rou.anchor.Match(main, len(main))
+		var pathParams map[string]string
+		// 尝试匹配，包括参数提取
+		anch, suffix_url, pathParams = rou.anchor.Match(main, len(main))
+
+		// 如果找到匹配，设置路径参数
+		if anch != nil && len(pathParams) > 0 {
+			for key, value := range pathParams {
+				context.SetPathParam(key, value)
+			}
+			slog.Debug("matched with path params", "params", pathParams)
+		}
 		if !s.isSilence(r.URL.Path) {
 			slog.Info("routing", "path", r.URL.Path)
 		}

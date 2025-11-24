@@ -49,6 +49,7 @@ type Context struct {
 	infos           map[string]interface{}
 	cookiesForWrite map[string]*http.Cookie
 	showHidden      bool
+	pathParams      map[string]string // 路径参数存储
 }
 
 func (c *Context) ShowHidden() {
@@ -57,6 +58,34 @@ func (c *Context) ShowHidden() {
 
 func (c *Context) handleData() {
 
+}
+
+// SetPathParam 设置路径参数
+func (c *Context) SetPathParam(key, value string) {
+	if c.pathParams == nil {
+		c.pathParams = make(map[string]string)
+	}
+	c.pathParams[key] = value
+}
+
+// GetPathParam 获取路径参数
+func (c *Context) PathParam(key string) string {
+	if c.pathParams == nil {
+		return ""
+	}
+	return c.pathParams[key]
+}
+
+func (c *Context) SetPathParams(params map[string]string) {
+	c.pathParams = params
+}
+
+// PathParams 获取所有路径参数
+func (c *Context) PathParams() map[string]string {
+	if c.pathParams == nil {
+		return make(map[string]string)
+	}
+	return c.pathParams
 }
 
 func (c *Context) SetForceFormat(format, layout string) {

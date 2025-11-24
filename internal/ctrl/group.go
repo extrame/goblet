@@ -40,7 +40,7 @@ func (g *Group) Parse(ctx Context) error {
 	var suffix = ctx.Suffix()
 	if len(suffix) > 1 {
 
-		matched, suffix := g.methods.Match(suffix, len(suffix))
+		matched, suffix, params := g.methods.Match(suffix, len(suffix))
 
 		if matched != nil {
 			method = matched.Opt.(*MethodCaller).fn
@@ -48,6 +48,10 @@ func (g *Group) Parse(ctx Context) error {
 				ctx.SetSuffix(suffix)
 				goto next
 			}
+		}
+
+		if params != nil {
+			ctx.SetPathParams(params)
 		}
 	}
 	if !method.IsValid() {

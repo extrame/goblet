@@ -16,6 +16,7 @@ type Context interface {
 	Respond(data interface{})
 	NotRendered() bool
 	GetPre(key string) []reflect.Value
+	SetPathParams(params map[string]string)
 }
 
 type Wrapper interface {
