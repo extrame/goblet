@@ -1,6 +1,8 @@
 package matcher
 
 import (
+	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -32,6 +34,20 @@ type UrlMatcher struct {
 	Opt       AnchorOp
 	isParam   bool   // 是否为参数节点
 	paramName string // 参数名称
+}
+
+type defaultAnchor struct{}
+
+func (a *defaultAnchor) MatchSuffix(string) bool {
+	return false
+}
+
+func (a *defaultAnchor) String() string {
+	return "hidden default anchor"
+}
+
+func (a *UrlMatcher) String() string {
+	return fmt.Sprintf("UrlMatcher(%s) on %s", a.prefix+a.char, a.Opt.String())
 }
 
 func (a *UrlMatcher) Add(path string, opt AnchorOp) bool {
@@ -79,7 +95,7 @@ func (a *UrlMatcher) addSubPath(path string, opt AnchorOp) bool {
 		tailBeforParam = tailBeforParam - 1
 	}
 	var char = path[tailBeforParam : tailBeforParam+1]
-
+	slog.Info("add sub path", "path", path, "tailBeforParam", tailBeforParam, "char", char, "paramName", paramName)
 	branch = &UrlMatcher{tailBeforParam,
 		char, path[0:tailBeforParam],
 		[]*UrlMatcher{}, nil, hasParam, paramName}

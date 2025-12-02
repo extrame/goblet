@@ -39,27 +39,15 @@ type Wrapper interface {
 }
 
 func New(basic *Basic, block interface{}, ignoreCase bool) Wrapper {
+	var ctrl Wrapper
 	switch basic.typ {
 	case "single":
-		return &Html{basic}
+		ctrl = &Html{basic}
 	case "rest":
-		return &Rest{basic}
-	case "group":
-		return &Group{basic, ignoreCase}
+		ctrl = &Rest{basic}
+	default:
+		ctrl = &Group{basic, ignoreCase}
 	}
-
-	for i := 0; i < basic.block.Type().NumMethod(); i++ {
-		mtd := basic.block.Type().Method(i)
-		switch mtd.Name {
-		case "Get", "Post":
-			return &Html{basic}
-		case "Read", "ReadMany", "Delete", "DeleteMany", "Update", "UpdateMany", "New", "Create", "Edit":
-			return &Rest{basic}
-		case "Init":
-			continue
-		default:
-			return &Group{basic, ignoreCase}
-		}
-	}
-	return &Group{basic, ignoreCase}
+	basic.methods.Opt = ctrl
+	return ctrl
 }

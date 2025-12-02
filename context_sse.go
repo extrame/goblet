@@ -1,6 +1,7 @@
 package goblet
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -106,7 +107,10 @@ func splitLines(s string) []string {
 
 // SseSendJSON 发送JSON格式的SSE消息（便捷方法）
 func (c *Context) SseSendJSON(data interface{}, action ...string) error {
-	jsonStr := fmt.Sprintf("%v", data) // 简化处理，实际项目中可以使用json.Marshal
+	jsonStr, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
 	return c.SseSend(jsonStr, action...)
 }
 

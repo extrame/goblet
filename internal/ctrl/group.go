@@ -2,6 +2,7 @@ package ctrl
 
 import (
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -43,10 +44,14 @@ func (g *Group) Parse(ctx Context) error {
 		matched, suffix, params := g.methods.Match(suffix, len(suffix))
 
 		if matched != nil {
-			method = matched.Opt.(*MethodCaller).fn
-			if method.IsValid() {
-				ctx.SetSuffix(suffix)
-				goto next
+			if mc, ok := matched.Opt.(*MethodCaller); ok {
+				method = mc.fn
+				if method.IsValid() {
+					ctx.SetSuffix(suffix)
+					goto next
+				}
+			} else {
+				slog.Info("matched not method caller", "matched", matched)
 			}
 		}
 
