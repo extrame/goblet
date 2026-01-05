@@ -233,14 +233,14 @@ func (cx *Context) FillAs(v interface{}, autofill bool, ct string) error {
 	// 设置默认值
 	if autofill {
 		if err := defaults.Set(v); err != nil {
-			return err
+			slog.Error("Failed to set default values", "error", err)
 		}
 	}
 
 	// decode
 	err := decoder.Unmarshal(cx, v, autofill)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Failed to decode request data", "error", err)
 		return err
 	}
 	// all clear

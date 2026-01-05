@@ -120,8 +120,18 @@ func (c *Context) startKeepAliveTimer() {
 
 	// 创建新的定时器
 	keepAlive.timer = time.AfterFunc(keepAlive.timeout, func() {
+		// 检查请求上下文是否已取消
+		select {
+		case <-c.Request.Context().Done():
+			// 请求已取消，不再发送KeepAlive
+			return
+		default:
+			// 请求仍然活跃，继续发送KeepAlive
+		}
+
 		// 发送KeepAlive消息
 		c.SseSend(":keepalive\n\n")
+
 		// 重新启动定时器
 		keepAlive.mu.Lock()
 		if keepAlive.started {
