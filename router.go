@@ -43,7 +43,8 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 	context := &Context{
 		s, r, w,
 		nil, s.DB, suffix_url, format,
-		"", nil, "default", nil, nil, nil, "", 200, false, nil, nil, nil,
+		"", nil, "default", nil, nil, nil, "", 200, false,
+		nil, nil, nil,
 		nil, false, params,
 	}
 

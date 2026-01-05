@@ -4,10 +4,72 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
+	"time"
 )
 
+type SseOption func(*Context)
+
+// sseKeepAliveTimer 存储SSE保活定时器信息
+type sseKeepAliveTimer struct {
+	timer    *time.Timer
+	timeout  time.Duration
+	mu       sync.Mutex
+	started  bool
+	stopChan chan bool
+}
+
+func SseWithKeepAlive(timeout int) SseOption {
+	return func(c *Context) {
+		if timeout <= 0 {
+			return
+		}
+
+		// 创建保活定时器信息
+		keepAlive := &sseKeepAliveTimer{
+			timeout:  time.Duration(timeout) * time.Second,
+			stopChan: make(chan bool, 1),
+		}
+
+		// 存储在context的extra中
+		if c.extra == nil {
+			c.extra = make(map[string]interface{})
+		}
+		c.extra["sse_keepalive"] = keepAlive
+	}
+}
+
+// stopKeepAliveTimer 停止KeepAlive定时器
+func (c *Context) stopKeepAliveTimer() {
+	if c.extra == nil {
+		return
+	}
+
+	keepAliveInterface, exists := c.extra["sse_keepalive"]
+	if !exists {
+		return
+	}
+
+	keepAlive, ok := keepAliveInterface.(*sseKeepAliveTimer)
+	if !ok {
+		return
+	}
+
+	keepAlive.mu.Lock()
+	defer keepAlive.mu.Unlock()
+
+	// 停止定时器
+	if keepAlive.timer != nil {
+		keepAlive.timer.Stop()
+		keepAlive.timer = nil
+	}
+
+	// 标记为已停止
+	keepAlive.started = false
+}
+
 // EnableSse 启用SSE连接，设置必要的响应头
-func (c *Context) EnableSse() error {
+func (c *Context) EnableSse(options ...SseOption) error {
 	// 设置SSE所需的响应头
 	c.writer.Header().Set("Content-Type", "text/event-stream")
 	c.writer.Header().Set("Cache-Control", "no-cache")
@@ -24,13 +86,62 @@ func (c *Context) EnableSse() error {
 		return fmt.Errorf("response writer does not support flushing")
 	}
 
+	// 应用SSE选项
+	for _, option := range options {
+		option(c)
+	}
+
 	return nil
+}
+
+// startKeepAliveTimer 启动或重置KeepAlive定时器
+func (c *Context) startKeepAliveTimer() {
+	if c.extra == nil {
+		return
+	}
+
+	keepAliveInterface, exists := c.extra["sse_keepalive"]
+	if !exists {
+		return
+	}
+
+	keepAlive, ok := keepAliveInterface.(*sseKeepAliveTimer)
+	if !ok {
+		return
+	}
+
+	keepAlive.mu.Lock()
+	defer keepAlive.mu.Unlock()
+
+	// 如果已经存在定时器，先停止它
+	if keepAlive.timer != nil {
+		keepAlive.timer.Stop()
+	}
+
+	// 创建新的定时器
+	keepAlive.timer = time.AfterFunc(keepAlive.timeout, func() {
+		// 发送KeepAlive消息
+		c.SseSend(":keepalive\n\n")
+		// 重新启动定时器
+		keepAlive.mu.Lock()
+		if keepAlive.started {
+			keepAlive.timer.Reset(keepAlive.timeout)
+		}
+		keepAlive.mu.Unlock()
+	})
+
+	// 标记为已启动
+	if !keepAlive.started {
+		keepAlive.started = true
+	}
 }
 
 // SseSend 发送SSE消息
 // message: 要发送的消息内容，可以是任意类型，会被转换为字符串
 // action: 可选的事件类型，如果提供则作为event字段发送
 func (c *Context) SseSend(message interface{}, action ...string) error {
+	// 在发送消息后重置KeepAlive定时器
+	defer c.startKeepAliveTimer()
 	// 转换消息为字符串
 	var messageStr string
 	switch v := message.(type) {
@@ -126,6 +237,8 @@ func (c *Context) SseSendError(err error, action ...string) error {
 // SseEnd 发送SSE结束信号并关闭连接
 // 发送标准的"[DONE]"信号，这是SSE的通用结束约定
 func (c *Context) SseEnd(message ...string) error {
+	// 停止KeepAlive定时器
+	defer c.stopKeepAliveTimer()
 	// 构建结束消息，使用标准的[DONE]信号
 	endMessage := "[DONE]"
 	if len(message) > 0 && message[0] != "" {

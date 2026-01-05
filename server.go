@@ -269,7 +269,7 @@ func (s *Server) AddModel(models interface{}, syncs ...bool) {
 		sync = syncs[0]
 	}
 
-	if sync {
+	if sync && s.Config.Basic.DbEngine != "none" {
 		err := s.DB.AutoMigrate(models)
 		if err != nil {
 			slog.Error("migrate error:", "error", err)

@@ -57,23 +57,44 @@ func callMethod(method reflect.Value, ctx Context) ([]reflect.Value, reflect.Typ
 
 	if i < typ.NumIn() {
 		var typArg = typ.In(i)
-		var newV reflect.Value
-		if typArg.Kind() == reflect.Ptr {
-			newV = reflect.New(typ.In(i).Elem())
+
+		// 检查参数类型是否为map类型
+		if typArg.Kind() == reflect.Map {
+			// 对于map类型，直接从请求体中解析JSON
+			// 创建对应类型的map实例
+			mapType := reflect.MapOf(typArg.Key(), typArg.Elem())
+			mapValue := reflect.New(mapType).Elem()
+
+			// 创建指向map的指针用于Fill
+			mapPtr := reflect.New(mapType).Interface()
+
+			if err := ctx.Fill(mapPtr); err == nil {
+				// 填充成功，将解析的map赋值给参数
+				rvArgs[i] = reflect.ValueOf(mapPtr).Elem()
+			} else {
+				// 如果填充失败，返回空的map
+				rvArgs[i] = mapValue
+			}
 		} else {
-			newV = reflect.New(typ.In(i))
-		}
+			// 原有的结构体参数处理逻辑
+			var newV reflect.Value
+			if typArg.Kind() == reflect.Ptr {
+				slog.Info("parse arguments", "typArg", typArg, "pointer", typArg.Elem())
+				newV = reflect.New(typ.In(i).Elem())
+			} else {
+				slog.Info("parse arguments", "typArg", typArg)
+				newV = reflect.New(typ.In(i))
+			}
 
-		if err := ctx.Fill(newV.Interface()); err != nil {
-			slog.Error("parse arguments error", "error", err)
-
+			if err := ctx.Fill(newV.Interface()); err != nil {
+				slog.Error("parse arguments error", "error", err)
+			}
+			if typArg.Kind() == reflect.Ptr {
+				rvArgs[i] = newV
+			} else {
+				rvArgs[i] = newV.Elem()
+			}
 		}
-		if typArg.Kind() == reflect.Ptr {
-			rvArgs[i] = newV
-		} else {
-			rvArgs[i] = newV.Elem()
-		}
-
 	}
 
 	return method.Call(rvArgs), typ

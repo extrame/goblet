@@ -45,7 +45,7 @@ type Context struct {
 	status_code     int
 	already_writed  bool
 	fill_bts        []byte
-	bower_stack     map[string]bool
+	extra           map[string]interface{}
 	infos           map[string]interface{}
 	cookiesForWrite map[string]*http.Cookie
 	showHidden      bool
