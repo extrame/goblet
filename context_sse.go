@@ -120,15 +120,6 @@ func (c *Context) startKeepAliveTimer() {
 
 	// 创建新的定时器
 	keepAlive.timer = time.AfterFunc(keepAlive.timeout, func() {
-		// 检查请求上下文是否已取消
-		select {
-		case <-c.Request.Context().Done():
-			// 请求已取消，不再发送KeepAlive
-			return
-		default:
-			// 请求仍然活跃，继续发送KeepAlive
-		}
-
 		// 发送KeepAlive消息
 		c.SseSend(":keepalive\n\n")
 
@@ -150,6 +141,13 @@ func (c *Context) startKeepAliveTimer() {
 // message: 要发送的消息内容，可以是任意类型，会被转换为字符串
 // action: 可选的事件类型，如果提供则作为event字段发送
 func (c *Context) SseSend(message interface{}, action ...string) error {
+
+	select {
+	case <-c.Request.Context().Done():
+		return fmt.Errorf("context canceled: %w", c.Request.Context().Err())
+	default:
+	}
+
 	// 在发送消息后重置KeepAlive定时器
 	defer c.startKeepAliveTimer()
 	// 转换消息为字符串

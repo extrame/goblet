@@ -14,9 +14,9 @@ type TestedController struct {
 
 // GetSimple 简单的SSE端点示例
 // Route: GET /sse/simple
-func (c *TestedController) GetSimple(ctx *goblet.Context) {
-	// 启用SSE连接，使用KeepAlive功能（每30秒发送一次保活消息）
-	if err := ctx.EnableSse(goblet.SseWithKeepAlive(30)); err != nil {
+func (c *TestedController) Simple(ctx *goblet.Context) {
+	// 启用SSE连接
+	if err := ctx.EnableSse(); err != nil {
 		ctx.RespondError(err, "SSE启用失败")
 		return
 	}
@@ -117,7 +117,7 @@ func main() {
 /*
 使用示例：
 
-1. 测试简单SSE连接（带KeepAlive功能）：
+1. 测试简单SSE连接：
 curl -N http://localhost:8080/sse/simple
 
 2. 测试JSON格式的SSE：
@@ -142,10 +142,6 @@ curl -N http://localhost:8080/sse/multiline
         const eventSource = new EventSource('/sse/simple');
 
         eventSource.onmessage = function(event) {
-            // 过滤掉KeepAlive消息（以:开头的消息）
-            if (event.data.startsWith(':')) {
-                return;
-            }
             document.getElementById('messages').innerHTML += '<p>' + event.data + '</p>';
         };
 
@@ -164,13 +160,6 @@ curl -N http://localhost:8080/sse/multiline
 </body>
 </html>
 ```
-
-SSE KeepAlive功能说明：
-- 使用 SseWithKeepAlive(timeout) 选项启用KeepAlive功能
-- timeout参数指定保活间隔时间（秒）
-- 在指定时间内如果没有消息发送，会自动发送KeepAlive消息（格式为:keepalive\n\n）
-- 每次调用SseSend都会重置定时器
-- KeepAlive消息以冒号开头，客户端应该过滤掉这类消息
 
 控制器模式说明：
 - 使用 TestedController 结构体嵌入 goblet.SingleController
