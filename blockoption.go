@@ -301,6 +301,12 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 			method = g.block.MethodByName("Post")
 		case "get":
 			method = g.block.MethodByName("Get")
+		case "delete":
+			method = g.block.MethodByName("Delete")
+		case "put":
+			method = g.block.MethodByName("Put")
+		case "patch":
+			method = g.block.MethodByName("Patch")
 		}
 	}
 
