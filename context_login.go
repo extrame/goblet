@@ -22,6 +22,11 @@ func (c *Context) GetLoginInfo() (*LoginContext, bool) {
 	return c.GetLoginInfoAs(USERCOOKIENAME)
 }
 
+// EncryptLoginContext encrypt the login context to a token
+func (c *Context) EncryptLoginContext(lctx *LoginContext) string {
+	return c.Server.loginSaver.GetToken(lctx)
+}
+
 func (c *Context) GetLoginInfoAs(name string) (*LoginContext, bool) {
 	cookie, err := c.Server.loginSaver.GetLoginIdAs(c, name)
 	if cookie != nil && err == nil {

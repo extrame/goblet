@@ -15,6 +15,10 @@ type LoginContext struct {
 	Attrs    map[string]interface{}
 }
 
+func (l *LoginContext) SetDeadline(t time.Time) {
+	l.Deadline = &t
+}
+
 func (l *LoginContext) HasAttr(key string, content interface{}) bool {
 	if l.Attrs == nil {
 		return false

@@ -91,11 +91,13 @@ func (l *_JwtLoginPlugin) GetLoginIdAs(ctx *goblet.Context, key string) (*goblet
 					Name: key,
 					Id:   id.(string),
 				}
-
+				exp, ok := token.Claims().Expiration()
+				if ok {
+					result.SetDeadline(exp)
+				}
 				if result.Attrs == nil {
 					result.Attrs = make(map[string]interface{})
 				}
-
 				for k, v := range token.Claims() {
 					if k != key+"Id" && k != "exp" && k != "nbf" && k != "iat" {
 						result.Attrs[k] = v
