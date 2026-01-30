@@ -133,6 +133,7 @@ func (c *Context) startKeepAliveTimer() {
 		if err := c.SseSend(":keepalive\n\n"); err != nil {
 			// 如果发送失败，可以选择记录日志或停止定时器
 			slog.Error("failed to send keepalive message", "error", err)
+			return
 		}
 
 		// 重新启动定时器

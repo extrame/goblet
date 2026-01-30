@@ -70,6 +70,7 @@ type LoginInfoStorer interface {
 	AddLoginAs(ctx *Context, lctx *LoginContext) string
 	GetLoginIdAs(ctx *Context, key string) (*LoginContext, error)
 	DeleteLoginAs(ctx *Context, key string) error
+	GetToken(lctx *LoginContext) string
 }
 
 type CookieLoginInfoStorer struct{}
@@ -88,6 +89,10 @@ func (c *CookieLoginInfoStorer) AddLoginAs(ctx *Context, lctx *LoginContext) str
 	}
 	ctx.AddSignedCookie(cookie)
 	return cookie.Value
+}
+
+func (c *CookieLoginInfoStorer) GetToken(lctx *LoginContext) string {
+	return lctx.Id
 }
 
 func (c *CookieLoginInfoStorer) GetLoginIdAs(ctx *Context, key string) (*LoginContext, error) {
