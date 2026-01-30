@@ -232,9 +232,7 @@ func (cx *Context) FillAs(v interface{}, autofill bool, ct string) error {
 
 	// 设置默认值
 	if autofill {
-		if err := defaults.Set(v); err != nil {
-			slog.Error("Failed to set default values", "error", err)
-		}
+		defaults.Set(v)
 	}
 
 	// decode

@@ -3,6 +3,7 @@ package goblet
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -120,8 +121,19 @@ func (c *Context) startKeepAliveTimer() {
 
 	// 创建新的定时器
 	keepAlive.timer = time.AfterFunc(keepAlive.timeout, func() {
+		// 防止panic导致程序崩溃
+		defer func() {
+			if r := recover(); r != nil {
+				// 记录错误但不影响其他goroutine
+				slog.Error("panic in SSE keepalive timer", "error", r)
+			}
+		}()
+
 		// 发送KeepAlive消息
-		c.SseSend(":keepalive\n\n")
+		if err := c.SseSend(":keepalive\n\n"); err != nil {
+			// 如果发送失败，可以选择记录日志或停止定时器
+			slog.Error("failed to send keepalive message", "error", err)
+		}
 
 		// 重新启动定时器
 		keepAlive.mu.Lock()
@@ -140,7 +152,7 @@ func (c *Context) startKeepAliveTimer() {
 // SseSend 发送SSE消息
 // message: 要发送的消息内容，可以是任意类型，会被转换为字符串
 // action: 可选的事件类型，如果提供则作为event字段发送
-func (c *Context) SseSend(message interface{}, action ...string) error {
+func (c *Context) SseSend(message interface{}, action ...string) (err error) {
 
 	select {
 	case <-c.Request.Context().Done():
@@ -179,7 +191,7 @@ func (c *Context) SseSend(message interface{}, action ...string) error {
 	sseMessage += "\n"
 
 	// 写入响应
-	_, err := c.writer.Write([]byte(sseMessage))
+	_, err = c.writer.Write([]byte(sseMessage))
 	if err != nil {
 		return fmt.Errorf("failed to write SSE message: %w", err)
 	}
@@ -244,7 +256,8 @@ func (c *Context) SseSendError(err error, action ...string) error {
 
 // SseEnd 发送SSE结束信号并关闭连接
 // 发送标准的"[DONE]"信号，这是SSE的通用结束约定
-func (c *Context) SseEnd(message ...string) error {
+func (c *Context) SseEnd(message ...string) (err error) {
+
 	// 停止KeepAlive定时器
 	defer c.stopKeepAliveTimer()
 	// 构建结束消息，使用标准的[DONE]信号
@@ -257,7 +270,7 @@ func (c *Context) SseEnd(message ...string) error {
 	sseMessage := fmt.Sprintf("data: %s\n\n", endMessage)
 
 	// 写入响应
-	_, err := c.writer.Write([]byte(sseMessage))
+	_, err = c.writer.Write([]byte(sseMessage))
 	if err != nil {
 		return fmt.Errorf("failed to write SSE end message: %w", err)
 	}
