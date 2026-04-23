@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 )
 
 // TestedController 使用Goblet控制器模式实现SSE功能

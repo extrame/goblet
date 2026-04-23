@@ -3,7 +3,7 @@ package redis
 import (
 	"log"
 
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 	"github.com/garyburd/redigo/redis"
 )
 

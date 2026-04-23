@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	toml "github.com/extrame/go-toml-config"
-	"github.com/extrame/goblet/config"
+	"github.com/extrame/goblet/v2/config"
 	"github.com/extrame/unmarshall"
 	myyaml "github.com/extrame/unmarshall/yaml"
 	"gopkg.in/yaml.v3"

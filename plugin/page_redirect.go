@@ -3,8 +3,8 @@ package plugin
 import (
 	"regexp"
 
-	"github.com/extrame/goblet"
-	ge "github.com/extrame/goblet/error"
+	"github.com/extrame/goblet/v2"
+	ge "github.com/extrame/goblet/v2/error"
 )
 
 type PageRedirector struct {
@@ -28,7 +28,7 @@ func (p *PageRedirector) Get(ctx *goblet.Context) error {
 	return ge.NOSUCHROUTER("")
 }
 
-//PageRedirect Create a page redirector match the matcher and redirect to target, if withOriginalAsQuery is true, the original url will be append to the target url's query part as target?original=original
+// PageRedirect Create a page redirector match the matcher and redirect to target, if withOriginalAsQuery is true, the original url will be append to the target url's query part as target?original=original
 func PageRedirect(matcher *regexp.Regexp, target string, withOriginalAsQuery bool) *PageRedirector {
 	return &PageRedirector{
 		matcher:             matcher,

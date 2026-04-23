@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/boltdb/bolt"
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 )
 
 type BackEnd struct {

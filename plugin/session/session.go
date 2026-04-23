@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	gorandom "github.com/extrame/go-random"
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 )
 
 const sessionName = "goblet-session-id"
@@ -20,7 +20,7 @@ type Session struct {
 	} `goblet:"redis"`
 }
 
-//OnNewRequest 检查该请求是否有对应的session
+// OnNewRequest 检查该请求是否有对应的session
 func (s *Session) OnNewRequest(ctx *goblet.Context) error {
 	if _, err := ctx.SignedCookie(sessionName); err != nil {
 		s.addSession(ctx)

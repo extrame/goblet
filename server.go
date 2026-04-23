@@ -16,9 +16,9 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
-	"github.com/extrame/goblet/config"
-	ge "github.com/extrame/goblet/error"
-	"github.com/extrame/goblet/render"
+	"github.com/extrame/goblet/v2/config"
+	ge "github.com/extrame/goblet/v2/error"
+	"github.com/extrame/goblet/v2/render"
 	yaml "gopkg.in/yaml.v3"
 )
 

@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/denverdino/aliyungo/oss"
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 )
 
 type Alioss struct {

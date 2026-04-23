@@ -6,7 +6,7 @@ import (
 	"html/template"
 	"io"
 
-	"github.com/extrame/goblet/render"
+	"github.com/extrame/goblet/v2/render"
 )
 
 type JsonRenderCodeSetter interface {

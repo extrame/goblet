@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/extrame/goblet/internal/ctrl"
-	"github.com/extrame/goblet/render"
+	"github.com/extrame/goblet/v2/internal/ctrl"
+	"github.com/extrame/goblet/v2/render"
 	"gorm.io/gorm"
 )
 
@@ -243,7 +243,7 @@ func (c *Context) render() (err error) {
 					var in = rfnT.In(index)
 					if in.Kind() == reflect.Ptr {
 						ein := in.Elem()
-						if ein.Name() == "Context" && ein.PkgPath() == "github.com/extrame/goblet" {
+						if ein.Name() == "Context" && ein.PkgPath() == "github.com/extrame/goblet/v2" {
 							ctxIndex = index
 						}
 					} else {

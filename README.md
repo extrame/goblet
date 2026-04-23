@@ -31,7 +31,7 @@ After 11 years, Goblet v2 will be redesigned with the goal of providing a more m
   # 创建一个新的项目 / Create a new project
 
   ```golang
-  import "github.com/extrame/goblet"
+  import "github.com/extrame/goblet/v2"
 
   func main() {
     var server = goblet.Organize("project_name")

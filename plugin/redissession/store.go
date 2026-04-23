@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	gorandom "github.com/extrame/go-random"
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 	"github.com/garyburd/redigo/redis"
 )
 

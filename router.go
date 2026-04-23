@@ -7,10 +7,10 @@ import (
 
 	"log/slog"
 
-	"github.com/extrame/goblet/config"
-	ge "github.com/extrame/goblet/error"
-	"github.com/extrame/goblet/internal/ctrl"
-	"github.com/extrame/goblet/internal/matcher"
+	"github.com/extrame/goblet/v2/config"
+	ge "github.com/extrame/goblet/v2/error"
+	"github.com/extrame/goblet/v2/internal/ctrl"
+	"github.com/extrame/goblet/v2/internal/matcher"
 
 	"github.com/pkg/errors"
 )

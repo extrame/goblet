@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/extrame/goblet/internal/errors"
+	"github.com/extrame/goblet/v2/internal/errors"
 )
 
 // 错误包装函数

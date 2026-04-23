@@ -9,7 +9,7 @@ import (
 	"log/slog"
 
 	gorandom "github.com/extrame/go-random"
-	"github.com/extrame/goblet/config"
+	"github.com/extrame/goblet/v2/config"
 )
 
 func (s *Server) wrapError(w http.ResponseWriter, err interface{}, withStack bool) {

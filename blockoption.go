@@ -5,7 +5,7 @@ import (
 
 	"log/slog"
 
-	"github.com/extrame/goblet/internal/ctrl"
+	"github.com/extrame/goblet/v2/internal/ctrl"
 )
 
 type Route byte

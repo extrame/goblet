@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 	"github.com/extrame/smtpoverttl"
 )
 

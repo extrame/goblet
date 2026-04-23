@@ -4,8 +4,8 @@ import (
 	"html/template"
 	"sync"
 
-	"github.com/extrame/goblet"
-	"github.com/extrame/goblet/render"
+	"github.com/extrame/goblet/v2"
+	"github.com/extrame/goblet/v2/render"
 )
 
 type HtmlRenderPlugin struct {

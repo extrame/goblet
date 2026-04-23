@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	ge "github.com/extrame/goblet/error"
+	ge "github.com/extrame/goblet/v2/error"
 )
 
 const (

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 )
 
 // New create a new LoginAsHeader plugin

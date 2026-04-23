@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/extrame/goblet/config"
-	"github.com/extrame/goblet/internal/errors"
-	"github.com/extrame/goblet/internal/matcher"
+	"github.com/extrame/goblet/v2/config"
+	"github.com/extrame/goblet/v2/internal/errors"
+	"github.com/extrame/goblet/v2/internal/matcher"
 )
 
 type Server interface {
@@ -53,7 +53,7 @@ func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase boo
 		for i := 0; i < valtype.NumField(); i++ {
 			t := valtype.Field(i)
 
-			if t.Type.PkgPath() != "github.com/extrame/goblet" {
+			if t.Type.PkgPath() != "github.com/extrame/goblet/v2" {
 				continue
 			}
 

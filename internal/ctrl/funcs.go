@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	ge "github.com/extrame/goblet/error"
+	ge "github.com/extrame/goblet/v2/error"
 )
 
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()

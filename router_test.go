@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/extrame/goblet/internal/ctrl"
-	"github.com/extrame/goblet/internal/matcher"
+	"github.com/extrame/goblet/v2/internal/ctrl"
+	"github.com/extrame/goblet/v2/internal/matcher"
 )
 
 func TestAnchor(t *testing.T) {

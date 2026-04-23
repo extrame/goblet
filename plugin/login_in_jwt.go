@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 	"github.com/extrame/jose/crypto"
 	"github.com/extrame/jose/jws"
 )

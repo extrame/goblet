@@ -3,8 +3,8 @@ package plugin
 import (
 	"html/template"
 
-	"github.com/extrame/goblet"
-	"github.com/extrame/goblet/render"
+	"github.com/extrame/goblet/v2"
+	"github.com/extrame/goblet/v2/render"
 )
 
 type XmlRenderPlugin struct {

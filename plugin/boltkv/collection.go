@@ -2,7 +2,7 @@ package boltkv
 
 import (
 	"github.com/boltdb/bolt"
-	"github.com/extrame/goblet"
+	"github.com/extrame/goblet/v2"
 	"github.com/pkg/errors"
 	"gopkg.in/mgo.v2/bson"
 )

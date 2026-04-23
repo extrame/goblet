@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/extrame/goblet/internal/ctrl"
-	"github.com/extrame/goblet/internal/matcher"
+	"github.com/extrame/goblet/v2/internal/ctrl"
+	"github.com/extrame/goblet/v2/internal/matcher"
 )
 
 // 基准测试：参数式URL vs 普通URL匹配效率对比

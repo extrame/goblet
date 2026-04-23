@@ -1,7 +1,7 @@
 package goblet
 
 import (
-	"github.com/extrame/goblet/config"
+	"github.com/extrame/goblet/v2/config"
 )
 
 const (
