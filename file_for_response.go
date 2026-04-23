@@ -1,16 +1,14 @@
 package goblet
 
-import (
-	"os"
-)
+import "io"
 
 type fileWithName struct {
-	origin *os.File
+	origin io.ReadSeeker
 	name   string
 }
 
-//FileWithName make file can by download for another name
-func FileWithName(file *os.File, name string) *fileWithName {
+// FileWithName make file can by download for another name
+func FileWithName(file io.ReadSeeker, name string) *fileWithName {
 	return &fileWithName{
 		origin: file,
 		name:   name,
