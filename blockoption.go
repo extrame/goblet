@@ -272,15 +272,25 @@ func (g *groupBlockOption) Parse(ctx *Context) error {
 
 		var ok bool
 		method, ok = g.methods[name]
-		if ok && method.IsValid() {
-			if len(args) > 1 {
-				ctx.suffix = strings.Join(args[1:], "/")
-			} else {
-				ctx.suffix = ""
+		if !ok || !method.IsValid() {
+			reqMethod := ctx.request.URL.Query().Get("method")
+			if reqMethod == "" {
+				reqMethod = ctx.request.Method
 			}
-			goto next
+			name = strings.ToLower(reqMethod) + name
+			method, ok = g.methods[name]
+			if !ok || !method.IsValid() {
+				goto backup
+			}
 		}
+		if len(args) > 1 {
+			ctx.suffix = strings.Join(args[1:], "/")
+		} else {
+			ctx.suffix = ""
+		}
+		goto next
 	}
+backup:
 	if !method.IsValid() {
 		if name = ctx.request.URL.Query().Get("method"); name == "" {
 			name = ctx.request.Method
