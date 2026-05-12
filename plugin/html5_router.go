@@ -24,11 +24,9 @@ func (p *Html5Router) Get(ctx *goblet.Context) error {
 		}
 	}
 
-	for _, exclude := range p.excludes {
-		if matched, _ := filepath.Match(exclude, "/"+ctx.Suffix()); matched {
-			return ge.NOSUCHROUTER("")
-		}
-	}
+	return ge.NewFallbackWhenNoStaicFile(
+		"index.html",
+	)
 
 matched:
 	ctx.RenderAs("index")

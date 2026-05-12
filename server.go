@@ -309,15 +309,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}()
 	err := s.router.route(s, w, r)
 	err = errors.Cause(err)
-	if geE, ok := err.(*ge.Error); ok && geE.Code == ge.ERROR_NOSUCHROUTER {
+	if geE, ok := err.(*ge.Error); ok {
+
+		// ERROR_NOSUCHROUTER
 		var path string
 		if geE.Method != "" {
-			//dynamic return a method which should used as static render
-			logrus.Debugln("use static file name return by dynamic", geE.Method)
-			file := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method)
-			if _, err := os.Stat(file); !os.IsNotExist(err) {
-				s.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method))
-				return
+			if geE.Code == ge.ERROR_NOSUCHROUTER {
+				//dynamic return a method which should used as static render
+				logrus.Debugln("use static file name return by dynamic", geE.Method)
+				file := filepath.Join(s.Basic.WwwRoot, s.PublicDir(), geE.Method)
+				if _, err := os.Stat(file); !os.IsNotExist(err) {
+					s.ServeFile(w, r, geE.Method, geE)
+					return
+				}
 			}
 		}
 		if strings.HasSuffix(r.URL.Path, "/") {
@@ -325,20 +329,30 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			path = r.URL.Path
 		}
-		s.ServeFile(w, r, filepath.Join(s.Basic.WwwRoot, s.PublicDir(), path))
+		s.ServeFile(w, r, path, geE)
 	} else if err != nil {
 		s.wrapError(w, err, false)
 	}
 }
 
-func (s *Server) ServeFile(w http.ResponseWriter, r *http.Request, file string) {
+func (s *Server) ServeFile(w http.ResponseWriter, r *http.Request, file string, geE *ge.Error) {
 	//if not index.html, set cache-control to 1 year
 	if filepath.Base(file) != "index.html" {
 		w.Header().Del("Pragma")
 		w.Header().Set("Cache-Control", "max-age=31536000")
 	}
 
-	http.ServeFile(w, r, file)
+	var fileFullPath = filepath.Join(s.Basic.WwwRoot, s.PublicDir(), file)
+
+	if geE.Code == ge.ERROR_FallbackWhenNoStaicFile {
+		var fallback = geE.Method
+		//if file exists, use it instead
+		if _, err := os.Stat(fileFullPath); !os.IsNotExist(err) {
+			fileFullPath = filepath.Join(s.Basic.WwwRoot, s.PublicDir(), fallback)
+		}
+	}
+
+	http.ServeFile(w, r, fileFullPath)
 }
 
 // GetPlugin 获得对应名称的插件
