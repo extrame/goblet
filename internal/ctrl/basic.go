@@ -3,7 +3,6 @@ package ctrl
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"reflect"
 	"strings"
 
@@ -255,7 +254,6 @@ func (r *Basic) callMethodForBlock(methodName string, ctx Context, onlyWithParam
 		slog.Info("block option error", "error", err)
 	} else {
 		slog.Error("block option fatal error", "error", err)
-		os.Exit(1)
 	}
 	return err
 

@@ -59,8 +59,13 @@ func (r *Rest) Parse(c Context) error {
 			suffix = nsuff
 			return r.Basic.callMethodForBlock("Edit", c)
 		} else {
-			c.RenderAs(REST_SHOW)
-			return r.Basic.callMethodForBlock("Show", c)
+			c.RenderAs(REST_INDEX)
+			er := r.Basic.callMethodForBlock("Index", c, true)
+
+			if er != nil {
+				c.RenderAs(REST_SHOW)
+				return r.Basic.callMethodForBlock("Show", c)
+			}
 		}
 
 	case id != "" && method == "DELETE":
