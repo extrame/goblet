@@ -71,6 +71,10 @@ func (r *Rest) Parse(c Context) error {
 		c.RenderAs(REST_UPDATE)
 		return r.Basic.callMethodForBlock("Update", c)
 
+	case id != "" && method == "POST":
+		c.RenderAs(REST_CREATE)
+		return r.Basic.callMethodForBlock("Create", c, true)
+
 	case id == "" && method == "GET":
 		c.RenderAs(REST_INDEX)
 		return r.Basic.callMethodForBlock("Index", c)

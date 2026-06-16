@@ -229,22 +229,26 @@ func toHyphenCase(s string) string {
 	return string(result)
 }
 
-func (r *Basic) callMethodForBlock(methodName string, ctx Context) error {
+func (r *Basic) callMethodForBlock(methodName string, ctx Context, onlyWithParams ...bool) error {
 	var firstParam = ctx.PopSuffix()
 	var err error
 	//change first letter in firstParam to uppercase
 	firstParam = strings.Title(firstParam)
 	_methodName := methodName + firstParam
 	method := r.block.MethodByName(methodName)
+	onlyWithParam := len(onlyWithParams) > 0 && onlyWithParams[0]
 
 	if method.IsValid() {
 		goto callMethod
 	}
-	ctx.UnpopSuffix()
-	_methodName = methodName
-	method = r.block.MethodByName(_methodName)
-	if method.IsValid() {
-		goto callMethod
+
+	if !onlyWithParam {
+		ctx.UnpopSuffix()
+		_methodName = methodName
+		method = r.block.MethodByName(_methodName)
+		if method.IsValid() {
+			goto callMethod
+		}
 	}
 	err = fmt.Errorf("you have no method named (%s)", methodName)
 	if ctx.Env() == config.ProductEnv {
