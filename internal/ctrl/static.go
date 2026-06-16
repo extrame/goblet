@@ -13,8 +13,8 @@ func (c *Static) MatchSuffix(suffix string) bool {
 }
 
 func (c *Static) Parse(ctx Context) error {
-	var suffix = ctx.Suffix()
-	if len(suffix) > 1 {
+	var suffix, suffixWithSlash = ctx.Suffix()
+	if len(suffix) > 0 && suffixWithSlash {
 		ctx.RenderAs(suffix)
 	} else {
 		ctx.RenderAs("index")

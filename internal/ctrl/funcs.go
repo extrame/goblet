@@ -11,15 +11,15 @@ import (
 
 var errorInterface = reflect.TypeOf((*error)(nil)).Elem()
 
-func callMethod(method reflect.Value, ctx Context) ([]reflect.Value, reflect.Type) {
+func callMethod(method reflect.Value, ctx Context, args ...string) ([]reflect.Value, reflect.Type) {
 	typ := method.Type()
 	rvArgs := make([]reflect.Value, typ.NumIn())
 	var i = 0
-	var suffix = ctx.Suffix()
+	var suffix, _ = ctx.Suffix()
+	params := strings.Split(suffix, "/")
+	args = append(args, params...)
 
-	if len(suffix) > 0 && suffix[0] == '/' {
-		suffix = suffix[1:]
-	}
+	offset := 0
 
 	for ; i < typ.NumIn(); i++ {
 		argT := typ.In(i)
@@ -27,28 +27,26 @@ func callMethod(method reflect.Value, ctx Context) ([]reflect.Value, reflect.Typ
 		if kind == reflect.String || (kind >= reflect.Int && kind <= reflect.Uint64) {
 			args := strings.SplitN(suffix, "/", 2)
 			var newV = reflect.New(argT)
+			var arg string
+			if offset >= len(args) {
+				arg = ""
+			} else {
+				arg = args[offset]
+			}
 
 			if kind == reflect.String {
-				newV.Elem().SetString(args[0])
+				newV.Elem().SetString(arg)
 			} else if kind <= reflect.Int64 {
-				iValue, _ := strconv.ParseInt(args[0], 10, 64)
+				iValue, _ := strconv.ParseInt(arg, 10, 64)
 				newV.Elem().SetInt(iValue)
 			} else if kind <= reflect.Uint64 {
-				uValue, _ := strconv.ParseUint(args[0], 10, 64)
+				uValue, _ := strconv.ParseUint(arg, 10, 64)
 				newV.Elem().SetUint(uValue)
 			}
-
 			rvArgs[i] = newV.Elem()
-
-			if len(args) >= 2 {
-				suffix = args[1]
-			} else {
-				suffix = ""
-			}
+			offset++
 		} else if kind == reflect.Slice && argT.Elem().Kind() == reflect.String {
-			args := strings.SplitN(suffix, "/", -1)
-			rvArgs[i] = reflect.ValueOf(args)
-			i++
+			rvArgs[i] = reflect.ValueOf(args[offset:])
 			break
 		} else {
 			break

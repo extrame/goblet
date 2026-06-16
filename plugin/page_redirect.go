@@ -18,10 +18,11 @@ type PageRedirector struct {
 
 func (p *PageRedirector) Get(ctx *goblet.Context) error {
 	ctx.AllowRender(ctx.Format())
-	if p.matcher.MatchString("/" + ctx.Suffix()) {
+	var suffix, _ = ctx.Suffix()
+	if p.matcher.MatchString("/" + suffix) {
 		var target = p.target
 		if p.withOriginalAsQuery {
-			target += "?original=/" + ctx.Suffix()
+			target += "?original=/" + suffix
 		}
 		ctx.RedirectTo(target)
 	}

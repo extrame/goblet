@@ -228,28 +228,37 @@ func toHyphenCase(s string) string {
 	return string(result)
 }
 
-func (r *Basic) callMethodForBlock(methodName string, ctx Context, onlyWithParams ...bool) error {
-	var firstParam = ctx.PopSuffix()
+type CallParams struct {
+	OnlyWithParam bool
+	Params        []string
+	MethodName    string
+	SubMethodName string
+}
+
+func (r *Basic) callMethodForBlock(ctx Context, params CallParams) error {
+	var subMethodNameFromSuffix bool = false
+	if params.SubMethodName == "" {
+		params.SubMethodName = strings.Title(ctx.PopSuffix())
+		subMethodNameFromSuffix = true
+	}
 	var err error
 	//change first letter in firstParam to uppercase
-	firstParam = strings.Title(firstParam)
-	_methodName := methodName + firstParam
-	method := r.block.MethodByName(methodName)
-	onlyWithParam := len(onlyWithParams) > 0 && onlyWithParams[0]
+	method := r.block.MethodByName(params.MethodName + params.SubMethodName)
 
 	if method.IsValid() {
 		goto callMethod
 	}
 
-	if !onlyWithParam {
-		ctx.UnpopSuffix()
-		_methodName = methodName
-		method = r.block.MethodByName(_methodName)
+	if !params.OnlyWithParam {
+		if subMethodNameFromSuffix {
+			ctx.UnpopSuffix()
+		}
+		method = r.block.MethodByName(params.MethodName)
 		if method.IsValid() {
 			goto callMethod
 		}
 	}
-	err = fmt.Errorf("you have no method named (%s)", methodName)
+	err = fmt.Errorf("you have no method named (%s)", params.MethodName)
 	if ctx.Env() == config.ProductEnv {
 		slog.Info("block option error", "error", err)
 	} else {
@@ -258,8 +267,8 @@ func (r *Basic) callMethodForBlock(methodName string, ctx Context, onlyWithParam
 	return err
 
 callMethod:
-	if r.tryPre(methodName, ctx) {
-		results, typ := callMethod(method, ctx)
+	if r.tryPre(params.MethodName, ctx) {
+		results, typ := callMethod(method, ctx, params.Params...)
 		//可以接收传统的无返回，直接结束
 		// 或者有返回，如果返回不是error，且不为空，返回结果
 		// 如果有返回，且返回是error，不为空，返回错误

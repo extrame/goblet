@@ -181,8 +181,14 @@ func (c *Context) Callback() string {
 	return c.Request.FormValue("callback")
 }
 
-func (c *Context) Suffix() string {
-	return c.suffix[c.suffixOffset:]
+func (c *Context) Suffix() (string, bool) {
+	var suffix = c.suffix[c.suffixOffset:]
+	if suffix == "" {
+		return "", false
+	} else if suffix[0] == '/' {
+		return suffix[1:], true
+	}
+	return suffix, false
 }
 
 func (c *Context) SetHeader(key, value string) {

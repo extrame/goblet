@@ -22,5 +22,7 @@ func (h *Html) Parse(c Context) error {
 	method := c.ReqMethod()
 
 	methodName := method[:1] + strings.ToLower(method[1:])
-	return h.Basic.callMethodForBlock(methodName, c)
+	return h.Basic.callMethodForBlock(c, CallParams{
+		MethodName: methodName,
+	})
 }
