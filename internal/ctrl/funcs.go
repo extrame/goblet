@@ -24,15 +24,18 @@ func callMethod(method reflect.Value, ctx Context) ([]reflect.Value, reflect.Typ
 	for ; i < typ.NumIn(); i++ {
 		argT := typ.In(i)
 		var kind = argT.Kind()
-		if kind == reflect.String || (kind >= reflect.Int && kind <= reflect.Int64) {
+		if kind == reflect.String || (kind >= reflect.Int && kind <= reflect.Uint64) {
 			args := strings.SplitN(suffix, "/", 2)
 			var newV = reflect.New(argT)
 
 			if kind == reflect.String {
 				newV.Elem().SetString(args[0])
-			} else {
+			} else if kind <= reflect.Int64 {
 				iValue, _ := strconv.ParseInt(args[0], 10, 64)
 				newV.Elem().SetInt(iValue)
+			} else if kind <= reflect.Uint64 {
+				uValue, _ := strconv.ParseUint(args[0], 10, 64)
+				newV.Elem().SetUint(uValue)
 			}
 
 			rvArgs[i] = newV.Elem()

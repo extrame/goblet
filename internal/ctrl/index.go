@@ -17,6 +17,8 @@ type Context interface {
 	NotRendered() bool
 	GetPre(key string) []reflect.Value
 	SetPathParams(params map[string]string)
+	UnpopSuffix()
+	PopSuffix() string
 }
 
 type Wrapper interface {

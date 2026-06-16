@@ -41,11 +41,17 @@ func (rou *router) route(s *Server, w http.ResponseWriter, r *http.Request) (err
 	}
 
 	context := &Context{
-		s, r, w,
-		nil, s.DB, suffix_url, format,
-		"", nil, "default", nil, nil, nil, "", 200, false,
-		nil, nil, nil,
-		nil, false, params,
+		Server:       s,
+		Request:      r,
+		writer:       w,
+		option:       nil,
+		DB:           s.DB,
+		suffix:       suffix_url,
+		format:       format,
+		suffixOffset: 0,
+		forceFormat:  "",
+		method:       "default",
+		pathParams:   params,
 	}
 
 	if s.nrPlugin != nil {

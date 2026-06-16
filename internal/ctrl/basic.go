@@ -230,26 +230,39 @@ func toHyphenCase(s string) string {
 }
 
 func (r *Basic) callMethodForBlock(methodName string, ctx Context) error {
+	var firstParam = ctx.PopSuffix()
+	var err error
+	//change first letter in firstParam to uppercase
+	firstParam = strings.Title(firstParam)
+	_methodName := methodName + firstParam
 	method := r.block.MethodByName(methodName)
-	if !method.IsValid() {
-		var err = fmt.Errorf("you have no method named (%s)", methodName)
-		if ctx.Env() == config.ProductEnv {
-			slog.Info("block option error", "error", err)
-		} else {
-			slog.Error("block option fatal error", "error", err)
-			os.Exit(1)
-		}
 
-		return err
+	if method.IsValid() {
+		goto callMethod
+	}
+	ctx.UnpopSuffix()
+	_methodName = methodName
+	method = r.block.MethodByName(_methodName)
+	if method.IsValid() {
+		goto callMethod
+	}
+	err = fmt.Errorf("you have no method named (%s)", methodName)
+	if ctx.Env() == config.ProductEnv {
+		slog.Info("block option error", "error", err)
 	} else {
-		if r.tryPre(methodName, ctx) {
-			results, typ := callMethod(method, ctx)
-			//可以接收传统的无返回，直接结束
-			// 或者有返回，如果返回不是error，且不为空，返回结果
-			// 如果有返回，且返回是error，不为空，返回错误
-			// 其他情况，直接返回ok
-			return checkResult(results, typ, ctx)
-		}
+		slog.Error("block option fatal error", "error", err)
+		os.Exit(1)
+	}
+	return err
+
+callMethod:
+	if r.tryPre(methodName, ctx) {
+		results, typ := callMethod(method, ctx)
+		//可以接收传统的无返回，直接结束
+		// 或者有返回，如果返回不是error，且不为空，返回结果
+		// 如果有返回，且返回是error，不为空，返回错误
+		// 其他情况，直接返回ok
+		return checkResult(results, typ, ctx)
 	}
 
 	return nil

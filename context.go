@@ -34,6 +34,7 @@ type Context struct {
 	DB      *gorm.DB // 数据库连接
 	//默认请求类型：HTML
 	suffix          string
+	suffixOffset    int // PopSuffix的偏移位置，0表示未偏移
 	format          string
 	forceFormat     string
 	tempRenders     []string
@@ -181,7 +182,7 @@ func (c *Context) Callback() string {
 }
 
 func (c *Context) Suffix() string {
-	return c.suffix
+	return c.suffix[c.suffixOffset:]
 }
 
 func (c *Context) SetHeader(key, value string) {
@@ -504,6 +505,49 @@ func (c *Context) Layout() string {
 	} else {
 		return c.option.Layout()
 	}
+}
+
+// UnpopSuffix 恢复到上一次PopSuffix之前的状态
+// 找到上一个/的位置，将suffixOffset移回该位置
+func (c *Context) UnpopSuffix() {
+	if c.suffixOffset <= 0 {
+		return
+	}
+
+	// 从当前offset位置往前找上一个/
+	prefix := c.suffix[:c.suffixOffset]
+	lastSlash := strings.LastIndex(prefix, "/")
+	if lastSlash <= 0 {
+		c.suffixOffset = 0
+	} else {
+		c.suffixOffset = lastSlash
+	}
+}
+
+// PopSuffix 弹出当前的suffix第一个/之前的内容，标记offset，以便Suffix()返回/之后的内容
+func (c *Context) PopSuffix() string {
+	if c.suffixOffset >= len(c.suffix) {
+		return ""
+	}
+
+	rest := c.suffix[c.suffixOffset:]
+	start := 0
+	if len(rest) > 0 && rest[0] == '/' {
+		start = 1
+	}
+
+	slashIdx := strings.Index(rest[start:], "/")
+
+	var firstPart string
+	if slashIdx < 0 {
+		firstPart = rest[start:]
+		c.suffixOffset = len(c.suffix)
+	} else {
+		firstPart = rest[start : start+slashIdx]
+		c.suffixOffset += start + slashIdx
+	}
+
+	return firstPart
 }
 
 // RenderAs 设置渲染的模型文件，注意和UseRender的区别，需要修改json/html等用UseRender
