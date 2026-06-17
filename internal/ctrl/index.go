@@ -10,7 +10,7 @@ type Context interface {
 	//return the suffix of url and if first suffix is /
 	//if first suffix is /, then the suffix is the suffix of /
 	//else, the suffix is the suffix of /
-	Suffix() (string, bool)
+	Suffix(withSlash ...bool) (string, bool)
 	SetSuffix(string)
 	Env() string
 	Fill(v interface{}, fills ...bool) error

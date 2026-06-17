@@ -181,11 +181,14 @@ func (c *Context) Callback() string {
 	return c.Request.FormValue("callback")
 }
 
-func (c *Context) Suffix() (string, bool) {
+func (c *Context) Suffix(withSlash ...bool) (string, bool) {
 	var suffix = c.suffix[c.suffixOffset:]
 	if suffix == "" {
 		return "", false
 	} else if suffix[0] == '/' {
+		if len(withSlash) > 0 && withSlash[0] {
+			return suffix, true
+		}
 		return suffix[1:], true
 	}
 	return suffix, false

@@ -38,7 +38,7 @@ func (g *Group) Parse(ctx Context) error {
 		"Get",
 	}
 
-	var suffix, suffixWithSlash = ctx.Suffix()
+	var suffix, suffixWithSlash = ctx.Suffix(true)
 	if len(suffix) > 0 && suffixWithSlash {
 
 		matched, suffix, params := g.methods.Match(suffix, len(suffix))
