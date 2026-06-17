@@ -25,7 +25,6 @@ func callMethod(method reflect.Value, ctx Context, args ...string) ([]reflect.Va
 		argT := typ.In(i)
 		var kind = argT.Kind()
 		if kind == reflect.String || (kind >= reflect.Int && kind <= reflect.Uint64) {
-			args := strings.SplitN(suffix, "/", 2)
 			var newV = reflect.New(argT)
 			var arg string
 			if offset >= len(args) {

@@ -72,6 +72,7 @@ func (r *Rest) Parse(c Context) error {
 					Params:     []string{id},
 				})
 			}
+			return er
 		}
 
 	case id != "" && method == "DELETE":

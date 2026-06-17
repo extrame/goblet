@@ -238,9 +238,10 @@ type CallParams struct {
 func (r *Basic) callMethodForBlock(ctx Context, params CallParams) error {
 	var subMethodNameFromSuffix bool = false
 	if params.SubMethodName == "" {
-		params.SubMethodName = strings.Title(ctx.PopSuffix())
+		params.SubMethodName = ctx.PopSuffix()
 		subMethodNameFromSuffix = true
 	}
+	params.SubMethodName = strings.Title(params.SubMethodName)
 	var err error
 	//change first letter in firstParam to uppercase
 	method := r.block.MethodByName(params.MethodName + params.SubMethodName)

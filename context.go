@@ -372,6 +372,7 @@ func (c *Context) NotRendered() bool {
 
 func (c *Context) SetSuffix(suf string) {
 	c.suffix = suf
+	c.suffixOffset = 0
 }
 
 func (c *Context) GetPre(key string) []reflect.Value {

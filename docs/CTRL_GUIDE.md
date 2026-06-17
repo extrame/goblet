@@ -85,3 +85,134 @@ func checkLogin(ctx *goblet.Context) error {
 type MyController struct {
     goblet.Route `path:"/mycontroller/:id"`
 }
+```
+
+---
+
+## RestController 模式
+
+### 概述
+
+`goblet.RestController` 提供了一套完整的 RESTful API 模板，自动为资源生成 7 个标准端点，并支持灵活的方法签名和扩展子路径。
+
+### 快速开始
+
+```go
+type TaskController struct {
+    goblet.RestController `Route:"/tasks"`
+}
+```
+
+### 标准RESTful端点
+
+注册后自动映射以下7个标准端点：
+
+| HTTP方法  | 路径              | 控制器方法      | 说明          |
+|-----------|-------------------|----------------|--------------|
+| GET       | /tasks            | Index()        | 获取资源列表    |
+| GET       | /tasks/new        | New()          | 新建表单页     |
+| POST      | /tasks            | Create()       | 创建资源       |
+| GET       | /tasks/:id        | Show()         | 获取单个资源    |
+| GET       | /tasks/:id/edit   | Edit()         | 编辑表单页     |
+| PATCH/PUT | /tasks/:id        | Update()       | 更新资源       |
+| DELETE    | /tasks/:id        | Destroy()      | 删除资源       |
+
+### 灵活的方法签名
+
+方法参数按以下顺序自动注入：
+
+1. **路径参数** — `string`/`int`/`uint` 类型，从URL路径自动提取
+2. **`*goblet.Context`** — 上下文对象
+3. **请求体结构体** — 从请求体 JSON 自动解析（`*struct` 或 `struct`）
+4. **`map` 类型** — 从请求体 JSON 自动解析
+
+支持的方法签名示例：
+
+```go
+// 只有Context
+func (c *TaskController) Index(ctx *goblet.Context) ([]Task, error)
+
+// 路径参数 + Context
+func (c *TaskController) Show(id string, ctx *goblet.Context) (*Task, error)
+
+// Context + 请求体
+func (c *TaskController) Create(ctx *goblet.Context, req *CreateRequest) (*Task, error)
+
+// 路径参数 + Context + 请求体
+func (c *TaskController) Update(id string, ctx *goblet.Context, req *UpdateRequest) (*Task, error)
+
+// 仅返回error
+func (c *TaskController) Destroy(id string, ctx *goblet.Context) error
+
+// 无返回值，通过ctx手动设置响应
+func (c *TaskController) New(ctx *goblet.Context) error {
+    return nil
+}
+```
+
+返回值支持以下组合：
+
+- `(data, error)` — 数据和错误
+- `(data)` — 仅数据
+- `(error)` — 仅错误
+- 无返回值 — 通过 `ctx.Respond()` 手动设置
+
+### 扩展子路径方法（新特性）
+
+在标准RESTful端点基础上，支持按子路径名称扩展方法。
+
+#### GET 路径扩展
+
+当访问 `GET /tasks/done` 时，Rest控制器会：
+
+1. **优先尝试** 查找 `IndexDone()` 方法（`Index` + `Done` 的组合）
+2. **若不存在**，回退到标准 `Show("done", ctx)` 方法
+
+```go
+// GET /tasks/done -> 调用此方法
+func (c *TaskController) IndexDone(ctx *goblet.Context) ([]Task, error) {
+    // ctx.DB.Where("status = ?", "done").Find(&tasks)
+    return tasks, nil
+}
+
+// GET /tasks/pending -> 调用此方法
+func (c *TaskController) IndexPending(ctx *goblet.Context) ([]Task, error) {
+    // ctx.DB.Where("status = ?", "pending").Find(&tasks)
+    return tasks, nil
+}
+```
+
+#### POST 路径扩展
+
+当访问 `POST /tasks/123/approve` 时，Rest控制器：
+
+1. 提取 id = `"123"`，剩余路径 `/approve`
+2. 调用 `CreateApprove(id, ctx, req)` 方法
+
+```go
+// POST /tasks/:id/approve
+func (c *TaskController) CreateApprove(id string, ctx *goblet.Context, req *CreateTaskRequest) (*Task, error) {
+    var task Task
+    // ctx.DB.First(&task, id)
+    // task.Status = "done"
+    // ctx.DB.Save(&task)
+    return &task, nil
+}
+
+// POST /tasks/:id/reject
+func (c *TaskController) CreateReject(id string, ctx *goblet.Context, req *CreateTaskRequest) (*Task, error) {
+    var task Task
+    // ctx.DB.First(&task, id)
+    // task.Status = "rejected"
+    // ctx.DB.Save(&task)
+    return &task, nil
+}
+```
+
+### 完整示例
+
+完整的可运行示例请参考：
+
+- [Rest示例代码](../examples/rest/main.go)
+- [SSE示例代码](../examples/sse_example.go)
+- [基础示例代码](../examples/example/main.go)
