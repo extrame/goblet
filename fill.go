@@ -70,7 +70,7 @@ type FormRequestDecoder struct {
 
 func NewFormRequestDecoder() *FormRequestDecoder {
 	decoder := schema.NewDecoder()
-	decoder.SetAliasTag("form") // 使用form标签
+	decoder.SetAliasTag("query") // 使用form标签
 	decoder.IgnoreUnknownKeys(true)
 	return &FormRequestDecoder{decoder: decoder}
 }
@@ -91,7 +91,7 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 		if rv.Kind() == reflect.Struct {
 			for i := 0; i < rv.NumField(); i++ {
 				field := rv.Type().Field(i)
-				if typ, ok := field.Tag.Lookup("form"); ok {
+				if typ, ok := field.Tag.Lookup("query"); ok {
 					if fn, exists := cx.Server.filler[typ]; exists {
 						values := cx.Request.Form[field.Name]
 						if len(values) > 0 {
@@ -233,6 +233,17 @@ func (cx *Context) FillAs(v interface{}, autofill bool, ct string) error {
 	// 设置默认值
 	if autofill {
 		defaults.Set(v)
+	}
+
+	// 无论任何 Content Type，都应该首先从 query string 中 fill 数据
+	if cx.Request.URL.RawQuery != "" {
+		queryDecoder := schema.NewDecoder()
+		queryDecoder.SetAliasTag("query")
+		queryDecoder.IgnoreUnknownKeys(true)
+		if err := queryDecoder.Decode(v, cx.Request.URL.Query()); err != nil {
+			slog.Error("Failed to decode query string", "error", err)
+			return err
+		}
 	}
 
 	// decode
