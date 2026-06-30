@@ -23,12 +23,29 @@ type _JwtLoginPlugin struct {
 	Issuer   string
 	Alg      string
 	Duration string
+	Headers  []string
 	duration time.Duration
+	headers  map[string]string
 }
 
 func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
 
 	server.AddConfig("jwt", j)
+
+	//get headers from config
+	if j.Headers == nil {
+		j.Headers = []string{"authorization"}
+	}
+	j.headers = make(map[string]string)
+	for _, h := range j.Headers {
+		//if h is xxx:yyy, means xxx is key and yyy is actual header name
+		key, actual, ok := strings.Cut(h, ":")
+		if ok {
+			j.headers[strings.ToLower(key)] = actual
+		} else {
+			j.headers[strings.ToLower(h)] = h
+		}
+	}
 
 	m := jws.GetSigningMethod(j.Alg)
 	if m == nil {
@@ -50,7 +67,13 @@ func (j *_JwtLoginPlugin) AddCfgAndInit(server *goblet.Server) error {
 
 func (l *_JwtLoginPlugin) AddLoginAs(ctx *goblet.Context, lctx *goblet.LoginContext) string {
 	token := l.GetToken(lctx)
-	ctx.SetHeader("Authorization", token)
+	if l.headers["authorization"] != "" {
+		ctx.SetHeader(l.headers["authorization"], token)
+	}
+	//Token-Expire 字段，值为 Unix 时间戳（毫秒）
+	if l.headers["token-expire"] != "" {
+		ctx.SetHeader(l.headers["token-expire"], fmt.Sprintf("%d", lctx.Deadline.Unix()*1000))
+	}
 	return token
 }
 

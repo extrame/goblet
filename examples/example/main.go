@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/extrame/goblet/v2"
+	"github.com/extrame/goblet/v2/examples/example/config"
 	"github.com/extrame/goblet/v2/examples/example/ctrl"
 	"github.com/extrame/goblet/v2/examples/example/model"
 )
@@ -17,6 +18,10 @@ func main() {
 
 	// 注册自动同步的模型，会使用gorm自动同步模型
 	app.AddModel(&model.ExampleModel{})
+
+	// 注册ExampleConfig配置项，会使用goblet自动加载配置文件
+	// 配置内容会从example.conf文件中加载,并将其中对应test的部分加载到ExampleConfig结构体中
+	app.AddConfig("test", &config.ExampleConfig{})
 
 	// 启动应用，等待应用终止
 	err := app.Run()
