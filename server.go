@@ -1,9 +1,11 @@
 package goblet
 
 import (
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -66,6 +68,8 @@ type Server struct {
 	configer      Configer
 	delims        []string
 	DB            *gorm.DB
+	ctx           context.Context
+	cancel        context.CancelFunc
 }
 
 func (s *Server) SetDefaultOk(fn func(*Context)) {
@@ -74,6 +78,14 @@ func (s *Server) SetDefaultOk(fn func(*Context)) {
 
 func (s *Server) SetDefaultError(fn func(*Context, error, ...string)) {
 	s.errFunc = fn
+}
+
+func (s *Server) Context() context.Context {
+	return s.ctx
+}
+
+func (s *Server) SetContext(ctx context.Context) {
+	s.ctx, s.cancel = context.WithCancel(ctx)
 }
 
 // type Handler interface {
@@ -461,12 +473,18 @@ func (s *Server) Run() error {
 			return err
 		}
 	}
+	if s.ctx == nil {
+		s.SetContext(context.Background())
+	}
 	slog.With("port", s.Config.Basic.Port).Info("Listening")
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", s.Config.Basic.Port),
 		Handler:      s,
 		WriteTimeout: time.Second * time.Duration(s.Config.Basic.WriteT0),
 		ReadTimeout:  time.Second * time.Duration(s.Config.Basic.ReadT0),
+		BaseContext: func(netListener net.Listener) context.Context {
+			return s.ctx
+		},
 	}
 	srv.SetKeepAlivesEnabled(s.Config.Basic.EnableKeepAlive)
 	var err error
@@ -475,8 +493,17 @@ func (s *Server) Run() error {
 	} else {
 		err = srv.ListenAndServe()
 	}
-	slog.Info(err.Error())
+	if err != nil && err != http.ErrServerClosed {
+		slog.Error(err.Error())
+	}
 	return err
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.cancel != nil {
+		s.cancel()
+	}
+	return nil
 }
 
 func (s *Server) GetDefaultRender() string {
