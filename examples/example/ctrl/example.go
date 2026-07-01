@@ -41,6 +41,18 @@ func (c *ExampleCtrl) Deep_Test(ctx *goblet.Context) (ExampleResponse, error) {
 	return ExampleResponse{}, nil
 }
 
+// 展示各类参数的获取，包括json/json, query, form, default等，除了path参数，其他参数都可以通过在ctx后定义参数入参来获取参数
+// path参数则在ctx入参之前定义，可以定义多个，例如a, b, c，会从请求路径中用/分隔的参数中获取，类型可以是string/int/uint等
+func (e *ExampleCtrl) Query(a, b, c string, ctx *goblet.Context, args struct {
+	Count int    `json:"count"`                   // 表示从application/json请求体中获取count参数
+	Name  string `query:"name"`                   // 表示从查询参数中获取name参数
+	Age   int    `form:"age"`                     // 表示从form-data或者multipart/form-data中获取age参数
+	Email string `form:"email" default:"a@b.com"` // 默认值为a@b.com, json/query/form参数也可以设置默认值
+}) (ExampleResponse, error) {
+	// 处理Query请求
+	return ExampleResponse{}, nil
+}
+
 type ExampleResponse struct {
 	Count int `json:"count"`
 }

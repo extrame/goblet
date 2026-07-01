@@ -29,11 +29,11 @@ type Fn struct {
 	Fn   interface{}
 }
 
-type ControllerNeedInit interface {
+type controllerNeedInit interface {
 	Init(*Server)
 }
 
-type ControllerNeedInitAndReturnError interface {
+type controllerNeedInitAndReturnError interface {
 	Init(*Server) error
 }
 
@@ -48,8 +48,8 @@ type Server struct {
 	Name          string
 	plugins       map[string]NewPlugin
 	funcs         []Fn
-	initCtrl      []ControllerNeedInit
-	initCtrlNew   []ControllerNeedInitAndReturnError
+	inits         []func(*Server)
+	initsNew      []func(*Server) error
 	pres          map[string][]reflect.Value
 	nrPlugin      onNewRequestPlugin
 	saver         Saver
@@ -223,18 +223,34 @@ func (s *Server) connectDB() (*gorm.DB, error) {
 //
 // 函数逻辑：
 // 1. 通过 wrapController 函数将控制器转换为配置信息
-// 2. 如果控制器实现了 ControllerNeedInit 接口，则将其添加到初始化控制器列表中
-// 3. 如果控制器实现了 ControllerNeedInitAndReturnError 接口，则将其添加到新的初始化控制器列表中
+// 2. 如果控制器实现了 controllerNeedInit 接口，则将其添加到初始化控制器列表中
+// 3. 如果控制器实现了 controllerNeedInitAndReturnError 接口，则将其添加到新的初始化控制器列表中
 // 4. 将配置信息添加到路由表中
-func (s *Server) ControlBy(controller interface{}) {
-	cfg := s.wrapController(controller)
-	if bc, ok := controller.(ControllerNeedInit); ok {
-		s.initCtrl = append(s.initCtrl, bc)
+func (s *Server) ControlBy(controllers ...interface{}) {
+	for _, controller := range controllers {
+		cfg := s.wrapController(controller)
+
+		if bc, ok := controller.(controllerNeedInit); ok {
+			s.inits = append(s.inits, bc.Init)
+		}
+		if bc, ok := controller.(controllerNeedInitAndReturnError); ok {
+			s.initsNew = append(s.initsNew, bc.Init)
+		}
+		s.router.add(cfg)
 	}
-	if bc, ok := controller.(ControllerNeedInitAndReturnError); ok {
-		s.initCtrlNew = append(s.initCtrlNew, bc)
+}
+
+func (s *Server) OnInit(extraInit ...interface{}) error {
+	if len(extraInit) > 0 {
+		for _, initFn := range extraInit {
+			if fn, ok := initFn.(func(*Server) error); ok {
+				s.initsNew = append(s.initsNew, fn)
+			} else if fn, ok := initFn.(func(*Server)); ok {
+				s.inits = append(s.inits, fn)
+			}
+		}
 	}
-	s.router.add(cfg)
+	return nil
 }
 
 func (s *Server) caller() (string, string, error) {
@@ -437,11 +453,11 @@ func (s *Server) Run() error {
 	if s.Renders["raw"] == nil {
 		s.Renders["raw"] = new(render.RawRender)
 	}
-	for _, bc := range s.initCtrl {
-		bc.Init(s)
+	for _, bc := range s.inits {
+		bc(s)
 	}
-	for _, bc := range s.initCtrlNew {
-		if err := bc.Init(s); err != nil {
+	for _, bc := range s.initsNew {
+		if err := bc(s); err != nil {
 			return err
 		}
 	}
