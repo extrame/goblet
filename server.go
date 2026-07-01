@@ -240,7 +240,7 @@ func (s *Server) ControlBy(controllers ...interface{}) {
 	}
 }
 
-func (s *Server) OnInit(extraInit ...interface{}) error {
+func (s *Server) Setup(extraInit ...interface{}) error {
 	if len(extraInit) > 0 {
 		for _, initFn := range extraInit {
 			if fn, ok := initFn.(func(*Server) error); ok {
