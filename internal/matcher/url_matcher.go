@@ -95,7 +95,7 @@ func (a *UrlMatcher) addSubPath(path string, opt AnchorOp) bool {
 		tailBeforParam = tailBeforParam - 1
 	}
 	var char = path[tailBeforParam : tailBeforParam+1]
-	slog.Info("add sub path", "path", path, "tailBeforParam", tailBeforParam, "char", char, "paramName", paramName)
+	slog.Debug("add sub path", "path", path, "tailBeforParam", tailBeforParam, "char", char, "paramName", paramName)
 	branch = &UrlMatcher{tailBeforParam,
 		char, path[0:tailBeforParam],
 		[]*UrlMatcher{}, nil, hasParam, paramName}

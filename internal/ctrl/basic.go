@@ -228,6 +228,26 @@ func toHyphenCase(s string) string {
 	return string(result)
 }
 
+// fromHyphenCase 将连字符格式转换为驼峰命名，例如：aaa-bbb -> AaaBbb
+func fromHyphenCase(s string) string {
+	var result []rune
+	toUpper := true
+	for _, r := range s {
+		if r == '-' {
+			toUpper = true
+			continue
+		}
+		if toUpper && r >= 'a' && r <= 'z' {
+			r -= 'a' - 'A'
+			toUpper = false
+		} else {
+			toUpper = false
+		}
+		result = append(result, r)
+	}
+	return string(result)
+}
+
 type CallParams struct {
 	OnlyWithParam bool
 	Params        []string
@@ -238,7 +258,7 @@ type CallParams struct {
 func (r *Basic) callMethodForBlock(ctx Context, params CallParams) error {
 	var subMethodNameFromSuffix bool = false
 	if params.SubMethodName == "" {
-		params.SubMethodName = ctx.PopSuffix()
+		params.SubMethodName = fromHyphenCase(ctx.PopSuffix())
 		subMethodNameFromSuffix = true
 	}
 	params.SubMethodName = strings.Title(params.SubMethodName)
