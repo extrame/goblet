@@ -113,13 +113,14 @@ func (d *FormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool
 // a form-enc decoder for request body
 type MultiFormRequestDecoder struct {
 	decoder *schema.Decoder
+	tag     string
 }
 
 func NewMultiFormRequestDecoder() *MultiFormRequestDecoder {
 	decoder := schema.NewDecoder()
 	decoder.SetAliasTag("form")
 	decoder.IgnoreUnknownKeys(true)
-	return &MultiFormRequestDecoder{decoder: decoder}
+	return &MultiFormRequestDecoder{decoder: decoder, tag: "form"}
 }
 
 func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill bool) error {
@@ -144,8 +145,13 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 	if rv.Kind() == reflect.Struct {
 		for i := 0; i < rv.NumField(); i++ {
 			field := rv.Type().Field(i)
-			if field.Type.String() == "github.com/extrame/goblet.File" {
-				if file, _, err := cx.Request.FormFile(field.Name); err == nil {
+			if field.Type.PkgPath() == "github.com/extrame/goblet/v2" && field.Type.Name() == "File" {
+				slog.Info("parse file arguments", "field", field)
+				tag, ok := field.Tag.Lookup(d.tag)
+				if !ok {
+					tag = field.Name
+				}
+				if file, _, err := cx.Request.FormFile(tag); err == nil {
 					fileObj := File{
 						rc:     file,
 						Name:   field.Name,
