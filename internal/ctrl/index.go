@@ -46,8 +46,8 @@ type Wrapper interface {
 func New(basic *Basic, block interface{}, ignoreCase bool) Wrapper {
 	var ctrl Wrapper
 	switch basic.typ {
-	case "single":
-		ctrl = &Html{basic}
+	case "http":
+		ctrl = &HttpMethod{basic}
 	case "rest":
 		ctrl = &Rest{basic}
 	default:

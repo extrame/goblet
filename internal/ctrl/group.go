@@ -9,6 +9,11 @@ import (
 	ge "github.com/extrame/goblet/v2/error"
 )
 
+// Group match URL by suffix
+// example:
+// A controller on /api/user
+// /api/user/info -> Info()
+// /api/user/name -> Name()
 type Group struct {
 	*Basic
 	IgnoreCase bool

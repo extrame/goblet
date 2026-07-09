@@ -60,8 +60,8 @@ func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase boo
 				basic.layout = string(t.Tag)
 				continue
 			}
-			if t.Type.Name() == "SingleController" {
-				basic.typ = "single"
+			if t.Type.Name() == "HttpMethodController" {
+				basic.typ = "http"
 				continue
 			}
 
