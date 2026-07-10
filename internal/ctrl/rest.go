@@ -103,7 +103,7 @@ func (r *Rest) Parse(c Context) error {
 		c.RenderAs(REST_CREATE)
 		//只测试id作为method的第二个部分的函数是否存在，存在则调用
 		er := r.Basic.callMethodForBlock(c, CallParams{
-			MethodName:    "Update",
+			MethodName:    "Create",
 			SubMethodName: id,
 			OnlyWithParam: true,
 		})
