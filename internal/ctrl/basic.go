@@ -260,8 +260,9 @@ func (r *Basic) callMethodForBlock(ctx Context, params CallParams) error {
 	if params.SubMethodName == "" {
 		params.SubMethodName = fromHyphenCase(ctx.PopSuffix())
 		subMethodNameFromSuffix = true
+	} else {
+		params.SubMethodName = fromHyphenCase(params.SubMethodName)
 	}
-	params.SubMethodName = strings.Title(params.SubMethodName)
 	var err error
 	methodName := params.MethodName + params.SubMethodName
 	//change first letter in firstParam to uppercase
