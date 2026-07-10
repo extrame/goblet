@@ -101,10 +101,20 @@ func (r *Rest) Parse(c Context) error {
 
 	case id != "" && method == "POST":
 		c.RenderAs(REST_CREATE)
-		return r.Basic.callMethodForBlock(c, CallParams{
-			MethodName: "Create",
-			Params:     []string{id},
+		//只测试id作为method的第二个部分的函数是否存在，存在则调用
+		er := r.Basic.callMethodForBlock(c, CallParams{
+			MethodName:    "Update",
+			SubMethodName: id,
+			OnlyWithParam: true,
 		})
+
+		if er != nil {
+			return r.Basic.callMethodForBlock(c, CallParams{
+				MethodName: "Create",
+				Params:     []string{id},
+			})
+		}
+		return er
 
 	case id == "" && method == "GET":
 		c.RenderAs(REST_INDEX)
