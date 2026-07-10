@@ -102,9 +102,8 @@ func (r *Rest) Parse(c Context) error {
 	case id != "" && method == "POST":
 		c.RenderAs(REST_CREATE)
 		return r.Basic.callMethodForBlock(c, CallParams{
-			MethodName:    "Create",
-			OnlyWithParam: true,
-			Params:        []string{id},
+			MethodName: "Create",
+			Params:     []string{id},
 		})
 
 	case id == "" && method == "GET":

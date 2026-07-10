@@ -263,12 +263,15 @@ func (r *Basic) callMethodForBlock(ctx Context, params CallParams) error {
 	}
 	params.SubMethodName = strings.Title(params.SubMethodName)
 	var err error
+	methodName := params.MethodName + params.SubMethodName
 	//change first letter in firstParam to uppercase
-	method := r.block.MethodByName(params.MethodName + params.SubMethodName)
+	method := r.block.MethodByName(methodName)
 
 	if method.IsValid() {
 		goto callMethod
 	}
+
+	err = fmt.Errorf("you have no method named (%s)", methodName)
 
 	if !params.OnlyWithParam {
 		if subMethodNameFromSuffix {
@@ -278,8 +281,9 @@ func (r *Basic) callMethodForBlock(ctx Context, params CallParams) error {
 		if method.IsValid() {
 			goto callMethod
 		}
+		err = fmt.Errorf("you have no method named (%s)", params.MethodName)
 	}
-	err = fmt.Errorf("you have no method named (%s)", params.MethodName)
+
 	if ctx.Env() == config.ProductEnv {
 		slog.Info("block option error", "error", err)
 	} else {
