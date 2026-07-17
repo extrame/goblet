@@ -145,7 +145,16 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 	if rv.Kind() == reflect.Struct {
 		for i := 0; i < rv.NumField(); i++ {
 			field := rv.Type().Field(i)
-			if field.Type.PkgPath() == "github.com/extrame/goblet/v2" && field.Type.Name() == "File" {
+			var elemType reflect.Type
+			var isPtr bool = false
+			// if field is pointer to File type
+			if field.Type.Kind() == reflect.Ptr {
+				elemType = field.Type.Elem()
+				isPtr = true
+			} else {
+				elemType = field.Type
+			}
+			if elemType.PkgPath() == "github.com/extrame/goblet/v2" && elemType.Name() == "File" {
 				slog.Info("parse file arguments", "field", field)
 				tag, ok := field.Tag.Lookup(d.tag)
 				if !ok {
@@ -158,7 +167,11 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 						Size:   0, // 需要从header获取
 						Header: make(map[string][]string),
 					}
-					rv.Field(i).Set(reflect.ValueOf(fileObj))
+					if isPtr {
+						rv.Field(i).Set(reflect.ValueOf(&fileObj))
+					} else {
+						rv.Field(i).Set(reflect.ValueOf(fileObj))
+					}
 				}
 			}
 		}
