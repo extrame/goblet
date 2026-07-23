@@ -160,12 +160,12 @@ func (d *MultiFormRequestDecoder) Unmarshal(cx *Context, v interface{}, autofill
 				if !ok {
 					tag = field.Name
 				}
-				if file, _, err := cx.Request.FormFile(tag); err == nil {
+				if file, header, err := cx.Request.FormFile(tag); err == nil {
 					fileObj := File{
 						rc:     file,
-						Name:   field.Name,
-						Size:   0, // 需要从header获取
-						Header: make(map[string][]string),
+						Name:   header.Filename,
+						Size:   header.Size,
+						Header: header.Header,
 					}
 					if isPtr {
 						rv.Field(i).Set(reflect.ValueOf(&fileObj))
