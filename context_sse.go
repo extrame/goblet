@@ -79,6 +79,7 @@ func (c *Context) EnableSse(options ...SseOption) error {
 
 	// 写入状态码
 	c.writer.WriteHeader(http.StatusOK)
+	c.already_writed = true
 
 	// 刷新响应，确保头部立即发送
 	if flusher, ok := c.writer.(http.Flusher); ok {
