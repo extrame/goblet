@@ -84,10 +84,6 @@ func (s *Server) Context() context.Context {
 	return s.ctx
 }
 
-func (s *Server) SetContext(ctx context.Context) {
-	s.ctx, s.cancel = context.WithCancel(ctx)
-}
-
 // type Handler interface {
 // 	Path() string
 // 	Dir() string
@@ -455,7 +451,12 @@ func (s *Server) GetDelims() []string {
 }
 
 // Run 运营一个服务器
-func (s *Server) Run() error {
+func (s *Server) Run(ctx ...context.Context) error {
+	if len(ctx) > 0 {
+		s.ctx = ctx[0]
+	} else {
+		s.ctx = context.Background()
+	}
 	if s.Config.Basic.Version == "datetime" {
 		s.Config.Basic.Version = fmt.Sprintf("%d", time.Now().Unix())
 	}
@@ -472,9 +473,6 @@ func (s *Server) Run() error {
 		if err := bc(s); err != nil {
 			return err
 		}
-	}
-	if s.ctx == nil {
-		s.SetContext(context.Background())
 	}
 	slog.With("port", s.Config.Basic.Port).Info("Listening")
 	srv := &http.Server{
