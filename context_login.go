@@ -2,7 +2,6 @@ package goblet
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 )
 
@@ -68,20 +67,7 @@ func (c *Context) AddLoginIdAs(id interface{}, name string, setter ...LoginInfoS
 }
 
 func (c *Context) AddLoginId(id interface{}, setter ...LoginInfoSetter) string {
-	var userid string
-	switch rid := id.(type) {
-	case string:
-		userid = rid
-	case int:
-		userid = strconv.FormatInt(int64(rid), 10)
-	case int32:
-		userid = strconv.FormatInt(int64(rid), 10)
-	case int64:
-		userid = strconv.FormatInt(rid, 10)
-	default:
-		userid = fmt.Sprintf("%s", id)
-	}
-	return c.AddLoginIdAs(userid, "user", setter...)
+	return c.AddLoginIdAs(id, "user", setter...)
 
 }
 
