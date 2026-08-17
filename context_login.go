@@ -43,12 +43,10 @@ func (c *Context) AddLoginIdAs(id interface{}, name string, setter ...LoginInfoS
 	switch rid := id.(type) {
 	case string:
 		userid = rid
-	case int:
-		userid = strconv.FormatInt(int64(rid), 10)
-	case int32:
-		userid = strconv.FormatInt(int64(rid), 10)
-	case int64:
-		userid = strconv.FormatInt(rid, 10)
+	case int, int32, int64, uint, uint32, uint64:
+		userid = fmt.Sprintf("%d", rid)
+	default:
+		userid = fmt.Sprintf("%s", id)
 	}
 
 	lctx := &LoginContext{
