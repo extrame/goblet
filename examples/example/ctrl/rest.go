@@ -98,6 +98,15 @@ func (c *TaskController) Update(id string, ctx *goblet.Context, req *UpdateTaskR
 	return &task, nil
 }
 
+// UpdateStatus 更新任务状态
+// Route: PATCH/PUT /tasks/:id/status
+// req.Status 从请求体JSON自动解析
+func (c *TaskController) UpdateStatus(id string, ctx *goblet.Context, req *UpdateTaskRequest) (*Task, error) {
+	var task Task
+	// ctx.DB.First(&task, id); ctx.DB.Model(&task).Update("status", req.Status)
+	return &task, nil
+}
+
 // Destroy 删除任务
 // Route: DELETE /tasks/:id
 func (c *TaskController) Destroy(id string, ctx *goblet.Context) error {

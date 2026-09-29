@@ -9,7 +9,7 @@ import (
 
 // TestedController 使用Goblet控制器模式实现SSE功能
 type TestedController struct {
-	goblet.SingleController `Route:"/sse"`
+	goblet.GroupController `Route:"/sse"`
 }
 
 // GetSimple 简单的SSE端点示例

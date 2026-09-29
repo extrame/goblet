@@ -25,30 +25,34 @@ func (h *HttpMethod) Parse(c Context) error {
 	method := c.ReqMethod()
 
 	var suffix, suffixWithSlash = c.Suffix(true)
+	var suffixWithMethod string
 
 	if suffixWithSlash {
-		var suffixWithMethod = strings.ToLower(method) + suffix
-		matched, suffix, params := h.methods.Match(suffixWithMethod, len(suffixWithMethod))
+		suffixWithMethod = strings.ToLower(method) + suffix
+	} else {
+		suffixWithMethod = "/" + strings.ToLower(method)
+	}
+	matched, suffix, params := h.methods.Match(suffixWithMethod, len(suffixWithMethod))
 
-		if matched != nil {
-			if mc, ok := matched.Opt.(*MethodCaller); ok {
-				mtd := mc.fn
-				if mtd.IsValid() {
-					c.SetSuffix(suffix)
-					if h.tryPre(mc.String(), c) {
-						results, typ := callMethod(mtd, c)
-						return checkResult(results, typ, c)
-					}
-					return nil
+	if matched != nil {
+		if mc, ok := matched.Opt.(*MethodCaller); ok {
+			slog.Info("matched method caller", "matched", matched)
+			mtd := mc.fn
+			if mtd.IsValid() {
+				c.SetSuffix(suffix)
+				if h.tryPre(mc.String(), c) {
+					results, typ := callMethod(mtd, c)
+					return checkResult(results, typ, c)
 				}
-			} else {
-				slog.Info("matched not method caller", "matched", matched)
+				return nil
 			}
+		} else {
+			slog.Info("matched not method caller", "matched", matched)
 		}
+	}
 
-		if params != nil {
-			c.SetPathParams(params)
-		}
+	if params != nil {
+		c.SetPathParams(params)
 	}
 
 	return ge.NOSUCHROUTER("")

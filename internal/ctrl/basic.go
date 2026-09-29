@@ -49,6 +49,25 @@ func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase boo
 	basic.Name = valtype.Name()
 
 	if val.Kind() == reflect.Struct {
+		// setPathRender 支持直接在控制器字段的 tag 上声明 path 与 render，
+		// 例如: GroupController `path:"/api/group" render:"json"`
+		// 同时兼容原有的 Route / Render 独立字段写法
+		setPathRender := func(t reflect.StructField) {
+			if p := t.Tag.Get("path"); p != "" && len(basic.routing) == 0 {
+				basic.routing = []string{p}
+				basic.htmlRenderFileOrDir = strings.TrimLeft(p, "/")
+			}
+			if rv := t.Tag.Get("render"); rv != "" && len(basic.render) == 0 {
+				for _, v := range strings.Split(rv, ",") {
+					vs := strings.Split(v, "=")
+					basic.render = append(basic.render, vs[0])
+					if vs[0] == "html" && len(vs) >= 2 {
+						basic.htmlRenderFileOrDir = vs[1]
+					}
+				}
+			}
+		}
+
 		for i := 0; i < valtype.NumField(); i++ {
 			t := valtype.Field(i)
 
@@ -62,11 +81,13 @@ func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase boo
 			}
 			if t.Type.Name() == "HttpMethodController" {
 				basic.typ = "http"
+				setPathRender(t)
 				continue
 			}
 
 			if t.Type.Name() == "RestController" {
 				basic.typ = "rest"
+				setPathRender(t)
 				continue
 			}
 
@@ -86,11 +107,12 @@ func DetectOption(ctrl interface{}, server Server) (basic *Basic, ignoreCase boo
 				for _, v := range tags {
 					vs := strings.Split(v, "=")
 					if vs[0] == "ignoreCase" && len(vs) >= 2 {
-						if vs[1] == "false" {
+						if vs[1] == "false" || vs[1] == "\"false\"" {
 							ignoreCase = false
 						}
 					}
 				}
+				setPathRender(t)
 				continue
 			}
 

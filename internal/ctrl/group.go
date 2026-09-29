@@ -56,7 +56,7 @@ func (g *Group) Parse(ctx Context) error {
 					goto next
 				}
 			} else {
-				slog.Info("matched not method caller", "matched", matched)
+				slog.Info("no method matched", "wrong matched", matched)
 			}
 		}
 
